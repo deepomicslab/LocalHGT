@@ -114,5 +114,5 @@ if __name__ == "__main__":
     index2name_dict = index2name()
     find_chr_name()
     extracted_ref_interval_file = extracted_ref_interval_file+'.eva.txt'
-    # extract_seq()
+    extract_seq()
 

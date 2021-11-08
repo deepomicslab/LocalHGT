@@ -9,8 +9,10 @@ sample=$outdir/$ID
 extracted_ref=$outdir/$ID.specific.ref.fasta
 start=$(date +%s)
 
-
+samtools faidx $original_ref
 /mnt/d/breakpoints/script/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7
+cat ${interval_file}_tmp_* >$interval_file
+rm ${interval_file}_tmp_*
 python /mnt/d/breakpoints/script/extract_ref_seq.py $original_ref $extracted_ref $interval_file
 :<<!
 bwa index $extracted_ref

@@ -708,7 +708,7 @@ def main():
         procs = []
         for j in range(start_pos, end_pos):
             p = multiprocessing.Process(target = worker, args = (preClusterData, ref_name_list[j], output_filename, ref_dict_Interact_Big))
-            print('ref %s is processing, NO.%s of %s.'%(ref_name_list[j], j, len(ref_name_list)), len(preClusterData.get(ref_name_list[j])))
+            # print('ref %s is processing, NO.%s of %s.'%(ref_name_list[j], j, len(ref_name_list)), len(preClusterData.get(ref_name_list[j])))
             procs.append(p)
             p.start()
         for proc in procs:

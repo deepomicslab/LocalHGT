@@ -253,10 +253,10 @@ def find_accurate_bkp():
         # if species_pair != "NC_014414.1=NZ_MTLG01000053.1":
         #     continue
         raw_bkp_clusters = rrm.raw_bkps_cluster[species_pair]
-        print (len(raw_bkp_clusters))
+        # print (len(raw_bkp_clusters))
         for cluster in raw_bkp_clusters:
             if len(cluster.support_reads) == 0: # ignore the bkp not supported by split reads
-                print (cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
+                # print (cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
                 continue
             choose_acc_from_cluster(cluster)
             bkp_num_support += 1

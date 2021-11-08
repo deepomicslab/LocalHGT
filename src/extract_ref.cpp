@@ -8,6 +8,11 @@
 #include <cstdlib>
 #include <ctime>
 #include <string.h>
+#include <sys/stat.h> 
+#include <pthread.h>
+#include <thread>
+#include <sstream>
+
 
 using namespace std;
 
@@ -18,9 +23,10 @@ const int k = 32;
 long long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 // vector <char>kmer_count_table(array_size);
+// char* kmer_count_table = (char*)malloc(array_size);
 
 
-long slide_window(bool* record_ref_hit, int ref_len, int ref_index, long extract_ref_len, ofstream & interval_file, float hit_ratio, float perfect_hit_ratio){ //find density hits regions
+long slide_window(bool* record_ref_hit, int ref_len, long ref_index, long extract_ref_len, ofstream & interval_file, float hit_ratio, float perfect_hit_ratio){ //find density hits regions
     int frag_index = 0;
     int window = 500;
     int one_coder_bases = 0; // the number of bases supported by at least one coder in a window
@@ -239,7 +245,7 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple, st
                 delete [] ref_int;
                 delete [] ref_comple_int;
             }
-            if (ref_index % 1 == 0){
+            if (ref_index % 1000 == 0){
                 time_t t1 = time(0);
                 cout << chr_name<<"\t" << ref_index << "\t" <<ref_len <<" bp\t"<<slide_ref_len<<" bp\t" <<t1-t0<< endl;
             }  
@@ -304,14 +310,84 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple, st
     index_file.close();
 }
 
-void read_index(string fasta_file, bool* coder, int* base, int k, char* comple, string index_name, string interval_name, short *choose_coder, float hit_ratio, float perfect_hit_ratio){
+void read_index_thread(bool* coder, int* base, char* comple, string index_name, string interval_name, short *choose_coder, float hit_ratio, float perfect_hit_ratio, long start_byte, long end_byte, long start_ref_index){
+
+    ifstream index_file;
+    ofstream interval_file;
+    index_file.open(index_name, ios::in | ios::binary); 
+    interval_file.open(interval_name+"_tmp_"+to_string(start_byte), ios::out | ios::trunc);
+    unsigned int real_index;
+    long i = 0;
+    int ref_len;
+    long ref_end = 0;
+    long ref_index = start_ref_index;
+    long ref_start = 0;
+    long extract_ref_len = 0;
+    long slide_ref_len = 0;
+    bool *record_ref_hit; 
+    time_t t0 = time(0);
+
+    cout <<"Start slide ref..."<< ref_index<<endl;
+
+    index_file.seekg(start_byte, ios::beg);
+    i = start_byte/4;
+    long end = end_byte/4;
+    while (!index_file.eof()){
+        index_file.read(reinterpret_cast<char*>(&real_index), sizeof(unsigned int));
+        // cout<<start_byte<<"\tstart_len\t"<<real_index<< "\t" <<endl;
+
+        if (i > ref_end){  
+            //previous ref            
+            if (ref_start != 0){
+                if (ref_len > 1000){
+                    extract_ref_len = slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, perfect_hit_ratio);
+                }
+                delete [] record_ref_hit;
+                if (ref_index % 1 == 0){
+                    time_t t1 = time(0);
+                    cout << ref_index << "\t" <<slide_ref_len << " bp\t" << extract_ref_len <<" bp\t" <<t1-t0<< endl;
+                } 
+            }
+            // new ref
+            ref_len = real_index;
+            if (ref_len > 0){ //ref_len=0 means the end of file
+                ref_start = i + 1;
+                ref_end = i+ (ref_len-k+1)*coder_num;
+                record_ref_hit = new bool[ref_len*coder_num];
+                ref_index += 1;  //start from 1    
+                slide_ref_len += ref_len;
+            }
+        }
+        else{
+            if ((int)kmer_count_table[real_index] == least_depth & real_index != 0){
+                record_ref_hit[i-ref_start] = true;
+                // cout <<(int)kmer_count_table[real_index] << "\t"<<i<<endl;
+            }
+            else{
+                record_ref_hit[i-ref_start] = false;
+            }
+        }
+        // }
+        i += 1;
+        real_index = 0;
+        if (i > end){
+            break;
+        }
+    }
+    
+    
+    index_file.close();  
+    interval_file.close();
+    
+}
+
+void read_index(bool* coder, int* base, int k, char* comple, string index_name, string interval_name, short *choose_coder, float hit_ratio, float perfect_hit_ratio){
     ifstream index_file;
     ofstream interval_file;
     index_file.open(index_name, ios::in | ios::binary); 
     interval_file.open(interval_name, ios::out | ios::trunc);
     unsigned int real_index;
     long i = 0;
-    short read_choose_coder[100];
     int ref_len, ref_index;
     long ref_end = 0;
     ref_index = 0;
@@ -326,7 +402,6 @@ void read_index(string fasta_file, bool* coder, int* base, int k, char* comple, 
     while (!index_file.eof()){
         index_file.read(reinterpret_cast<char*>(&real_index), sizeof(unsigned int));
         if (i < 100){
-            read_choose_coder[i] = real_index;
         }
         else{
             if (i > ref_end){  
@@ -336,7 +411,7 @@ void read_index(string fasta_file, bool* coder, int* base, int k, char* comple, 
                         extract_ref_len = slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, perfect_hit_ratio);
                     }
                     delete [] record_ref_hit;
-                    if (ref_index % 1 == 0){
+                    if (ref_index % 1000 == 0){
                         time_t t1 = time(0);
                         cout << ref_index << "\t" <<slide_ref_len << " bp\t" << extract_ref_len <<" bp\t" <<t1-t0<< endl;
                     } 
@@ -363,20 +438,32 @@ void read_index(string fasta_file, bool* coder, int* base, int k, char* comple, 
         }
         i += 1;
         real_index = 0;
-    }
-    
-    
+    }    
     index_file.close();  
     interval_file.close();
 }
 
 // vector<char> 
-void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple, short *choose_coder, int down_sam_ratio)
+void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple, short *choose_coder, int down_sam_ratio, long start, long end)
 {
     time_t t0 = time(0);
     ifstream fq_file; 
     fq_file.open(fastq_file);
-    //fq_file.open("test.fq");
+
+    long pos;
+    for (long i = start; i>0; i--){
+        fq_file.seekg(i, ios::beg);
+        char j;
+        fq_file.get(j);
+        if (j == '@'){ //only read name has this symbol.
+            pos = i;
+            break;
+        }       
+    }
+    fq_file.seekg(pos, ios::beg);
+    long add_size = start;
+
+
     string reads_seq;
     int reads_int [150];
     int reads_comple_int [150];
@@ -388,7 +475,7 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple, 
     int n;
     unsigned int kmer_index, comple_kmer_index, real_index, b;   
     int r ;
-    short read_len = 150;
+    short read_len = 0;
     // char abnormal_base[150];
     unsigned seed;
     seed = time(0);
@@ -396,10 +483,18 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple, 
 
     while (fq_file >> reads_seq)
     {
+        if (add_size>=end){
+            break;
+        }
+        add_size += reads_seq.length();
+
         if (i % 4 == 1){
             time_t t1 = time(0);
             if (i % 10000000 == 1){
                 cout <<i<<"reads\t" << t1-t0 <<endl;
+            }
+            if (i == 1){
+                read_len = reads_seq.length();//cal read length
             }
             // srand((unsigned)time(NULL));
             r = rand() % 100 ;
@@ -449,6 +544,7 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple, 
     // return kmer_count_table;
 
 }
+// */
 
 bool * generate_coder(bool coder_num)
 {
@@ -538,10 +634,8 @@ short * random_coder(int k)
             // cout << choose_coder[j*3+i]<<"#"<<permu[r*3+i] << endl;
         }
     }
-    // for (int j = 0; j < k; j++){
-    //     for (int i = 0; i < coder_num; i++){
-    //         cout << j <<"\t"<< i <<"\t" << choose_coder[j*3+i] << endl;
-    //     }
+    // for (int j = 0; j < 100; j++){
+    //         cout << j <<"\t" << choose_coder[j] << endl;
     // }
     return choose_coder;
 }
@@ -566,6 +660,38 @@ short * saved_random_coder(string index_name){
     return read_choose_coder;
 }
 
+int cal_sam_ratio(string fq1, long down_sampling_size){
+    int down_sam_ratio = 0;
+    int read_len = 0;
+    long i = 0;
+    long sample_size = 0;
+    string reads_seq;
+
+    ifstream fq_file; 
+    fq_file.open(fq1);
+    while (fq_file >> reads_seq){
+        if (i % 4 == 1 & read_len == 0){
+            read_len = reads_seq.length();
+            cout <<"read length is "<<read_len<<endl;
+        }
+        i += 1;
+    }
+    fq_file.close();
+    sample_size = (i/2)*read_len;
+    down_sam_ratio = 100*down_sampling_size/sample_size;
+    cout<<i<<"\t"<<sample_size<<" down sample ratio "<<down_sam_ratio<<endl;
+    return down_sam_ratio;
+}
+
+long file_size(string filename)  
+{  
+    struct stat statbuf;  
+    stat(filename.c_str(),&statbuf);  
+    long size=statbuf.st_size;   
+    return size;  
+}  
+
+
 int main( int argc, char *argv[])
 {
     // string ref_seq = read_ref();
@@ -587,8 +713,13 @@ int main( int argc, char *argv[])
     string accept_perfect_hit_ratio = argv[6];
     float hit_ratio = stod(accept_hit_ratio);
     float perfect_hit_ratio = stod(accept_perfect_hit_ratio);
+    long down_sampling_size = 2000000000; //2G bases
 
-    int down_sam_ratio = 13; //percent of downsampling ratio (1-100).
+    int thread_num = 5;
+    long start = 0;
+    long end = 0;
+
+    int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
 
     //index
     // choose_coder = random_coder(k); 
@@ -598,16 +729,96 @@ int main( int argc, char *argv[])
     cout << "Start extract..."<<endl;
     memset(kmer_count_table, 0, sizeof(char)*array_size);
     choose_coder = saved_random_coder(index_name);
-    read_fastq(fq1, k, coder, base, comple, choose_coder, down_sam_ratio);
-    read_fastq(fq2, k, coder, base, comple, choose_coder, down_sam_ratio);
+
+    //multithread
+
+    long size = file_size(fq1);
+    long each_size = size/thread_num;
+    cout <<size<<endl;
+    
+    std::vector<std::thread>threads;
+
+    for (int i=0; i<thread_num; i++){
+        start = i*each_size;
+        end = (i+1)*each_size;
+        if (i == thread_num-1){
+            end = size;
+        }
+        cout <<start<<"\t"<<end<<endl;
+        threads.push_back(thread(read_fastq, fq1, k, coder, base, comple, choose_coder, down_sam_ratio, start, end));
+    }
+	for (auto&th : threads)
+		th.join();
+    threads.clear();
+
+    
+    for (int i=0; i<thread_num; i++){
+        start = i*each_size;
+        end = (i+1)*each_size;
+        if (i == thread_num-1){
+            end = size;
+        }
+        cout <<start<<"\t"<<end<<endl;
+        threads.push_back(thread(read_fastq, fq2, k, coder, base, comple, choose_coder, down_sam_ratio, start, end));
+    }
+	for (auto&th : threads)
+		th.join();
+    threads.clear();
     time_t now2 = time(0);
     cout << "reads finish.\t" << now2 - now1 << endl;
-    read_index(fasta_file, coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio);
 
+    // /*
+    long index_size = file_size(index_name);
+    long each_index_size = index_size/thread_num + 1;
+    string fai_name = fasta_file + ".fai";
+    ifstream fai_file;
+    fai_file.open(fai_name, ios::in); 
+    string aa;
+    string line;
+    int ref_len;
+    long add;
+    long pos = 100 * 4;
+    long start_byte, end_byte;
+    start_byte = pos;
+    long start_ref_index = 0;
+    long end_ref_index = 0;
+
+    while(!fai_file.eof()){
+        getline(fai_file,line);
+        end_ref_index += 1;
+        std::istringstream iss(line);
+        if (!(iss >> aa >> ref_len)) { break; }
+        add = 4*((ref_len-k+1)*coder_num+1); //the size of the genome.
+        if (pos -start_byte > each_index_size){
+            end_byte = pos + add;
+            // cout << start_byte <<"\tsplit bytes\t"<<end_byte<<"\t"<<ref_len <<endl;
+            threads.push_back(thread(read_index_thread, coder, base, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio, start_byte, end_byte,start_ref_index));
+            start_byte = end_byte;     
+            start_ref_index = end_ref_index;   
+        }
+        pos += add;
+        
+    }
+    end_byte = index_size;
+    // cout << start_byte <<"\tsplit bytes\t"<<end_byte<<endl;
+    threads.push_back(thread(read_index_thread, coder, base, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio, start_byte, end_byte,start_ref_index));
+	for (auto&th : threads)
+		th.join();
+    // */
+    // read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio);
     time_t now3 = time(0);
     cout << "Finish with time:\t" << now3-now1<<endl;
-    delete [] kmer_count_table;
+    
+    /*
+    // read_fastq(fq1, k, coder, base, comple, choose_coder, down_sam_ratio);
+    // read_fastq(fq2, k, coder, base, comple, choose_coder, down_sam_ratio);
 
+    
+    read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio);
+
+
+    */
+    delete [] kmer_count_table;
     return 0;
 }
 
