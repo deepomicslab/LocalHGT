@@ -10,12 +10,12 @@ extracted_ref=$outdir/$ID.specific.ref.fasta
 start=$(date +%s)
 
 # samtools faidx $original_ref
-# /mnt/d/breakpoints/script/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7
-# cat ${interval_file}_tmp_* >$interval_file
-# rm ${interval_file}_tmp_*
+/mnt/d/breakpoints/script/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7
+cat ${interval_file}_tmp_* >$interval_file
+rm ${interval_file}_tmp_*
 python /mnt/d/breakpoints/script/get_bed_file.py $original_ref $interval_file
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
-:<<!
+# :<<!
 bwa index $extracted_ref
 samtools faidx $extracted_ref
 end=$(date +%s)
