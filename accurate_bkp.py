@@ -383,12 +383,13 @@ class Acc_Bkp(object):
         self.read_str = read_seq
         self.ref_str = ref_seq
         self.similarity = score
+
     def print_out(self):
-        print (self.from_ref, self.to_ref, self.from_bkp, self.to_bkp, self.from_side,\
+        print (self.from_ref, self.from_bkp, self.to_ref, self.to_bkp, self.from_side,\
          self.to_side, self.if_reverse, self.similarity)
 
     def write_out(self, writer):
-        writer.writerow ([self.from_ref, self.to_ref, self.from_bkp, self.to_bkp, \
+        writer.writerow ([self.from_ref, self.from_bkp, self.to_ref, self.to_bkp, \
         self.from_side, self.to_side, self.if_reverse, self.read_str, self.ref_str, self.similarity])
 
 
@@ -451,4 +452,4 @@ if __name__ == "__main__":
             # acc.print_out()
             acc.write_out(writer)
         f.close()
-        print ('final bkp num is %s'%(len(acc_bkp_list)))
+        print ('Final bkp num is %s'%(len(acc_bkp_list)))

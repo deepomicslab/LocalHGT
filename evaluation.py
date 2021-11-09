@@ -19,8 +19,11 @@ def read_interval(interval_file, true_locus):
     cover_flag = False
     f = open(interval_file)
     for line in f:
-        array = line.strip().split()
-        if array[0] == true_locus[0] and int(true_locus[1]) > int(array[1]) + gap and int(true_locus[1]) < int(array[2]) - gap:
+        line = line.strip()
+        chr_name = line.split(":")[0]
+        start = int(line.split(":")[1].split("-")[0])
+        end = int(line.split(":")[1].split("-")[1])
+        if chr_name == true_locus[0] and int(true_locus[1]) > start + gap and int(true_locus[1]) < end - gap:
             cover_flag = True
         #     print (true_locus, array)
     f.close()
@@ -153,7 +156,7 @@ class Sample():
         pe = Performance(accuracy, FDR, tool_time, tool_mem)
         return pe
 
-    def extract_time(self, time_file):
+    def extract_time(self, time_file): #log file obtained by /usr/bin/time -v
          #if no time available
         for line in open(time_file):
             time_re = re.search('User time \(seconds\):(.*?)$', line)
@@ -178,7 +181,7 @@ class Sample():
         return final_mem
 
     def eva_ref(self, tool_dir):
-        interval_file = tool_dir + '/%s.interval.txt.eva.txt'%(self.ID)
+        interval_file = tool_dir + '/%s.interval.txt.bed'%(self.ID)
         ref_accuracy, ref_len = check_if_bkp_in_extracted_ref(self.true_file, interval_file)
         return ref_accuracy, round(ref_len/1000000000, 2)
 
