@@ -343,7 +343,7 @@ void read_index_thread(bool* coder, int* base, char* comple, string index_name, 
                     extract_ref_len = slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, perfect_hit_ratio);
                 }
                 delete [] record_ref_hit;
-                if (ref_index % 1 == 0){
+                if (ref_index % 10000 == 0){
                     time_t t1 = time(0);
                     cout << ref_index << "\t" <<slide_ref_len << " bp\t" << extract_ref_len <<" bp\t" <<t1-t0<< endl;
                 } 
@@ -359,13 +359,20 @@ void read_index_thread(bool* coder, int* base, char* comple, string index_name, 
             }
         }
         else{
-            if ((int)kmer_count_table[real_index] == least_depth & real_index != 0){
-                record_ref_hit[i-ref_start] = true;
-                // cout <<(int)kmer_count_table[real_index] << "\t"<<i<<endl;
+            if (((i-ref_start)/3) % 2 == 1){ // skip 50% of the loci
+                // cout <<i<<"\t"<<i % 2<<endl;
+                if ((int)kmer_count_table[real_index] == least_depth & real_index != 0){
+                    record_ref_hit[i-ref_start] = true;
+                    // cout <<(int)kmer_count_table[real_index] << "\t"<<i<<endl;
+                }
+                else{
+                    record_ref_hit[i-ref_start] = false;
+                }
             }
             else{
                 record_ref_hit[i-ref_start] = false;
             }
+
         }
         // }
         i += 1;
@@ -810,13 +817,9 @@ int main( int argc, char *argv[])
     cout << "Finish with time:\t" << now3-now1<<endl;
     
     /*
-    // read_fastq(fq1, k, coder, base, comple, choose_coder, down_sam_ratio);
-    // read_fastq(fq2, k, coder, base, comple, choose_coder, down_sam_ratio);
-
-    
+    read_fastq(fq1, k, coder, base, comple, choose_coder, down_sam_ratio);
+    read_fastq(fq2, k, coder, base, comple, choose_coder, down_sam_ratio);   
     read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio);
-
-
     */
     delete [] kmer_count_table;
     return 0;
