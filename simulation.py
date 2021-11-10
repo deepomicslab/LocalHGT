@@ -61,15 +61,19 @@ def add_indel(sequence, rate):
 
 def extract_uniq_region(map_ref):
     remove_dict = {}
-    # for scaffold in scaffold_name:
-        # remove_loci = []
-    all_scaffold = []
+    all_scaffold = {}
+    line_num = 0
     for line in open(map_ref, 'r'):
+        line_num += 1
+        if line_num % 1000000 == 0:
+            print (line_num)
+        # if line_num > 1000000:
+        #     break
         array = line.split()
 
         #record scaffold name
-        if array[0] not in all_scaffold:
-            all_scaffold.append(array[0])
+        if array[0] not in all_scaffold.keys():
+            all_scaffold[array[0]] = 1
         #     continue
         
         if float(array[6]) < float(array[7]):
@@ -84,21 +88,14 @@ def extract_uniq_region(map_ref):
         else:
             sec_s = float(array[9])
             sec_e = float(array[8])   
-            # if array[0] == 'NZ_SMGI01000001.1':
-            #     print (fir_s, fir_e, sec_s, sec_e)
+
         if array[0] == array[1]:
             if fir_s >= sec_s and fir_s <= sec_e:
                 continue
             elif fir_e >= sec_s and fir_e <= sec_e:
                 continue
 
-        # if array[0] in scaffold_name and array[1] in scaffold_name:
-            #ignore the intra repeat.
-            # print (array[0], array[1])
-            # continue
-        #elif float(array[2]) < 85: # pident
-        #    continue
-        if float(array[3]) < 17: # length
+        if float(array[3]) < 50: # length
             continue
         if array[0] not in remove_dict.keys():
             remove_dict[array[0]] = []
@@ -116,18 +113,17 @@ def extract_uniq_region(map_ref):
                 overlap = True
         if overlap == False:
             remove_dict[array[0]].append([qstart, qend])
-        # print (qstart, qend)
-    # print (all_scaffold)
-    # print (remove_dict['NZ_BAIA02000032.1'])
-    for scaffold in all_scaffold:
+    print ("start sort segs...", len(all_scaffold.keys()))
+    i = 0
+    for scaffold in list(all_scaffold.keys()):
         #sometimes there is no repeat region in the scaffold, it not in remove_dict's keys.
         if scaffold in remove_dict.keys():
             remove_dict[scaffold] = sort_remove_loci(remove_dict[scaffold], scaffold)
         else:
             remove_dict[scaffold] = [[1,'end']]
-    # uniq_segs_loci = sort_remove_loci(remove_loci)
-    # remove_dict[scaffold] = uniq_segs_loci
-    # print (remove_dict)
+        i += 1
+        if i % 10000 == 0:
+            print ("sort", i)
     uniq_segs_loci = remove_dict
     return uniq_segs_loci
 
@@ -136,7 +132,6 @@ def remove_overlap(sorted_remove_loci):
     while flag:
         flag = False
         new_sorted_remove_loci = []
-        #for i in range(len(sorted_remove_loci) - 1):
         i = 0
         while i < len(sorted_remove_loci):
             if i + 1 < len(sorted_remove_loci) and sorted_remove_loci[i+1][0] >= sorted_remove_loci[i][0] and sorted_remove_loci[i+1][0] <= sorted_remove_loci[i][1]:
@@ -150,19 +145,9 @@ def remove_overlap(sorted_remove_loci):
                 new_sorted_remove_loci.append(sorted_remove_loci[i])
                 i += 1
         sorted_remove_loci = new_sorted_remove_loci[:]
-    #     print ('##############')
-    #     # break
-    # print ('new', new_sorted_remove_loci)
     return new_sorted_remove_loci
 
 def sort_remove_loci(remove_loci, scaffold):
-    # dict = {}
-    # for loci in remove_loci:
-    #     dict[loci[0]] = loci
-    # sorted_remove_loci = []
-    # for key in sorted(dict.keys()):
-    #     sorted_remove_loci.append(dict[key])
-    #original bug 
     sorted_remove_loci = []
     for loci in remove_loci:
         sorted_remove_loci.append(loci)
@@ -328,9 +313,10 @@ def UHGG_snp(uniq_segs_loci):
     species_dict = {} 
     pa = Parameters()
     pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
+    pa.add_segs(uniq_segs_loci)
+    pa.get_uniq_len()
 
-    for snp in pa.snp_level:
-        snp_rate = snp * 0.01
+    for snp_rate in pa.snp_level:
         pa.change_snp_rate(snp_rate)
         for index in range(pa.iteration_times):
             pa.get_ID(index)
@@ -344,10 +330,12 @@ def UHGG_snp(uniq_segs_loci):
                 for record in fasta_sequences:
                     if len(record.seq) < pa.min_genome:
                         continue
-                    if np.random.random() < pa.random_rate and str(record.id) not in uniq_segs_loci:
+                    if pa.uniq_len[str(record.id)] < pa.min_uniq_len:
+                        continue
+                    if np.random.random() < pa.random_rate:
                         rec1 = SeqRecord(record.seq, id=str(record.id), description="simulation")
                         SeqIO.write(rec1, f, "fasta") 
-                        uniq_segs_loci[str(record.id)] = [[1, len(record.seq)]]
+                        # uniq_segs_loci[str(record.id)] = [[1, len(record.seq)]]
                         species_dict[str(record.id)] = str(record.id)
                         select_num += 1
                     if select_num == pa.scaffold_num + pa.HGT_num:
@@ -357,7 +345,7 @@ def UHGG_snp(uniq_segs_loci):
                 print ('%s scaffolds were extracted.'%(select_num))
                 if select_num ==pa.scaffold_num + pa.HGT_num:
                     seq_dict = read_fasta(all_ref)  
-                    pa.add_segs(seq_dict, uniq_segs_loci, species_dict)                  
+                    pa.add_species(species_dict, seq_dict)                  
                     if_success = random_HGT(pa)
 
 class Parameters():
@@ -371,22 +359,29 @@ class Parameters():
         self.iteration_times = 10
         self.donor_in_flag = False
         self.min_genome = 100000
-        self.random_rate = 0.005
+        self.min_uniq_len = 20000
+        self.random_rate = 0.01
         self.cami_data = {'low':'RL_S001__insert_270', 'medium':'RM2_S001__insert_270',\
          'high':'RH_S001__insert_270'}
         self.complexity_level = ['high', 'low', 'medium']
-        self.snp_level = [round(x*0.1,1) for x in range(11)]
-        self.seq_dict = {}
+        self.snp_level = [round(x*0.01,2) for x in range(11)]
+        
         self.uniq_segs_loci = {}
         self.species_dict = {}
         self.sample = ''
         self.outdir = ''
-        self.origin_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.fna'
+        self.origin_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
+        self.seq_dict = {}
+        self.seq_len = {}
+        self.cal_genome_len()
+        self.uniq_len = {}
 
-    def add_segs(self, seq_dict, uniq_segs_loci, species_dict):
-        self.seq_dict = seq_dict
+    def add_segs(self, uniq_segs_loci):
         self.uniq_segs_loci = uniq_segs_loci
+        
+    def add_species(self, species_dict, seq_dict):
         self.species_dict = species_dict
+        self.seq_dict = seq_dict
 
     def change_snp_rate(self, snp_rate):
         self.snp_rate = snp_rate
@@ -399,6 +394,22 @@ class Parameters():
     def get_dir(self, outdir):
         self.outdir = outdir
 
+    def cal_genome_len(self):
+        for line in open(self.origin_ref+'.fai'):
+            array = line.split()
+            self.seq_len[array[0]] = int(array[1])
+
+    def get_uniq_len(self):
+        for sca in self.uniq_segs_loci.keys():
+            sca_len = 0
+            for interval in self.uniq_segs_loci[sca]:
+                start = interval[0]
+                end = interval[1]
+                if end == 'end':
+                    end = self.seq_len[sca]
+                sca_len += (end- start) 
+            self.uniq_len[sca] = sca_len
+
 if __name__ == "__main__":
     # ORIAINAL_REF = '/mnt/d/breakpoints/big/gut.reference.filter.fa'
     # REPEAT = '/mnt/d/breakpoints/big/ref.repeat_mark.txt'
@@ -406,7 +417,7 @@ if __name__ == "__main__":
     t0 = time.time()
     pa = Parameters()
     uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
-    blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.fna.blast.out'
+    blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
     if os.path.isfile(uniq_segs_file):
         uniq_segs_loci = np.load(uniq_segs_file, allow_pickle='TRUE').item()
     else:
@@ -414,6 +425,8 @@ if __name__ == "__main__":
         np.save(uniq_segs_file, uniq_segs_loci) 
     t1 = time.time()
     print ('Uniq extraction is done.', t1 - t0)
+
+    print ("genome num:", len(uniq_segs_loci))
 
 
     UHGG_snp(uniq_segs_loci)
