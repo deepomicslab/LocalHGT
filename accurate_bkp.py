@@ -12,14 +12,14 @@ import sys
 
 from get_raw_bkp_v2 import getInsertSize, readFilter
 
-min_match_score = 0.79
+min_match_score = 0.8
 min_seq_len = 15
 cigar_dict = {0:'M',1:'M',2:'M',3:'M',4:'N',5:'N'}
 
 def compute_scores(dna1, dna2):
     # StripedSmithWaterman docs:
     # http://scikit-bio.org/docs/0.4.2/generated/skbio.alignment.StripedSmithWaterman.html
-    ssw1 = StripedSmithWaterman(dna1, match_score=1, mismatch_score=0)
+    ssw1 = StripedSmithWaterman(dna1)  #match_score=1, mismatch_score=0
     # AlignmentStructure docs:
     # http://scikit-bio.org/docs/0.4.2/generated/skbio.alignment.AlignmentStructure.html
     # https://github.com/biocore/scikit-bio/blob/9dc60b4248912a4804c90d0132888d6979a62d51/skbio/alignment/_lib/ssw.c
@@ -271,9 +271,6 @@ def choose_acc_from_cluster(cluster):
     score2 = 0
 
     for readobj in cluster.support_reads:
-        # if readobj.qname != 'NZ_MTLG01000053.1-45306_1':
-        #     continue
-        
         score1 = 0
         my_pos1 = 0
         score2 = 0
@@ -370,6 +367,7 @@ def choose_acc_from_cluster(cluster):
         # print (readobj.clipped, cluster.direction, readobj.pos1, readobj.pos2, readobj.qname, readobj.clipped, cluster.ref1, cluster.ref2, cluster.ref1_positions, cluster.ref2_positions, score1, score2, cluster.pos1, cluster.pos2)
         if cluster.pos1 > 0 and cluster.pos2 > 0:
             break
+    # print (cluster.ref1, cluster.ref2, cluster.pos1, cluster.pos2, score1, score2, cluster.ref1_positions, cluster.ref2_positions, len(cluster.support_reads))
         
 class Acc_Bkp(object):
     def __init__(self, cluster, from_side, to_side, read_seq, ref_seq, score):
