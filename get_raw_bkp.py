@@ -9,7 +9,7 @@ import re
 import os
 import multiprocessing
 import argparse
-import ssw
+import time
 
 minSample = 1
 
@@ -24,7 +24,6 @@ def readFilter(read):
             not read.is_unmapped and
             not read.mate_is_unmapped)
 
-
 def getInsertSize(unique_bamfile):
     read_length_list = []
     insert_size_list = []
@@ -37,11 +36,13 @@ def getInsertSize(unique_bamfile):
     sdev = math.sqrt(float(sum([(x - mean)**2 for x in insert_size_list])) / (len(insert_size_list) - 1))
     return mean, sdev, read_length
 
-
 def calCrossReads(bamfile):
     dict_Interact_Big = {}
     for read in bamfile:
-        if read.is_unmapped == False and read.mate_is_unmapped == False and read.reference_name != read.next_reference_name and read.flag < 2048: 
+        if read.is_unmapped == False and read.mate_is_unmapped == False and read.reference_name.split(':')[0] != read.next_reference_name.split(':')[0] and read.flag < 2048: 
+            if args['n'] == 1:
+                read.reference_start = int(read.reference_name.split(':')[1].split('-')[0]) + read.reference_start
+                read.next_reference_start = int(read.next_reference_name.split(':')[1].split('-')[0]) + read.next_reference_start
             if read.qname not in dict_Interact_Big:
                 ls = []
                 ls.append(read)
@@ -53,22 +54,19 @@ def calCrossReads(bamfile):
                 dict_Interact_Big.get(read.qname).append(read)
     return dict_Interact_Big
 
-
-
 def indexReadBasedOnRef(dict_Interact_Big):
     ref_dict_Interact_Big = {}
     for key in dict_Interact_Big:
         if len(dict_Interact_Big.get(key))  >   1:
             for i in range(0,len(dict_Interact_Big.get(key))):
-                if dict_Interact_Big.get(key)[i].reference_name not in ref_dict_Interact_Big:
+                if dict_Interact_Big.get(key)[i].reference_name.split(':')[0] not in ref_dict_Interact_Big:
                     ls = []
                     ls.append(dict_Interact_Big.get(key)[i])
-                    dict_tmp = {dict_Interact_Big.get(key)[i].reference_name:ls}
+                    dict_tmp = {dict_Interact_Big.get(key)[i].reference_name.split(':')[0]:ls}
                     ref_dict_Interact_Big.update(dict_tmp)
                 else:
-                    ref_dict_Interact_Big.get(dict_Interact_Big.get(key)[i].reference_name).append(dict_Interact_Big.get(key)[i])
+                    ref_dict_Interact_Big.get(dict_Interact_Big.get(key)[i].reference_name.split(':')[0]).append(dict_Interact_Big.get(key)[i])
     return ref_dict_Interact_Big
-
 
 def indexReadBasedOnPos(ref_dict_Interact_Big):          
     ref_list_Interact_Big = []   
@@ -88,21 +86,20 @@ def indexReadBasedOnPos(ref_dict_Interact_Big):
         ref_list_Interact_Big.append(items)
     return ref_list_Interact_Big
 
-
 def htgMATRIX(dict_Interact_Big, ref_list_Interact_Big):
     htg_dict={}
     for i in range(0,len(ref_list_Interact_Big)):
         if len(ref_list_Interact_Big[i])<5:
             continue
-        ref_name = ref_list_Interact_Big[i][0][1][0].reference_name
+        ref_name = ref_list_Interact_Big[i][0][1][0].reference_name.split(':')[0]
         sub_dict = {}        
         for j in range(0, len(ref_list_Interact_Big[i])):
             for k in range(0, len(ref_list_Interact_Big[i][j][1])):
                 read_name=ref_list_Interact_Big[i][j][1][k].qname
-                if dict_Interact_Big.get(read_name)[0].reference_name!=ref_name:
-                    cross_name=dict_Interact_Big.get(read_name)[0].reference_name
+                if dict_Interact_Big.get(read_name)[0].reference_name.split(':')[0]!=ref_name:
+                    cross_name=dict_Interact_Big.get(read_name)[0].reference_name.split(':')[0]
                 else:
-                    cross_name=dict_Interact_Big.get(read_name)[1].reference_name
+                    cross_name=dict_Interact_Big.get(read_name)[1].reference_name.split(':')[0]
                 if cross_name not in sub_dict:
                     ls=[]
                     ls.append(ref_list_Interact_Big[i][j][1][k])
@@ -315,22 +312,6 @@ def calculateSim_bw_cluster_cross(cluster_cross_region, ref_name, cross_name, re
         sim_bw_cluster_cross.append(tmp)       
     return sim_bw_cluster_cross   
 
-
-def get_match_number(s1, s2):
-    s1_byte = str.encode(s1)
-    s2_byte = str.encode(s2)
-    sw = ssw()
-    sw.setRead(s1_byte)
-    sw.setReference(s2_byte)
-    res = sw.align()
-    matches = re.findall(r'(\d+)([A-Z]{1})', res.CIGAR)
-    count = 0
-    for ele in matches:
-        if ele[1] == 'M':
-            count += int(ele[0])
-    return count
-
-
 def uniqueCrossCluster(ref_A):
     unique_sim_cross_index = []
     unique_sim_cross_region = []
@@ -503,7 +484,6 @@ def modify(htgCluster,key,sub_key,sub_sub_key,tkey,extra_dict):
     else:
         makeSame(htgCluster.get(key).get(sub_key),htgCluster.get(sub_key).get(key),sub_sub_key,tkey)
 
-
 def clearDuplicate(htgCluster):
     extra_dict={} 
     for key in htgCluster:
@@ -578,7 +558,6 @@ def print_junction(f, key, sub_key, sub_sub_key, pos1, pos2, pos1_left, pos1_rig
         f.write( key + ", " + str(pos1) + ", " + str(pos1_left) + ", "+str(pos1_right) + ", "+ sub_key + ", " 
             + str(pos2) + ", " + str(pos2_left) + ", "+str(pos2_right) + ", "+ str(num_sup)+ ", "+"True" +'\n' )
 
-
 def calculateCandidateBkpList(cluster_label_dict, dict_xy, sub_sub_key):
     candidate_bkp_list = []
     for key1 in cluster_label_dict:
@@ -594,9 +573,7 @@ def calculateCandidateBkpList(cluster_label_dict, dict_xy, sub_sub_key):
         candidate_bkp_list.append(candidate_bkp)
     return candidate_bkp_list
 
-
-
-def worker(preClusterData, ref_name, file_name, ref_dict_Interact_Big, processed_junction_refs_list):
+def worker(preClusterData, ref_name, file_name, ref_dict_Interact_Big):
     scanned_pair_ref = {}
     key = ref_name
     for sub_key in preClusterData.get(key):
@@ -615,6 +592,8 @@ def worker(preClusterData, ref_name, file_name, ref_dict_Interact_Big, processed
         else:
             scanned_pair_ref[cross_name].append(ref_name)
         dict_xy = preClusterData.get(key).get(sub_key)
+        # if len(dict_xy) < minSample:
+        #     continue
         for sub_sub_key in dict_xy:
             cluster_label_dict = clusterBasedOnDensity(dict_xy,sub_sub_key)
             improved_cross_cluster = calculateCandidateBkpList(cluster_label_dict, dict_xy, sub_sub_key)
@@ -671,10 +650,7 @@ def worker(preClusterData, ref_name, file_name, ref_dict_Interact_Big, processed
                     i = i + 1
             f.close()
             improved_cross_cluster = []
-    print(ref_name+'_processed.')
-
-
-
+    # print(ref_name+'_processed.')
 
 def get_processed_ref(output_filename):
     fi = open(output_filename, "r")
@@ -689,7 +665,6 @@ def get_processed_ref(output_filename):
             processed_ref_list.append(buf[0])
     return processed_ref_list
 
-
 def get_processed_junction_refs(output_filename):
     fi = open(output_filename, "r")
     processed_junction_refs_list = []
@@ -703,56 +678,58 @@ def get_processed_junction_refs(output_filename):
             processed_junction_refs_list.append([buf[0],buf[4]])
     return processed_junction_refs_list
 
-
-
 def main():
     split_num = args["t"]
-    ref_genome_dir = args["r"]
     output_filename = args["o"]
     if not os.path.exists(output_filename):
         os.mknod(output_filename)
     bam_name = args["u"]
-    processed_ref_list = get_processed_ref(output_filename)
-    bamfile = pysam.AlignmentFile(filename = bam_name, mode = 'rb')
+    # processed_ref_list = [] #get_processed_ref(output_filename)
+    bamfile = pysam.AlignmentFile(filename = bam_name, mode = 'r')
     dict_Interact_Big = calCrossReads(bamfile)
     ref_dict_Interact_Big = indexReadBasedOnRef(dict_Interact_Big)
     ref_list_Interact_Big = indexReadBasedOnPos(ref_dict_Interact_Big)
     htg_dict = htgMATRIX(dict_Interact_Big,ref_list_Interact_Big)
     preClusterData = prepareClusterData(htg_dict)
+
+    del ref_list_Interact_Big
+    del htg_dict
+    del dict_Interact_Big
+
     tmp_ref_name_list = list(preClusterData.keys())
     ref_name_list = []
     for ref_name in tmp_ref_name_list:
-        if ref_name not in processed_ref_list:
-            ref_name_list.append(ref_name)
+        # if ref_name not in processed_ref_list:
+        ref_name_list.append(ref_name)
     i = 0
     while i < len(ref_name_list):
         start_pos = i
         end_pos = min(i + split_num, len(ref_name_list))
         procs = []
-        processed_junction_refs_list = get_processed_junction_refs(output_filename)
         for j in range(start_pos, end_pos):
-            p = multiprocessing.Process(target = worker, args = (preClusterData, ref_name_list[j], output_filename, ref_dict_Interact_Big, processed_junction_refs_list))
-            print(ref_name_list[j]+'_processing.')
+            p = multiprocessing.Process(target = worker, args = (preClusterData, ref_name_list[j], output_filename, ref_dict_Interact_Big))
+            # print('ref %s is processing, NO.%s of %s.'%(ref_name_list[j], j, len(ref_name_list)), len(preClusterData.get(ref_name_list[j])))
             procs.append(p)
             p.start()
-            print(p.pid)
         for proc in procs:
             proc.join()
         i = i + split_num
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Get raw hgt breakpoints", add_help=False, usage="%(prog)s [-h] -r genome_dir -id sample_id.txt", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description="Get raw hgt breakpoints", add_help=False, \
+    usage="%(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required = parser.add_argument_group("required arguments")
     optional = parser.add_argument_group("optional arguments")
-    required.add_argument("-r", type=str, help="<str> Metagenomic reference", metavar="\b")
+    # required.add_argument("-r", type=str, help="<str> Extracted Metagenomic reference", metavar="\b")
     required.add_argument("-o", type=str, help="<str> output file of raw breakpoints.", metavar="\b")
     required.add_argument("-u", type=str, help="<str> unique reads bam file.", metavar="\b")
     optional.add_argument("-t", type=int, default=5, help="<int> number of threads", metavar="\b")
+    optional.add_argument("-n", type=int, default=1, help="<0/1> 1 indicates the aligned-ref is extracted.", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
     args = vars(parser.parse_args())
     unique_bam_name = args["u"]
-    unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
+    unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'r')
     mean, sdev, rlen = getInsertSize(unique_bamfile)
     insert_size = int(mean + 2*sdev)
     rlen = int(rlen)

@@ -10,7 +10,7 @@ import argparse
 import sys
 
 
-from get_raw_bkp_v2 import getInsertSize, readFilter
+from get_raw_bkp import getInsertSize, readFilter
 
 min_match_score = 0.8
 min_seq_len = 15
@@ -207,7 +207,7 @@ class Each_Split_Read(object):
 
 def read_split_bam(split_bam_name):
     used_reads_num = 0
-    split_bamfile = pysam.AlignmentFile(filename = split_bam_name, mode = 'rb')
+    split_bamfile = pysam.AlignmentFile(filename = split_bam_name, mode = 'r')
     for read in split_bamfile:
         if not read.has_tag('SA'): 
             continue   
@@ -393,14 +393,6 @@ class Acc_Bkp(object):
 
 
 if __name__ == "__main__":
-    # raw_bkp = '/mnt/d/breakpoints/HGT/test/species10_snp0.08_depth20_reads150_sample_0_high_HGT.raw.txt'
-    # split_bam_name = '/mnt/d/breakpoints/HGT/test/species10_snp0.08_depth20_reads150_sample_0_high_HGT.splitters.bam'
-    # raw_bkp = '/mnt/d/breakpoints/HGT/test/lemon_HGT_0.01.raw.txt'
-    # split_bam_name = '/mnt/d/breakpoints/HGT/test/lemon_HGT_0.01.splitters.bam'
-    # raw_bkp = '/mnt/d/breakpoints/HGT/reverse_results/species10_snp0.01_depth20_reads150_sample_1_HGT.raw.txt'
-    # split_bam_name = '/mnt/d/breakpoints/HGT/reverse_results/species10_snp0.01_depth20_reads150_sample_1_HGT.splitters.bam'
-    # ref = '/mnt/d/breakpoints/big/gut.reference.filter.fa'
-    # rlen = 150
 
     parser = argparse.ArgumentParser(description="Get accurate hgt breakpoints", add_help=False, \
     usage="%(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -417,7 +409,7 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
 
     unique_bam_name = args["u"]
-    unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
+    unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'r')
     mean, sdev, rlen = getInsertSize(unique_bamfile)
     insert_size = int(mean + 2*sdev)
     rlen = int(rlen)
