@@ -727,9 +727,17 @@ int main( int argc, char *argv[])
     int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
 
     //index
-    string index_name = "/mnt/d/breakpoints/HGT/test/ref.index.tiny.dat";
-    choose_coder = random_coder(k); 
-    read_ref(fasta_file, coder, base, k, comple, index_name, choose_coder);
+    string index_name = fasta_file + ".index.dat";
+    ifstream findex(index_name);
+    if (! findex.good()){
+        cout << "Reference index not detected, start index..." << endl;
+        choose_coder = random_coder(k); 
+        read_ref(fasta_file, coder, base, k, comple, index_name, choose_coder);
+    }
+    else{
+        cout << "Reference index is detected." << endl;
+    }
+
 
     // start
     cout << "Start extract..."<<endl;
