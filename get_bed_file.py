@@ -38,7 +38,6 @@ if __name__ == "__main__":
     reffile = sys.argv[1]
     extracted_ref_interval_file = sys.argv[2]
 
-
     get_name()
     index2name_dict = index2name()
     find_chr_name()

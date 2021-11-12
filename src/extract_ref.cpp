@@ -698,7 +698,6 @@ long file_size(string filename)
     return size;  
 }  
 
-
 int main( int argc, char *argv[])
 {
     // string ref_seq = read_ref();
@@ -709,7 +708,7 @@ int main( int argc, char *argv[])
     coder = generate_coder(3);
     base = generate_base(k);
     comple = generate_complement();
-    string index_name = "/mnt/d/breakpoints/HGT/test/ref.index.dat";
+    string index_name = "/mnt/d/breakpoints/HGT/test/ref.index.tiny.dat";
     time_t now1 = time(0);
 
     string fasta_file = argv[3];
@@ -729,8 +728,8 @@ int main( int argc, char *argv[])
     int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
 
     //index
-    // choose_coder = random_coder(k); 
-    // read_ref(fasta_file, coder, base, k, comple, index_name, choose_coder);
+    choose_coder = random_coder(k); 
+    read_ref(fasta_file, coder, base, k, comple, index_name, choose_coder);
 
     // start
     cout << "Start extract..."<<endl;
@@ -774,7 +773,8 @@ int main( int argc, char *argv[])
     time_t now2 = time(0);
     cout << "reads finish.\t" << now2 - now1 << endl;
 
-    // /*
+    /*
+    thread_num = 1;
     long index_size = file_size(index_name);
     long each_index_size = index_size/thread_num + 1;
     string fai_name = fasta_file + ".fai";
@@ -798,7 +798,7 @@ int main( int argc, char *argv[])
         add = 4*((ref_len-k+1)*coder_num+1); //the size of the genome.
         if (pos -start_byte > each_index_size){
             end_byte = pos + add;
-            // cout << start_byte <<"\tsplit bytes\t"<<end_byte<<"\t"<<ref_len <<endl;
+            cout << start_byte <<"\tsplit bytes\t"<<end_byte<<"\t"<<ref_len <<endl;
             threads.push_back(thread(read_index_thread, coder, base, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio, start_byte, end_byte,start_ref_index));
             start_byte = end_byte;     
             start_ref_index = end_ref_index;   
@@ -811,8 +811,8 @@ int main( int argc, char *argv[])
     threads.push_back(thread(read_index_thread, coder, base, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio, start_byte, end_byte,start_ref_index));
 	for (auto&th : threads)
 		th.join();
-    // */
-    // read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio);
+    */
+    read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio);
     time_t now3 = time(0);
     cout << "Finish with time:\t" << now3-now1<<endl;
     

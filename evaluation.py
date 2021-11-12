@@ -13,6 +13,7 @@ import random
 import sys
 from collections import Counter
 from datetime import datetime
+from simulation import Parameters
 
 def read_interval(interval_file, true_locus):
     gap = 100
@@ -20,6 +21,8 @@ def read_interval(interval_file, true_locus):
     f = open(interval_file)
     for line in f:
         line = line.strip()
+        if line == '':
+            continue
         chr_name = line.split(":")[0]
         start = int(line.split(":")[1].split("-")[0])
         end = int(line.split(":")[1].split("-")[1])
@@ -39,7 +42,9 @@ def check_if_bkp_in_extracted_ref(true, interval_file):
     f = open(interval_file)
     for line in f:
         array = line.strip().split()
-        ref_len += abs(int(array[2])-int(array[1])) 
+        start = int(line.split(":")[1].split("-")[0])
+        end = int(line.split(":")[1].split("-")[1])
+        ref_len += abs(end - start ) 
     f.close()
     return float(i)/len(true_bkp), ref_len
 
@@ -56,6 +61,8 @@ def read_lemon(lemon):
     past = ['', '', '', '']
     for line in open(lemon):
         array = line.strip().split(',')
+        if array[0] == "from_ref": #skip the annotation line
+            continue
         if '_'.join(array[:4]) == '_'.join(past):
             continue
         lemon_bkp.append(array[:4])
@@ -63,7 +70,7 @@ def read_lemon(lemon):
     return lemon_bkp
 
 def compare(true_bkp, our_bkp):
-    tolerate_dist = 50
+    tolerate_dist = 100
     right = 0
     error = 0
     correct_result_num = 0
@@ -80,17 +87,17 @@ def compare(true_bkp, our_bkp):
                 right += 1
                 identified = True
                 break
-            # for wrong output formate
-            elif true[0] == our[0] and true[2] == our[1] and abs(int(true[1])-int(our[2]))\
-                < tolerate_dist and abs(int(true[3])-int(our[3])) < tolerate_dist:
-                right += 1
-                identified = True
-                break
-            elif true[0] == our[1] and true[2] == our[0] and abs(int(true[1])-int(our[3]))\
-                < tolerate_dist and abs(int(true[3])-int(our[2])) < tolerate_dist:
-                right += 1
-                identified = True
-                break
+            # # for wrong output formate
+            # elif true[0] == our[0] and true[2] == our[1] and abs(int(true[1])-int(our[2]))\
+            #     < tolerate_dist and abs(int(true[3])-int(our[3])) < tolerate_dist:
+            #     right += 1
+            #     identified = True
+            #     break
+            # elif true[0] == our[1] and true[2] == our[0] and abs(int(true[1])-int(our[3]))\
+            #     < tolerate_dist and abs(int(true[3])-int(our[2])) < tolerate_dist:
+            #     right += 1
+            #     identified = True
+            #     break
         if identified == False:
             print ("Missed bkp:", true)
     print ("-----------")  
@@ -113,6 +120,7 @@ def compare(true_bkp, our_bkp):
                     break
         if not identified:
             false_positive_locus.append(true)
+            print ("False bkp:", true)
     if len(our_bkp) > 0:
         FDR = len(false_positive_locus)/len(our_bkp)
     else:
@@ -182,8 +190,9 @@ class Sample():
 
     def eva_ref(self, tool_dir):
         interval_file = tool_dir + '/%s.interval.txt.bed'%(self.ID)
+        print (interval_file)
         ref_accuracy, ref_len = check_if_bkp_in_extracted_ref(self.true_file, interval_file)
-        return ref_accuracy, round(ref_len/1000000000, 2)
+        return ref_accuracy, round(ref_len/1000000, 2) #M
 
 class Figure():
     def __init__(self):
@@ -200,7 +209,7 @@ class Figure():
 
     def convert_df(self):
         self.df=pd.DataFrame(self.data,columns=['CPU time', 'Sensitivity','FDR', 'Max Memory (G)', \
-        'Ref Accuracy',  'Extracted Ref (G)', 'Methods', 'Variation'])
+        'Ref Accuracy',  'Extracted Ref (M)', 'Methods', 'Variation'])
 
     def plot(self):
         fi.convert_df()
@@ -209,7 +218,7 @@ class Figure():
         sns.barplot(ax = axes[0][1], x='Variation',y='FDR', hue= 'Methods',data=self.df) 
         sns.barplot(ax = axes[1][0], x='Variation',y='Max Memory (G)',hue= 'Methods',data=self.df)
         sns.barplot(ax = axes[1][1], x='Variation',y='CPU time', hue= 'Methods',data=self.df) 
-        sns.barplot(ax = axes[2][0], x='Variation',y='Extracted Ref (G)',hue= 'Methods',data=self.df)
+        sns.barplot(ax = axes[2][0], x='Variation',y='Extracted Ref (M)',hue= 'Methods',data=self.df)
         sns.barplot(ax = axes[2][1], x='Variation',y='Ref Accuracy', hue= 'Methods',data=self.df)        
         #     plt.xticks(rotation=0)
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
@@ -218,22 +227,29 @@ class Figure():
 
 if __name__ == "__main__":
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
-    tool_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
-    local_dir = "/mnt/d/breakpoints/HGT/cami_results/"
+    local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results/"
     fi = Figure()
-    for va in [0.1, 0.2, 0.3, 0.4, 0.5]:
-        ID = "species10_snp0.01_depth20_reads150_sample_0_high_%s"%(va)
-        sa = Sample(ID, true_dir)
-        lemon_pe = sa.eva_tool(lemon_dir)
-        local_pe = sa.eva_tool(local_dir)
-        ref_accuracy, ref_len = sa.eva_ref(local_dir)
-        local_pe.add_ref(ref_accuracy, ref_len)
-        print ("time:", lemon_pe.user_time, local_pe.user_time)
-        print ("sensitivity", lemon_pe.accuracy, local_pe.accuracy)
-        print ("mem",lemon_pe.max_mem, local_pe.max_mem)
-        print ("ref", local_pe.ref_accuracy, local_pe.ref_len)
-        
-        fi.add_local_sample(local_pe, va)
-        fi.add_lemon_sample(lemon_pe, va)
+    ba = Parameters()
+
+    for snp_rate in ba.snp_level[1:-1]: # 0.01-0.09
+        ba.change_snp_rate(snp_rate)
+        for index in range(9):
+        # for index in range(ba.iteration_times):
+            ba.get_ID(index)    
+            sa = Sample(ba.sample, true_dir)
+            print (ba.sample)
+            lemon_pe = sa.eva_tool(lemon_dir)
+            local_pe = sa.eva_tool(local_dir)
+            ref_accuracy, ref_len = sa.eva_ref(local_dir)
+            local_pe.add_ref(ref_accuracy, ref_len)
+            print ("time:", lemon_pe.user_time, local_pe.user_time)
+            print ("sensitivity", lemon_pe.accuracy, local_pe.accuracy)
+            print ("mem",lemon_pe.max_mem, local_pe.max_mem)
+            print ("ref", local_pe.ref_accuracy, local_pe.ref_len)
+            
+            fi.add_local_sample(local_pe, snp_rate)
+            fi.add_lemon_sample(lemon_pe, snp_rate)
+            # break
+        # break
     fi.plot()

@@ -311,18 +311,13 @@ def choose_acc_from_cluster(cluster):
                 if matches > score1: #ssw alignment
                     score1 = matches
                     my_pos1 = possible_bkp
-                if score1 > min_match_score and cluster.pos1 == 0: 
+                if score1 > min_match_score:
                     cluster.pos1 =  my_pos1  
                     if readobj.real_ref == cluster.ref2:
                         cluster.pos2 =  readobj.pos2 
                     acc = Acc_Bkp(cluster, from_side, to_side, read_seq, ref_seq, score1)
                     acc_bkp_list.append(acc)
-
-                    break
-                # elif score1 > 0.5 and cluster.pos1 == 0:  #it must be a bkp if the score > 0.5.
-                #     cluster.pos1 =  my_pos1  
-                #     if readobj.real_ref == cluster.ref2:
-                #         cluster.pos2 =  readobj.pos2 
+                    # break
 
         read_seq = readobj.seq2
         read_seq_len = len(read_seq)
@@ -352,22 +347,19 @@ def choose_acc_from_cluster(cluster):
                 if matches > score2: #ssw alignment
                     score2 = matches
                     my_pos2 = possible_bkp
-                if score2 > min_match_score and cluster.pos2 == 0:
+                if score2 > min_match_score:
                     cluster.pos2 = my_pos2
                     if readobj.real_ref == cluster.ref1:
                         cluster.pos1 =  readobj.pos1   
                     acc = Acc_Bkp(cluster, from_side, to_side, read_seq, ref_seq, score2)
                     acc_bkp_list.append(acc)
-                    break
-                # elif score2 > 0.5 and cluster.pos2 == 0:
-                #     cluster.pos2 = my_pos2
-                #     if readobj.real_ref == cluster.ref1:
-                #         cluster.pos1 =  readobj.pos1  
+                    # break
 
-        # print (readobj.clipped, cluster.direction, readobj.pos1, readobj.pos2, readobj.qname, readobj.clipped, cluster.ref1, cluster.ref2, cluster.ref1_positions, cluster.ref2_positions, score1, score2, cluster.pos1, cluster.pos2)
         if cluster.pos1 > 0 and cluster.pos2 > 0:
-            break
-    # print (cluster.ref1, cluster.ref2, cluster.pos1, cluster.pos2, score1, score2, cluster.ref1_positions, cluster.ref2_positions, len(cluster.support_reads))
+            break #keep searching accurate bkp until the two pos are found.
+    if cluster.ref1 == "GUT_GENOME000629_2" or cluster.ref2 == "GUT_GENOME000629_2":
+        print (cluster.ref1, cluster.ref2, cluster.pos1, 'hi', cluster.pos2, score1, score2,\
+     cluster.ref1_positions, cluster.ref2_positions, len(cluster.support_reads))
         
 class Acc_Bkp(object):
     def __init__(self, cluster, from_side, to_side, read_seq, ref_seq, score):
