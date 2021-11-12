@@ -1,3 +1,5 @@
+#!/bin/bash
+
 original_ref=$1
 fq1=$2
 fq2=$3

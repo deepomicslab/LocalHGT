@@ -686,7 +686,7 @@ int cal_sam_ratio(string fq1, long down_sampling_size){
     fq_file.close();
     sample_size = (i/2)*read_len;
     down_sam_ratio = 100*down_sampling_size/sample_size;
-    cout<<i<<"\t"<<sample_size<<" down sample ratio "<<down_sam_ratio<<endl;
+    cout<<i<<"\t"<<sample_size<<" Down-sampling ratio is "<<down_sam_ratio<< "%." <<endl;
     return down_sam_ratio;
 }
 

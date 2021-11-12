@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 compare the output hgt and ground truth,
 to evaluate our tool.
@@ -40,6 +42,9 @@ def check_if_bkp_in_extracted_ref(true, interval_file):
     for true_locus in true_bkp:
         if read_interval(interval_file, true_locus):
             i += 1
+            # print ('Have ref:', true_locus)
+        else:
+            print ('Lack ref:', true_locus)
     ref_len = 0
     f = open(interval_file)
     for line in f:
@@ -48,6 +53,7 @@ def check_if_bkp_in_extracted_ref(true, interval_file):
         end = int(line.split(":")[1].split("-")[1])
         ref_len += abs(end - start ) 
     f.close()
+    print (len(true_bkp))
     return float(i)/len(true_bkp), ref_len
 
 def read_true(true):
@@ -224,22 +230,21 @@ if __name__ == "__main__":
 
     for snp_rate in ba.snp_level[1:-1]: # 0.01-0.09
         ba.change_snp_rate(snp_rate)
-        for index in range(9):
-        # for index in range(ba.iteration_times):
+        for index in range(ba.iteration_times):
             ba.get_ID(index)    
             sa = Sample(ba.sample, true_dir)
             print (ba.sample)
-            lemon_pe = sa.eva_tool(lemon_dir)
+            # lemon_pe = sa.eva_tool(lemon_dir)
             local_pe = sa.eva_tool(local_dir)
             ref_accuracy, ref_len = sa.eva_ref(local_dir)
             local_pe.add_ref(ref_accuracy, ref_len)
-            print ("time:", lemon_pe.user_time, local_pe.user_time)
-            print ("sensitivity", lemon_pe.accuracy, local_pe.accuracy)
-            print ("mem",lemon_pe.max_mem, local_pe.max_mem)
-            print ("ref", local_pe.ref_accuracy, local_pe.ref_len)
+            # print ("time:", lemon_pe.user_time, local_pe.user_time)
+            # print ("sensitivity", lemon_pe.accuracy, local_pe.accuracy)
+            # print ("mem",lemon_pe.max_mem, local_pe.max_mem)
+            print ("ref", local_pe.ref_accuracy, local_pe.ref_len, "Mb")
             
-            fi.add_local_sample(local_pe, snp_rate)
-            fi.add_lemon_sample(lemon_pe, snp_rate)
+            # fi.add_local_sample(local_pe, snp_rate)
+            # fi.add_lemon_sample(lemon_pe, snp_rate)
             # break
         # break
-    fi.plot()
+    # fi.plot()

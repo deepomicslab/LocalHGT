@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import csv
 import pysam
 from pyfaidx import Fasta
@@ -148,7 +150,7 @@ class Each_Split_Read(object):
         m = self.map_length(read)
         if self.clipped_direction == 'right':
             self.pos1 += m
-        # if 'NZ_AUML01000004.1' in self.qname:
+        # if 'GUT_GENOME096055_4' in self.qname:
         #     print (self.qname, self.ref1, self.pos1, self.ref2, self.pos2, m)
         self.clipped = 2 #indicate this reads is clipped in ref2, so only use it to find acc in ref2.
         if len(read.query_sequence) < rlen:
@@ -256,7 +258,7 @@ def find_accurate_bkp():
         # print (len(raw_bkp_clusters))
         for cluster in raw_bkp_clusters:
             if len(cluster.support_reads) == 0: # ignore the bkp not supported by split reads
-                # print (cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
+                print ("no reads", cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
                 continue
             choose_acc_from_cluster(cluster)
             bkp_num_support += 1
