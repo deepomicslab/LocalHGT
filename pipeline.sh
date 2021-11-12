@@ -16,7 +16,7 @@ if [ -f $original_ref.fai ];then
   echo "start samtools faidx reference..."
   samtools faidx $original_ref
 fi
-# :<<!
+:<<!
 /mnt/d/breakpoints/script/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7
 if [ ! -f $interval_file ];then
   cat ${interval_file}_tmp_* >$interval_file

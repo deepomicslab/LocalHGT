@@ -15,6 +15,8 @@ from collections import Counter
 from datetime import datetime
 from simulation import Parameters
 
+tolerate_dist = 50
+
 def read_interval(interval_file, true_locus):
     gap = 100
     cover_flag = False
@@ -70,7 +72,6 @@ def read_lemon(lemon):
     return lemon_bkp
 
 def compare(true_bkp, our_bkp):
-    tolerate_dist = 100
     right = 0
     error = 0
     correct_result_num = 0
@@ -87,17 +88,6 @@ def compare(true_bkp, our_bkp):
                 right += 1
                 identified = True
                 break
-            # # for wrong output formate
-            # elif true[0] == our[0] and true[2] == our[1] and abs(int(true[1])-int(our[2]))\
-            #     < tolerate_dist and abs(int(true[3])-int(our[3])) < tolerate_dist:
-            #     right += 1
-            #     identified = True
-            #     break
-            # elif true[0] == our[1] and true[2] == our[0] and abs(int(true[1])-int(our[3]))\
-            #     < tolerate_dist and abs(int(true[3])-int(our[2])) < tolerate_dist:
-            #     right += 1
-            #     identified = True
-            #     break
         if identified == False:
             print ("Missed bkp:", true)
     print ("-----------")  

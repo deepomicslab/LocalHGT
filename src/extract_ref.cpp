@@ -708,7 +708,6 @@ int main( int argc, char *argv[])
     coder = generate_coder(3);
     base = generate_base(k);
     comple = generate_complement();
-    string index_name = "/mnt/d/breakpoints/HGT/test/ref.index.tiny.dat";
     time_t now1 = time(0);
 
     string fasta_file = argv[3];
@@ -728,6 +727,7 @@ int main( int argc, char *argv[])
     int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
 
     //index
+    string index_name = "/mnt/d/breakpoints/HGT/test/ref.index.tiny.dat";
     choose_coder = random_coder(k); 
     read_ref(fasta_file, coder, base, k, comple, index_name, choose_coder);
 
