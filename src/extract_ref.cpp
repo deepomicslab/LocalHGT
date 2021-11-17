@@ -25,7 +25,6 @@ char *kmer_count_table = new char[array_size];
 // vector <char>kmer_count_table(array_size);
 // char* kmer_count_table = (char*)malloc(array_size);
 
-
 long slide_window(bool* record_ref_hit, int ref_len, long ref_index, long extract_ref_len, ofstream & interval_file, float hit_ratio, float perfect_hit_ratio){ //find density hits regions
     int frag_index = 0;
     int window = 500;
@@ -40,6 +39,9 @@ long slide_window(bool* record_ref_hit, int ref_len, long ref_index, long extrac
     int* save_good_intervals = new int[2*ref_len/window];
     short *single_hit_num = new short[ref_len];
     short *trio_hit_num = new short[ref_len];
+    bool *peak_hit = new bool[ref_len];
+    int* save_peak_intervals = new int[2*ref_len];
+    int peak_index = 0;
     
     for (int j = 0; j < ref_len; j++){
         short hit_coder_num = 0;
@@ -92,11 +94,11 @@ long slide_window(bool* record_ref_hit, int ref_len, long ref_index, long extrac
             conti_flag = true;
         }
         if (conti_flag == true & good_window == false){
-            end = j + window;
+            end = j + 2 * window;
             if (end > ref_len){
                 end = ref_len;
             }
-            if (frag_index > 0 & start - save_good_intervals[2*frag_index-1] < 200 ){
+            if (frag_index > 0 & start - save_good_intervals[2*frag_index-1] < window ){
                 save_good_intervals[2*frag_index-1] = end;
             }
             else{
@@ -107,11 +109,29 @@ long slide_window(bool* record_ref_hit, int ref_len, long ref_index, long extrac
             conti_flag = false;
         }
 
+        // find peak
+        
+        peak_hit[j] = false;
+        if (j > 50){
+            for (int m = 0; m < 5; m++){
+                int diff = 0;
+                for (int n = 0; n < 10; n++){
+                    diff += (single_hit_num[j-m-10-n] - single_hit_num[j-n]);
+                }
+                if (abs(diff) > 8){
+                    peak_hit[j] = true;
+                    break;
+                }
+                // cout << diff << endl;
+            }
+            
+        }
+        // find peak
 
     }
     if (conti_flag == true & good_window == true){
         end = ref_len;
-        if (frag_index > 0 & start - save_good_intervals[2*frag_index-1] < 200 ){
+        if (frag_index > 0 & start - save_good_intervals[2*frag_index-1] < window ){
             save_good_intervals[2*frag_index-1] = end;
         }
         else{
@@ -121,10 +141,42 @@ long slide_window(bool* record_ref_hit, int ref_len, long ref_index, long extrac
         }
 
     }
+
     for (int i = 0; i < frag_index; i++){
-        extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
-        interval_file << ref_index << "\t" << save_good_intervals[2*i] << "\t"<< save_good_intervals[2*i+1] << endl;
+        // extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
+        for (int j =save_good_intervals[2*i]; j <save_good_intervals[2*i+1];j++ ){
+            if (peak_hit[j] == true){
+                start = j - 200;
+                end = j + 200;
+                if (end > ref_len){
+                    end = ref_len;
+                }
+                if (start < 1){
+                    start = 1;
+                }
+                if (peak_index > 0 & start - save_peak_intervals[2*peak_index-1] < window ){
+                    save_peak_intervals[2*peak_index-1] = end;
+                }
+                else{
+                    save_peak_intervals[2 * peak_index] = start;
+                    save_peak_intervals[2 * peak_index+1] = end;
+                    peak_index += 1;
+                }
+
+            }
+        }
+        
     }
+
+    for (int i = 0; i < peak_index; i++){
+        extract_ref_len += (save_peak_intervals[2*i+1] - save_peak_intervals[2*i]);
+        interval_file << ref_index << "\t" << save_peak_intervals[2*i] << "\t"<< save_peak_intervals[2*i+1] << endl;
+    }
+    
+    // for (int i = 0; i < frag_index; i++){
+    //     extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
+    //     interval_file << ref_index << "\t" << save_good_intervals[2*i] << "\t"<< save_good_intervals[2*i+1] << endl;
+    // }
     // cout << frag_index << endl;
     delete [] save_good_intervals;
     delete [] single_hit_num;
@@ -310,84 +362,6 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple, st
     index_file.close();
 }
 
-void read_index_thread(bool* coder, int* base, char* comple, string index_name, string interval_name, short *choose_coder, float hit_ratio, float perfect_hit_ratio, long start_byte, long end_byte, long start_ref_index){
-
-    ifstream index_file;
-    ofstream interval_file;
-    index_file.open(index_name, ios::in | ios::binary); 
-    interval_file.open(interval_name+"_tmp_"+to_string(start_byte), ios::out | ios::trunc);
-    unsigned int real_index;
-    long i = 0;
-    int ref_len;
-    long ref_end = 0;
-    long ref_index = start_ref_index;
-    long ref_start = 0;
-    long extract_ref_len = 0;
-    long slide_ref_len = 0;
-    bool *record_ref_hit; 
-    time_t t0 = time(0);
-
-    cout <<"Start slide ref..."<< ref_index<<endl;
-
-    index_file.seekg(start_byte, ios::beg);
-    i = start_byte/4;
-    long end = end_byte/4;
-    while (!index_file.eof()){
-        index_file.read(reinterpret_cast<char*>(&real_index), sizeof(unsigned int));
-        // cout<<start_byte<<"\tstart_len\t"<<real_index<< "\t" <<endl;
-
-        if (i > ref_end){  
-            //previous ref            
-            if (ref_start != 0){
-                if (ref_len > 1000){
-                    extract_ref_len = slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, perfect_hit_ratio);
-                }
-                delete [] record_ref_hit;
-                if (ref_index % 10000 == 0){
-                    time_t t1 = time(0);
-                    cout << ref_index << "\t" <<slide_ref_len << " bp\t" << extract_ref_len <<" bp\t" <<t1-t0<< endl;
-                } 
-            }
-            // new ref
-            ref_len = real_index;
-            if (ref_len > 0){ //ref_len=0 means the end of file
-                ref_start = i + 1;
-                ref_end = i+ (ref_len-k+1)*coder_num;
-                record_ref_hit = new bool[ref_len*coder_num];
-                ref_index += 1;  //start from 1    
-                slide_ref_len += ref_len;
-            }
-        }
-        else{
-            if (((i-ref_start)/3) % 2 == 1){ // skip 50% of the loci
-                // cout <<i<<"\t"<<i % 2<<endl;
-                if ((int)kmer_count_table[real_index] == least_depth & real_index != 0){
-                    record_ref_hit[i-ref_start] = true;
-                    // cout <<(int)kmer_count_table[real_index] << "\t"<<i<<endl;
-                }
-                else{
-                    record_ref_hit[i-ref_start] = false;
-                }
-            }
-            else{
-                record_ref_hit[i-ref_start] = false;
-            }
-
-        }
-        // }
-        i += 1;
-        real_index = 0;
-        if (i > end){
-            break;
-        }
-    }
-    
-    
-    index_file.close();  
-    interval_file.close();
-    
-}
-
 void read_index(bool* coder, int* base, int k, char* comple, string index_name, string interval_name, short *choose_coder, float hit_ratio, float perfect_hit_ratio){
     ifstream index_file;
     ofstream interval_file;
@@ -448,6 +422,8 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
     }    
     index_file.close();  
     interval_file.close();
+    time_t t1 = time(0);
+    cout << slide_ref_len << " bp\t" << extract_ref_len <<" bp\t" <<t1-t0<< endl;
 }
 
 // vector<char> 
@@ -700,7 +676,6 @@ long file_size(string filename)
 
 int main( int argc, char *argv[])
 {
-    // string ref_seq = read_ref();
     bool *coder;
     int *base;
     char *comple;
@@ -725,7 +700,7 @@ int main( int argc, char *argv[])
     long end = 0;
 
     int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-
+    // int down_sam_ratio = 13;
     //index
     string index_name = fasta_file + ".index.dat";
     ifstream findex(index_name);
@@ -737,7 +712,6 @@ int main( int argc, char *argv[])
     else{
         cout << "Reference index is detected." << endl;
     }
-
 
     // start
     cout << "Start extract..."<<endl;
@@ -782,7 +756,6 @@ int main( int argc, char *argv[])
     cout << "reads finish.\t" << now2 - now1 << endl;
 
     /*
-    thread_num = 1;
     long index_size = file_size(index_name);
     long each_index_size = index_size/thread_num + 1;
     string fai_name = fasta_file + ".fai";
@@ -817,8 +790,9 @@ int main( int argc, char *argv[])
     end_byte = index_size;
     // cout << start_byte <<"\tsplit bytes\t"<<end_byte<<endl;
     threads.push_back(thread(read_index_thread, coder, base, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio, start_byte, end_byte,start_ref_index));
-	for (auto&th : threads)
-		th.join();
+	for (auto&th : threads){
+        th.join();
+    }	
     */
     read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio);
     time_t now3 = time(0);

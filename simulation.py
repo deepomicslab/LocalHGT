@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import numpy as np
 import random
@@ -349,11 +351,10 @@ def UHGG_snp(uniq_segs_loci):
                     if_success = random_HGT(pa)
 
 def UHGG_cami(): 
-    species_dict = {} 
     pa = Parameters()
     pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
 
-    for snp_rate in [0.01, 0.03, 0.05, 0.07, 0.09]:
+    for snp_rate in [0.03, 0.05]:
         pa.change_snp_rate(snp_rate)
         index = 0
         pa.get_ID(index)
@@ -365,7 +366,19 @@ def UHGG_cami():
                 print (combine)
                 os.system(combine)
 
-
+def UHGG_cami2(): 
+    pa = Parameters()
+    pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
+    com = Complexity()
+    for snp_rate in [0.01, 0.03, 0.05]:
+        pa.change_snp_rate(snp_rate)
+        index = 0
+        pa.get_ID(index)
+        for level in pa.complexity_level:
+            for j in range(1, 3):
+                combine = f"cat {pa.outdir}/{pa.sample}.{j}.fq {com.complexity_dir}/{level}.{j}.fq >{pa.outdir}/{pa.sample}_{level}.{j}.fq"
+                print (combine)
+                os.system(combine)
 
 class Parameters():
     def __init__(self):
@@ -373,9 +386,9 @@ class Parameters():
         self.scaffold_num = self.HGT_num
         self.snp_rate = 0.01
         self.indel_rate = self.snp_rate * 0.1  
-        self.depth = 20
+        self.depth = 50
         self.reads_len = 150
-        self.iteration_times = 10
+        self.iteration_times = 1
         self.donor_in_flag = False
         self.min_genome = 100000
         self.min_uniq_len = 20000
@@ -430,6 +443,50 @@ class Parameters():
                 sca_len += (end- start) 
             self.uniq_len[sca] = sca_len
 
+class Complexity():
+    def __init__(self):
+        self.levels = ['low', 'medium', 'high']
+        self.size = {'high':1000000000, 'medium':500000000, 'low':100000000}
+        self.depths = {'high':10, 'medium':20, 'low':100}
+        self.origin_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
+        self.complexity_dir = '/mnt/d/breakpoints/HGT/complexity/'
+        self.random_rate = 0.1
+        self.read_pair_num = int(10000000000/300)
+
+    def select_genome(self, level):
+        all_ref = self.complexity_dir + '/%s.fa'%(level)
+              
+        f = open(all_ref, 'w')
+        select_size = 0
+        max_size = self.size[level]
+        while select_size < max_size:
+            fasta_sequences = SeqIO.parse(open(self.origin_ref),'fasta') 
+            for record in fasta_sequences:
+                if np.random.random() < self.random_rate:
+                    rec1 = SeqRecord(record.seq, id=str(record.id), description="simulation")
+                    SeqIO.write(rec1, f, "fasta") 
+                    select_size += len(record.seq)
+                    if select_size >  max_size:
+                        break
+        print ("genomes selecting done.")
+        self.fastq(all_ref, level)
+
+    def fastq(self, genome, level):
+        order = f"wgsim -1 150 -2 150 -r 0.001 -N {self.read_pair_num} {genome} \
+        {self.complexity_dir}/{level}.1.fq {self.complexity_dir}/{level}.2.fq"
+        print (order)
+        os.system(order)
+
+    def run(self):
+        # for level in self.levels:
+        for level in ['high']:    
+            print (level)
+            self.select_genome(level)
+
+def generate_complexity():
+    com = Complexity()
+    com.run()
+
 if __name__ == "__main__":
 
     t0 = time.time()
@@ -437,6 +494,7 @@ if __name__ == "__main__":
     uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
     blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
 
+    generate_complexity()
     # if os.path.isfile(uniq_segs_file):
     #     uniq_segs_loci = np.load(uniq_segs_file, allow_pickle='TRUE').item()
     # else:
@@ -448,4 +506,5 @@ if __name__ == "__main__":
     # UHGG_snp(uniq_segs_loci)
 
 
-    UHGG_cami()
+    # UHGG_cami()
+    # UHGG_cami2()

@@ -258,7 +258,7 @@ def find_accurate_bkp():
         # print (len(raw_bkp_clusters))
         for cluster in raw_bkp_clusters:
             if len(cluster.support_reads) == 0: # ignore the bkp not supported by split reads
-                print ("no reads", cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
+                # print ("no reads", cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
                 continue
             choose_acc_from_cluster(cluster)
             bkp_num_support += 1
@@ -355,7 +355,6 @@ def choose_acc_from_cluster(cluster):
             elif score2 > min_match_score:
                 acc_bkp_list.append(acc2)
             break #keep searching accurate bkp until the acc pos is found.
-
         
 class Acc_Bkp(object):
     def __init__(self, cluster, from_side, to_side, read_seq, ref_seq, score):

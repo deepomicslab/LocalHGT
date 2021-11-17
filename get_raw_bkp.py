@@ -27,10 +27,14 @@ def readFilter(read):
 def getInsertSize(unique_bamfile):
     read_length_list = []
     insert_size_list = []
+    num = 0
     for read in unique_bamfile:
         if readFilter(read):
             insert_size_list.append(read.tlen)
             read_length_list.append(len(read.query_sequence))
+            num += 1
+        if num > 10000:
+            break
     read_length = int(sum(read_length_list) / len(read_length_list))
     mean = float(sum(insert_size_list)) / len(insert_size_list)
     sdev = math.sqrt(float(sum([(x - mean)**2 for x in insert_size_list])) / (len(insert_size_list) - 1))
@@ -39,6 +43,8 @@ def getInsertSize(unique_bamfile):
 def calCrossReads(bamfile):
     dict_Interact_Big = {}
     for read in bamfile:
+        if read.mapping_quality < 20:
+            continue
         if read.is_unmapped == False and read.mate_is_unmapped == False and read.reference_name.split(':')[0] != read.next_reference_name.split(':')[0] and read.flag < 2048: 
             if args['n'] == 1:
                 read.reference_start = int(read.reference_name.split(':')[1].split('-')[0]) + read.reference_start

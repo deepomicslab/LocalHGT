@@ -10,7 +10,11 @@ interval_file=$outdir/$ID.interval.txt
 sample=$outdir/$ID
 extracted_ref=$outdir/$ID.specific.ref.fasta
 start=$(date +%s)
+dir=$(cd `dirname $0`; pwd)
 
+if [ -f $interval_file ];then
+  rm $interval_file
+fi
 
 if [ -f $original_ref.fai ];then
   echo "{reference}.fai file exists."
@@ -19,33 +23,34 @@ if [ -f $original_ref.fai ];then
   samtools faidx $original_ref
 fi
 # :<<!
-/mnt/d/breakpoints/script/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7
+$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7
 if [ ! -f $interval_file ];then
   cat ${interval_file}_tmp_* >$interval_file
   rm ${interval_file}_tmp_*
 fi
-python /mnt/d/breakpoints/script/get_bed_file.py $original_ref $interval_file
+python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
 
 bwa index $extracted_ref
 samtools faidx $extracted_ref
 end=$(date +%s)
 take=$(( end - start ))
-echo Time taken to prepare ref is ${take} seconds. > ${sample}.log
+echo Time taken to prepare ref is ${take} seconds. >> ${sample}.log
 
 ##################skip bam-sorting#################
-bwa mem -M -t 5 -R "@RG\tID:id\tSM:sample\tLB:lib" $extracted_ref $fq1 $fq2 > $sample.sam
-python /mnt/d/breakpoints/script/extractSplitReads_BwaMem.py -i $sample.sam >$sample.splitters.sam
-samtools view -h -q 20 $sample.sam > $sample.unique.sam
-rm $sample.sam
+bwa mem -M -t 5 -R "@RG\tID:id\tSM:sample\tLB:lib" $extracted_ref $fq1 $fq2 > $sample.unique.sam
+!
+python $dir/extractSplitReads_BwaMem.py -i $sample.unique.sam >$sample.splitters.sam
+# samtools view -h -q 20 $sample.sam > $sample.unique.sam
+# rm $sample.sam
 
 end=$(date +%s)
 take=$(( end - start ))
 echo Time taken to map reads is ${take} seconds. >> ${sample}.log
 
-python /mnt/d/breakpoints/script/get_raw_bkp.py -u $sample.unique.sam -o $sample.raw.txt
-!
-python /mnt/d/breakpoints/script/accurate_bkp.py -g $original_ref -u $sample.unique.sam \
+python $dir/get_raw_bkp.py -u $sample.unique.sam -o $sample.raw.txt
+
+python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.sam \
 -s $sample.splitters.sam -a $sample.raw.txt -o $sample.acc.txt
 
 end=$(date +%s)

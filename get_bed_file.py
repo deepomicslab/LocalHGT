@@ -4,14 +4,19 @@ import os
 
 
 def find_chr_name():
+    extract_len = 0
     f = open(extracted_ref_interval_file, "r")
     h = open(extracted_ref_interval_file+'.bed', "w")
     
     for line in f:
         array = line.strip().split()
+        if int(array[1]) < 1:
+            array[1] = 1
         print ('%s:%s-%s'%(index2name_dict[int(array[0])], array[1], array[2]), file = h)
+        extract_len += (int(array[2]) - int(array[1]))
     f.close()
     h.close()
+    return extract_len
 
 
 def get_name():
@@ -40,5 +45,6 @@ if __name__ == "__main__":
 
     get_name()
     index2name_dict = index2name()
-    find_chr_name()
+    extract_len = find_chr_name()
+    print ("extracted ref length is:", extract_len)
 
