@@ -19,6 +19,56 @@ from simulation import Parameters
 
 tolerate_dist = 50
 
+class Read_bed(object):
+    def __init__(self):
+        self.true_interval = {}
+        self.gap = 100
+        self.ref_len = 0
+
+    def read(self, interval_file):
+        f = open(interval_file)
+        for line in f:
+            line = line.strip()
+            if line == '':
+                continue
+            chr_name = line.split(":")[0]
+            start = int(line.split(":")[1].split("-")[0])
+            end = int(line.split(":")[1].split("-")[1])   
+            self.ref_len += (end - start)
+            self.add(chr_name, start, end)  
+        f.close()   
+
+    def add(self, chr_name, start, end):
+        if chr_name in self.true_interval:
+            self.true_interval[chr_name].append([start, end])
+        else:
+            self.true_interval[chr_name] = [[start, end]]
+
+    def search(self, true_locus):
+        if true_locus[0] not in self.true_interval:
+            return False
+        else:
+            for true in self.true_interval[true_locus[0]]:
+                start = true[0]
+                end = true[1]
+                if int(true_locus[1]) > start + self.gap and int(true_locus[1]) < end - self.gap:
+                    return True
+            return False
+
+def check_if_bkp_in_extracted_ref(true, interval_file):
+    bed_obj = Read_bed()
+    bed_obj.read(interval_file)
+
+    all_pos = read_all_frag(true)
+    i = 0
+    for single_locus in all_pos:
+        if bed_obj.search(single_locus):
+            i += 1
+            # print ('Have ref:', true_locus)
+        # else:
+        #     print ('Lack ref:', single_locus)
+    return round(float(i)/len(all_pos),2), bed_obj.ref_len
+
 def read_interval(interval_file, true_locus):
     gap = 100
     cover_flag = False
@@ -36,26 +86,6 @@ def read_interval(interval_file, true_locus):
             # print (true_locus, line)
     f.close()
     return cover_flag
-
-def check_if_bkp_in_extracted_ref(true, interval_file):
-    all_pos = read_all_frag(true)
-    i = 0
-    for single_locus in all_pos:
-        if read_interval(interval_file, single_locus):
-            i += 1
-            # print ('Have ref:', true_locus)
-        else:
-            print ('Lack ref:', single_locus)
-    ref_len = 0
-    f = open(interval_file)
-    for line in f:
-        array = line.strip().split()
-        start = int(line.split(":")[1].split("-")[0])
-        end = int(line.split(":")[1].split("-")[1])
-        ref_len += abs(end - start ) 
-    f.close()
-    # print (2 * len(true_bkp))
-    return float(i)/len(all_pos), ref_len
 
 def read_all_frag(true):
     all_pos = []
@@ -197,7 +227,7 @@ class Sample():
 
     def eva_ref(self, tool_dir):
         interval_file = tool_dir + '/%s.interval.txt.bed'%(self.ID)
-        print (interval_file)
+        # print (interval_file)
         ref_accuracy, ref_len = check_if_bkp_in_extracted_ref(self.true_file, interval_file)
         return ref_accuracy, round(ref_len/1000000, 2) #M
 
@@ -246,27 +276,32 @@ def cami():
         for level in ba.complexity_level:
             cami_ID = ba.sample + '_' + level
             sa.change_ID(cami_ID)
-            local_pe = sa.eva_tool(local_dir)
             ref_accuracy, ref_len = sa.eva_ref(local_dir)
+            print ("############ref" ,cami_ID, ref_accuracy, ref_len, "Mb")
+"""
+            local_pe = sa.eva_tool(local_dir)           
             local_pe.add_ref(ref_accuracy, ref_len)
             print (cami_ID, local_pe.user_time, local_pe.accuracy, local_pe.max_mem)
             print ("ref", local_pe.ref_accuracy, local_pe.ref_len, "Mb")
+"""
 
 def snp():
     fi = Figure()
     ba = Parameters()
 
-    # for snp_rate in ba.snp_level[1:-1]: # 0.01-0.09
-    for snp_rate in [0.08, 0.09]:
+    for snp_rate in ba.snp_level[1:-1]: # 0.01-0.09
+    # for snp_rate in [0.05]:
         ba.change_snp_rate(snp_rate)
         for index in range(ba.iteration_times):
         # for index in range(9, 10):
             ba.get_ID(index)    
             sa = Sample(ba.sample, true_dir)
-            print (ba.sample)
+            ref_accuracy, ref_len = sa.eva_ref(local_dir)
+            print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb")
+"""
             lemon_pe = sa.eva_tool(lemon_dir)
             local_pe = sa.eva_tool(local_dir)
-            ref_accuracy, ref_len = sa.eva_ref(local_dir)
+            
             local_pe.add_ref(ref_accuracy, ref_len)
             print ("time:", lemon_pe.user_time, local_pe.user_time)
             print ("sensitivity", lemon_pe.accuracy, local_pe.accuracy)
@@ -277,15 +312,16 @@ def snp():
             fi.add_lemon_sample(lemon_pe, snp_rate)
         #     break
         # break
-    fi.plot()
+    # fi.plot()
+"""
 
 if __name__ == "__main__":
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results/"
 
-    cami()
-    # snp()
+    # cami()
+    snp()
 
 
 

@@ -18,14 +18,14 @@ using namespace std;
 
 const short c = 300;
 const char coder_num = 3;
-const unsigned char least_depth = 255;
+const char least_depth = 3;
 const int k = 32;
 long long array_size = pow(2, k);
-unsigned char *kmer_count_table = new unsigned char[array_size];
+char *kmer_count_table = new char[array_size];
 // vector <char>kmer_count_table(array_size);
 // char* kmer_count_table = (char*)malloc(array_size);
 
-long slide_window(unsigned char* record_ref_hit, int ref_len, long ref_index, long extract_ref_len, ofstream & interval_file, float hit_ratio, float perfect_hit_ratio){ //find density hits regions
+long slide_window(bool* record_ref_hit, int ref_len, long ref_index, long extract_ref_len, ofstream & interval_file, float hit_ratio, float perfect_hit_ratio){ //find density hits regions
     int frag_index = 0;
     int window = 500;
     int one_coder_bases = 0; // the number of bases supported by at least one coder in a window
@@ -42,24 +42,17 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, long ref_index, lo
     bool *peak_hit = new bool[ref_len];
     int* save_peak_intervals = new int[2*ref_len];
     int peak_index = 0;
-    unsigned char* ref_depth = new unsigned char[ref_len];
-    int max_depth = 0;
-    int peak_num = 0;
     
     for (int j = 0; j < ref_len; j++){
         short hit_coder_num = 0;
-        max_depth = 0;
         for (int p = 0; p < 3; p++){
             // if (record_ref_hit[ref_len*p+j] == true){
-            if (record_ref_hit[coder_num*j+p] >3){
+            if (record_ref_hit[coder_num*j+p] == true){
                 hit_coder_num += 1;
                 // cout << j <<"hit"<<p << endl;
             }
-            if (record_ref_hit[coder_num*j+p] > max_depth){
-                max_depth = record_ref_hit[coder_num*j+p];
-            }
         }
-        ref_depth[j] = max_depth;
+        
         if (hit_coder_num == 3){
             trio_hit_num[j] = 1;
         }
@@ -120,57 +113,19 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, long ref_index, lo
         int w = 5;
         peak_hit[j] = false;
         if (j > 60){
-            // method 1
-            // for (int m = 0; m < 5; m++){
-            //     int diff = 0;
-            //     int left = 0;
-            //     int right = 0;
-            //     int max_diff= 0;
-            //     int max_value = 0;
-            //     for (int n = 0; n < w; n++){
-            //         diff += (ref_depth[j-m-w-n] - ref_depth[j-n]);
-            //         left += ref_depth[j-m-w-n];
-            //         right += ref_depth[j-n];
-            //         if (ref_depth[j-m-w-n] > max_value){
-            //             max_value = ref_depth[j-m-w-n];
-            //             max_diff = (ref_depth[j-m-w-n] - ref_depth[j-n]);
-            //         }
-            //         if (ref_depth[j-n] > max_value){
-            //             max_value = ref_depth[j-n];
-            //             max_diff = (ref_depth[j-m-w-n] - ref_depth[j-n]);
-            //         }
-            //     }
-            //     diff -= max_diff; //avoid a large value impact the extraction
-            //     if (abs(diff) > 0.5 *left &  abs(diff) > 0.5 *right & abs(diff) > w){
-            //         peak_hit[j] = true;
-            //         peak_num += 1;
-            //         break;
-            //     }
-
-            // method 2
             for (int m = 0; m < 5; m++){
                 int diff = 0;
-                int left = 0;
-                int right = 0;
-                for (int n = 0; n < 5; n++){
-                    left = (int)ref_depth[j-m-w-n];
-                    right = (int)ref_depth[j-n];
-                    if (abs(left -right) > 0.5*left & abs(left -right) > 0.5*right & abs(left -right) > 1){
-                        diff += 1;
-                    }
+                for (int n = 0; n < w; n++){
+                    diff += (single_hit_num[j-m-w-n] - single_hit_num[j-n]);
                 }
-                if (diff >= 0){
+                // if (abs(diff) == w){
                     peak_hit[j] = true;
-                    peak_num += 1;
                     break;
-                }   
-
+                // }
                 // cout << diff << endl;
             }
             
         }
-
-        // cout <<(int)ref_depth[j] << " " << peak_hit[j]<<endl;
         // find peak
 
     }
@@ -222,7 +177,7 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, long ref_index, lo
     //     extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
     //     interval_file << ref_index << "\t" << save_good_intervals[2*i] << "\t"<< save_good_intervals[2*i+1] << endl;
     // }
-    // cout << ref_len<<"\t" <<peak_num << endl;
+    // cout << frag_index << endl;
     delete [] save_good_intervals;
     delete [] single_hit_num;
     delete [] trio_hit_num;
@@ -415,70 +370,55 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
     index_file.open(index_name, ios::in | ios::binary); 
     interval_file.open(interval_name, ios::out | ios::trunc);
     unsigned int real_index;
-    unsigned int kmer_index;
     long i = 0;
     int ref_len, ref_index;
     long ref_end = 0;
-    ref_index = 1;
+    ref_index = 0;
     long ref_start = 0;
     long extract_ref_len = 0;
     long slide_ref_len = 0;
-    unsigned char *record_ref_hit; 
+    bool *record_ref_hit; 
     time_t t0 = time(0);
-    
-    // char *each_ref_buffer;
-    long long start_point = 400;
-    int buffer_size;
 
     cout <<"Start slide ref..."<<endl;
 
-    index_file.seekg (0, index_file.end);
-    long long length = index_file.tellg();
-
-    index_file.seekg(400, ios::beg);
     while (!index_file.eof()){
         index_file.read(reinterpret_cast<char*>(&real_index), sizeof(unsigned int));
-        ref_len = real_index;
-        buffer_size = (ref_len-k+1)*coder_num*4;
-        char *each_ref_buffer = new char[buffer_size];
-        index_file.read(each_ref_buffer, buffer_size);
-
-        int n = 0;
-        int j = 0;
-        record_ref_hit = new unsigned char[ref_len*coder_num];
-        while (n < buffer_size){
-            memcpy(&kmer_index, each_ref_buffer, sizeof(unsigned int));
-            // cout << n<< "\t"<< buffer_size <<"\t" <<kmer_index  <<"\t" << (int)kmer_count_table[kmer_index]<<endl;
-            if (kmer_index == 0){
-                record_ref_hit[j] = 0;
+        if (i < 100){
+        }
+        else{
+            if (i > ref_end){  
+                //previous ref            
+                if (ref_start != 0){
+                    if (ref_len > 1000){
+                        extract_ref_len = slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, perfect_hit_ratio);
+                    }
+                    delete [] record_ref_hit;
+                    if (ref_index % 1000 == 0){
+                        time_t t1 = time(0);
+                        cout << ref_index << "\t" <<slide_ref_len << " bp\t" << extract_ref_len <<" bp\t" <<t1-t0<< endl;
+                    } 
+                }
+                // new ref
+                ref_len = real_index;
+                if (ref_len > 0){ //ref_len=0 means the end of file
+                    ref_start = i + 1;
+                    ref_end = i+ (ref_len-k+1)*coder_num;
+                    record_ref_hit = new bool[ref_len*coder_num];
+                    ref_index += 1;  //start from 1    
+                    slide_ref_len += ref_len;
+                }
             }
             else{
-                record_ref_hit[j] = (int)kmer_count_table[kmer_index];
+                if ((int)kmer_count_table[real_index] == least_depth & real_index != 0){
+                    record_ref_hit[i-ref_start] = true;
+                    // cout <<(int)kmer_count_table[real_index] << "\t"<<i<<endl;
+                }
+                else{
+                    record_ref_hit[i-ref_start] = false;
+                }
             }
-            j += 1;
-            
-            each_ref_buffer = each_ref_buffer + sizeof(unsigned int);
-            n = n + sizeof(unsigned int);
         }
-        extract_ref_len = slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, perfect_hit_ratio);
-        slide_ref_len += ref_len;
-        start_point += 4;
-        start_point += buffer_size;
-        // index_file.seekg(start_point, ios::beg);
-        // cout << start_point << "\t"<< ref_len << endl;
-        each_ref_buffer = each_ref_buffer - buffer_size; //move the pointer to the start
-        delete [] each_ref_buffer;
-        delete [] record_ref_hit;
-        ref_index += 1;
-        if (start_point >= length){
-            cout << "read index ending." <<endl;
-            break;
-        }
-        if (ref_index % 1000 == 0){
-            time_t t1 = time(0);
-            cout << ref_index << "\t" <<slide_ref_len << " bp\t" << extract_ref_len <<" bp\t" <<t1-t0<< endl;
-        } 
-        
         i += 1;
         real_index = 0;
     }    
@@ -536,7 +476,7 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple, 
         if (i % 4 == 1){
             time_t t1 = time(0);
             if (i % 10000000 == 1){
-                cout <<i<<"\treads\t" << t1-t0 <<endl;
+                cout <<i<<"reads\t" << t1-t0 <<endl;
             }
             if (i == 1){
                 read_len = reads_seq.length();//cal read length
@@ -757,12 +697,12 @@ int main( int argc, char *argv[])
     float perfect_hit_ratio = stod(accept_perfect_hit_ratio);
     long down_sampling_size = 2000000000; //2G bases
 
-    int thread_num = 10;
+    int thread_num = 5;
     long start = 0;
     long end = 0;
 
-    // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    int down_sam_ratio = 13;
+    int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
+    // int down_sam_ratio = 13;
     //index
     string index_name = fasta_file + ".index.dat";
     ifstream findex(index_name);

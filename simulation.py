@@ -318,7 +318,8 @@ def UHGG_snp(uniq_segs_loci):
     pa.add_segs(uniq_segs_loci)
     pa.get_uniq_len()
 
-    for snp_rate in pa.snp_level:
+    # for snp_rate in pa.snp_level:
+    for snp_rate in [0.07]:
         pa.change_snp_rate(snp_rate)
         for index in range(pa.iteration_times):
             pa.get_ID(index)
@@ -494,16 +495,16 @@ if __name__ == "__main__":
     uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
     blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
 
-    generate_complexity()
-    # if os.path.isfile(uniq_segs_file):
-    #     uniq_segs_loci = np.load(uniq_segs_file, allow_pickle='TRUE').item()
-    # else:
-    #     uniq_segs_loci = extract_uniq_region(blast_file)  
-    #     np.save(uniq_segs_file, uniq_segs_loci) 
-    # t1 = time.time()
-    # print ('Uniq extraction is done.', t1 - t0)
-    # print ("genome num:", len(uniq_segs_loci))
-    # UHGG_snp(uniq_segs_loci)
+    # generate_complexity()
+    if os.path.isfile(uniq_segs_file):
+        uniq_segs_loci = np.load(uniq_segs_file, allow_pickle='TRUE').item()
+    else:
+        uniq_segs_loci = extract_uniq_region(blast_file)  
+        np.save(uniq_segs_file, uniq_segs_loci) 
+    t1 = time.time()
+    print ('Uniq extraction is done.', t1 - t0)
+    print ("genome num:", len(uniq_segs_loci))
+    UHGG_snp(uniq_segs_loci)
 
 
     # UHGG_cami()

@@ -22,13 +22,14 @@ if [ -f $original_ref.fai ];then
   echo "start samtools faidx reference..."
   samtools faidx $original_ref
 fi
-# :<<!
+
 $dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7
 if [ ! -f $interval_file ];then
   cat ${interval_file}_tmp_* >$interval_file
   rm ${interval_file}_tmp_*
 fi
 python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
+:<<!
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
 
 bwa index $extracted_ref
@@ -39,7 +40,7 @@ echo Time taken to prepare ref is ${take} seconds. >> ${sample}.log
 
 ##################skip bam-sorting#################
 bwa mem -M -t 5 -R "@RG\tID:id\tSM:sample\tLB:lib" $extracted_ref $fq1 $fq2 > $sample.unique.sam
-!
+
 python $dir/extractSplitReads_BwaMem.py -i $sample.unique.sam >$sample.splitters.sam
 # samtools view -h -q 20 $sample.sam > $sample.unique.sam
 # rm $sample.sam
@@ -52,7 +53,7 @@ python $dir/get_raw_bkp.py -u $sample.unique.sam -o $sample.raw.txt
 
 python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.sam \
 -s $sample.splitters.sam -a $sample.raw.txt -o $sample.acc.txt
-
+!
 end=$(date +%s)
 take=$(( end - start ))
 echo Time taken to execute commands is ${take} seconds. >> ${sample}.log

@@ -11,8 +11,8 @@ class Batch(Parameters):
         self.fq_dir = ''
         self.result_dir = ''
         self.localHGT = "/mnt/d/breakpoints/script/pipeline.sh"
-        self.hit = 0.2
-        self.perfect_hit = 0.08
+        self.hit = 0.1
+        self.perfect_hit = 0.05
         self.fq1 = ''
         self.fq2 = ''
         self.sample_fasta = ''
@@ -105,5 +105,5 @@ def batch_cami():
 
 
 if __name__ == "__main__":
-    # batch_snp()
-    batch_cami()
+    batch_snp()
+    # batch_cami()
