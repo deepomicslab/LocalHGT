@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <thread>
 #include <sstream>
+#include <map>
 
 
 using namespace std;
@@ -21,108 +22,11 @@ const char least_depth = 127;
 const int k = 16;
 long long array_size = pow(4, k);
 unsigned int *kmer_count_table = new unsigned int[array_size];
+int block_size = 500;
+bool *block_record = new bool[22000000];
+
 // vector <char>kmer_count_table(array_size);
 // char* kmer_count_table = (char*)malloc(array_size);
-
-
-long slide_window(char* record_ref_hit, int ref_len, long ref_index, long extract_ref_len, ofstream & interval_file, float hit_ratio, float perfect_hit_ratio){ //find density hits regions
-    int frag_index = 0;
-    int window = 50;
-    int three_coder_bases = 0; // the number of bases supported by three coder in a window
-    int three_coder_min = window * perfect_hit_ratio;    
-    bool good_window;
-    bool conti_flag = false;
-    int start = 0 ;
-    int end = 0;
-    int* save_good_intervals = new int[2*ref_len/window];
-    short *trio_hit_num = new short[ref_len];
-    bool peak_flag = false;
-    int peak_win = 10;
-    int diff = 0;
-
-    for (int j = 0; j < ref_len; j++){
-        if ((int)record_ref_hit[j] >= 3){
-            trio_hit_num[j] = 1;
-        }
-        else{
-            trio_hit_num[j] = 0;
-        }
-
-        peak_flag = false;
-        if (j > 2* peak_win){
-            diff = 0;
-            for (int i = 0; i < peak_win; i++){
-                diff = diff + ((int)record_ref_hit[j-i] - (int)record_ref_hit[j-peak_win-i]);
-                // cout << (int)record_ref_hit[j-i] << "\t" << (int)record_ref_hit[j-peak_win-i] << endl;
-            }
-            if (abs(diff)/peak_win > 10){
-                peak_flag = true;
-                // cout << diff << "\t" << abs(diff)/peak_win<< "\t"<<(int)record_ref_hit[j]<<endl;
-            }
-        }
-        // cout << (int)record_ref_hit[j]<< "\t" << peak_flag << endl;
-        
-        if (j < window){
-            if ((int)record_ref_hit[j] >= 3){
-                three_coder_bases += 1;
-            }
-        }
-        else{
-            three_coder_bases = three_coder_bases - trio_hit_num[j-window] + trio_hit_num[j];
-        }
-
-        if (three_coder_bases >= three_coder_min & peak_flag){
-            good_window = true;
-        }
-        else{
-            good_window = false;
-        }  
-        // cout << three_coder_bases << "\t" <<peak_flag<< "\t" << good_window<<endl;      
-        if (conti_flag == false & good_window == true){
-            start = j - 2 * window;
-            if (start < 1){
-                start = 1;
-            }
-            conti_flag = true;
-        }
-        if (conti_flag == true & good_window == false){
-            end = j + 2 * window;
-            if (end > ref_len){
-                end = ref_len;
-            }
-            if (frag_index > 0 & start - save_good_intervals[2*frag_index-1] < window ){
-                save_good_intervals[2*frag_index-1] = end;
-            }
-            else{
-                save_good_intervals[2 * frag_index] = start;
-                save_good_intervals[2 * frag_index+1] = end;
-                frag_index += 1;
-            }
-            conti_flag = false;
-        }
-    }
-    if (conti_flag == true & good_window == true){
-        end = ref_len;
-        if (frag_index > 0 & start - save_good_intervals[2*frag_index-1] < window ){
-            save_good_intervals[2*frag_index-1] = end;
-        }
-        else{
-            save_good_intervals[2 * frag_index] = start;
-            save_good_intervals[2 * frag_index+1] = end;
-            frag_index += 1;
-        }
-
-    }
-    for (int i = 0; i < frag_index; i++){
-        extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
-        interval_file << ref_index << "\t" << save_good_intervals[2*i] << "\t"<< save_good_intervals[2*i+1] << endl;
-    }
-    // cout << frag_index << endl;
-    delete [] save_good_intervals;
-    delete [] trio_hit_num;
-    // return save_good_intervals;
-    return extract_ref_len;
-}
 
 float cal_tab_empty_rate(){
     double empty_num = 0;
@@ -150,10 +54,9 @@ float cal_tab_empty_rate(){
     return empty_rate;
 }
 
-void find_ref(string fasta_file, short* coder, int* base, int k, char* comple, string interval_name, float hit_ratio, float perfect_hit_ratio)
+long find_ref(string fasta_file, short* coder, int* base, int k, char* comple, float hit_ratio, float perfect_hit_ratio)
 {
-    ofstream interval_file;
-    interval_file.open(interval_name, ios::out | ios::trunc);
+
     ifstream fa_file;
     fa_file.open(fasta_file, ios::in);
     string ref_seq, line_seq;
@@ -213,106 +116,52 @@ void find_ref(string fasta_file, short* coder, int* base, int k, char* comple, s
                         kmer_index = (kmer_index - coder[ref_int[j-1]]*base[0])*4 + coder[ref_int[j+k-1]];
                         comple_kmer_index = (comple_kmer_index - coder[ref_comple_int[j-1]])/4 + coder[ref_comple_int[j+k-1]]*base[0];
                     }
-
-                    // cout <<kmer_index<<"\t"<< j<<"\t"<<comple_kmer_index<<"\t"<<reads_seq[j] <<endl;
                     if (kmer_index > comple_kmer_index){ //use a smaller index
                         real_index = comple_kmer_index;
                     }   
                     else{
                         real_index = kmer_index;
                     }
-                    if (all_valid == false){
-                        real_index = 0;
-                    }  
-
-                    if (j % 500 == 0){
-                        kmer_count_table[real_index] = block_index;
+                    if (j % block_size == 0){
                         block_index += 1;
                     }
-                }
-                
+                    // if (kmer_count_table[real_index] != 0){
+                    //     cout << j << "\t"<< block_index << "\t"<< kmer_count_table[real_index]<<endl;
+                    // }
+                    if (j % 10 == 0 & all_valid){
+                        kmer_count_table[real_index] = block_index;
+                    }                   
+                }               
                 // cout << chr_name<<"\t"<<endl;
                 delete [] ref_int;
                 delete [] ref_comple_int;
-
             }
-            if (ref_index % 1000 == 0){
-                time_t t1 = time(0);
-                cout << chr_name<<"\t" << ref_index << "\t" <<ref_len <<" bp\t"<<slide_ref_len<< " bp\t"<<extract_ref_len<<" bp\t" <<t1-t0<< endl;
-            }  
+            // if (ref_index % 1 == 0){
+            //     time_t t1 = time(0);
+            //     cout << chr_name<<"\t" << ref_index << "\t" <<ref_len <<" bp\t"<<slide_ref_len<< " bp\t"<<extract_ref_len<<" bp\t" <<t1-t0<< endl;
+            // }  
             ref_index += 1;
             ref_seq = "\0";
         }
         else{
             ref_seq += line_seq;           
-        }            
+        }  
+              
     }
-    // for the last chr
-    // chr_name = pre_name;
-    // ref_len= ref_seq.length();
-    // slide_ref_len += ref_len;
-    // if (ref_len > k){   
-    //     int *ref_int = new int[ref_len];
-    //     int *ref_comple_int = new int[ref_len];
-    //     for (int j = 0; j < ref_len; j++){
-    //         ref_int[j] = (int)ref_seq[j];
-    //         ref_comple_int[j] = comple[ref_int[j]];
-    //     }
-    //     kmer_index = 0;
-    //     comple_kmer_index = 0;
-    //     for (int j = 0; j < ref_len-k+1; j++){
-    //         bool all_valid = true;
-    //         if (coder[ref_int[j]] == 5){
-    //             all_valid = false;
-    //         }
-    //         if (j == 0){
-    //             for (int z = 0; z<k; z++){
-    //                 kmer_index += coder[ref_int[j+z]]*base[z];  
-    //                 comple_kmer_index += coder[ref_comple_int[j+z]]*base[(k-1-z)];
-    //             }
-    //         }
-    //         else{
-    //             kmer_index = (kmer_index - coder[ref_int[j-1]]*base[0])*4 + coder[ref_int[j+k-1]];
-    //             comple_kmer_index = (comple_kmer_index - coder[ref_comple_int[j-1]])/4 + coder[ref_comple_int[j+k-1]]*base[0];
-    //         }
-
-
-    //         if (kmer_index > comple_kmer_index){ //use a smaller index
-    //             real_index = comple_kmer_index;
-    //         }   
-    //         else{
-    //             real_index = kmer_index;
-    //         }
-    //         if (all_valid == false){
-    //             real_index = 0;
-    //         }
-
-    //         if ((int)kmer_count_table[real_index] == least_depth & real_index != 0){
-    //             record_ref_hit[j] = true;
-                
-    //         }
-    //         else{
-    //             record_ref_hit[j] = false;
-    //         }
-
-    //     }     
-  
-    //     delete [] ref_int;
-    //     delete [] ref_comple_int;
-    //     time_t t1 = time(0);
-    //     cout << "Last chr:\t" << chr_name<<"\t" << ref_index << "\t" <<ref_len <<" bp\t"<<slide_ref_len<< " bp\t"<<extract_ref_len<<" bp\t" <<t1-t0<< endl;
-    // }
 
     cout << "Extracted ref length is"<< "\t" << extract_ref_len << endl;
     fa_file.close();
+    return block_index;
 }
 
 // vector<char> 
-void read_fastq(string fastq_file, int k, short* coder, int* base, char* comple, int down_sam_ratio, long start, long end)
+void read_fastq(string fastq_file, string fastq2_file, int k, short* coder, int* base, char* comple, int down_sam_ratio, long start, long end)
 {
     time_t t0 = time(0);
     ifstream fq_file; 
     fq_file.open(fastq_file);
+    ifstream fq2_file; 
+    fq2_file.open(fastq2_file);
 
     long pos;
     for (long i = start; i>0; i--){
@@ -325,10 +174,11 @@ void read_fastq(string fastq_file, int k, short* coder, int* base, char* comple,
         }       
     }
     fq_file.seekg(pos, ios::beg);
+    fq2_file.seekg(pos, ios::beg);
     long add_size = start;
 
 
-    string reads_seq;
+    string reads_seq, reads2_seq;
     int reads_int [150];
     int reads_comple_int [150];
 
@@ -348,6 +198,7 @@ void read_fastq(string fastq_file, int k, short* coder, int* base, char* comple,
 
     while (fq_file >> reads_seq)
     {
+        getline(fq2_file, reads2_seq);
         if (add_size>=end){
             break;
         }
@@ -365,21 +216,22 @@ void read_fastq(string fastq_file, int k, short* coder, int* base, char* comple,
             r = rand() % 100 ;
             // cout <<r << "r"<<endl;
             if (r < down_sam_ratio){
+                unsigned int read_support_block = 0;
+                bool flag = false;
+                map<unsigned int, int> block_count;
+
+                // for read 1
                 for (int j = 0; j < read_len; j++){
                     reads_int[j] = (int)reads_seq[j];
                     reads_comple_int[j] = comple[reads_int[j]];
                 }
                 kmer_index = 0;
                 comple_kmer_index = 0;
-                unsigned int read_support_block = 0;
                 for (int j = 0; j < read_len-k+1; j++){
-
                     bool all_valid = true;
-
                     if (coder[reads_int[j]] == 5){
                         all_valid = false;
                     }
-
                     if (j == 0){
                         for (int z = 0; z<k; z++){
                             kmer_index += coder[reads_int[j+z]]*base[z];  
@@ -390,36 +242,98 @@ void read_fastq(string fastq_file, int k, short* coder, int* base, char* comple,
                         kmer_index = (kmer_index - coder[reads_int[j-1]]*base[0])*4 + coder[reads_int[j+k-1]];
                         comple_kmer_index = (comple_kmer_index - coder[reads_comple_int[j-1]])/4 + coder[reads_comple_int[j+k-1]]*base[0];
                     }
-
-
                     if (kmer_index > comple_kmer_index){ //use a smaller index
                         real_index = comple_kmer_index;
                     }   
                     else{
                         real_index = kmer_index;
                     }
-                    // if ((int)kmer_count_table[real_index] < least_depth & all_valid == true ){
-                    //     kmer_count_table[real_index] += 1;
-                    //     // cout << (int)kmer_count_table[real_index] << "\t" << endl;
-                    // }  
-                    if (all_valid == true ){
-                        if (read_support_block == 0){
-                            read_support_block = kmer_count_table[real_index];
+                    // cout << j << "\t"<<kmer_count_table[real_index]<<endl;
+                    if (all_valid == true & kmer_count_table[real_index] != 0){
+                        if (block_count.find(kmer_count_table[real_index]) == block_count.end()){
+                            block_count[kmer_count_table[real_index]] = 1;
                         }
                         else{
-                            if (kmer_count_table[real_index] != read_support_block){
-                                split_read_num += 1;
-                                break;
-                            }
+                            block_count[kmer_count_table[real_index]] += 1;
                         }
                     }
                 }
+
+
+                // for read 2
+                for (int j = 0; j < read_len; j++){
+                    reads_int[j] = (int)reads2_seq[j];
+                    reads_comple_int[j] = comple[reads_int[j]];
+                }
+                kmer_index = 0;
+                comple_kmer_index = 0;
+                for (int j = 0; j < read_len-k+1; j++){
+                    bool all_valid = true;
+                    if (coder[reads_int[j]] == 5){
+                        all_valid = false;
+                    }
+                    if (j == 0){
+                        for (int z = 0; z<k; z++){
+                            kmer_index += coder[reads_int[j+z]]*base[z];  
+                            comple_kmer_index += coder[reads_comple_int[j+z]]*base[(k-1-z)];
+                        }
+                    }
+                    else{
+                        kmer_index = (kmer_index - coder[reads_int[j-1]]*base[0])*4 + coder[reads_int[j+k-1]];
+                        comple_kmer_index = (comple_kmer_index - coder[reads_comple_int[j-1]])/4 + coder[reads_comple_int[j+k-1]]*base[0];
+                    }
+                    if (kmer_index > comple_kmer_index){ //use a smaller index
+                        real_index = comple_kmer_index;
+                    }   
+                    else{
+                        real_index = kmer_index;
+                    }
+                    // cout << j << "\t"<<kmer_count_table[real_index]<<endl;
+                    if (all_valid == true & kmer_count_table[real_index] != 0){
+                        if (block_count.find(kmer_count_table[real_index]) == block_count.end()){
+                            block_count[kmer_count_table[real_index]] = 1;
+                        }
+                        else{
+                            block_count[kmer_count_table[real_index]] += 1;
+                        }
+                    }
+                }
+          
+            
+
+                if (block_count.size() > 1){
+                    map<unsigned int, int>::iterator iter;
+                    iter = block_count.begin();
+                    unsigned int a_locus = 0;
+                    while(iter != block_count.end()){
+                        // cout << iter->first << ":"<< iter->second <<endl;
+                        if (iter->second > 5){
+                            if (a_locus == 0){
+                                a_locus = iter->first;
+                            }
+                            else{
+                                int diff = iter->first - a_locus ;
+                                if (abs(diff) > 2){
+                                    block_record[a_locus] = true;
+                                    block_record[iter->first] = true;
+                                    flag = true;
+                                }
+                                a_locus = iter->first;
+                            }
+                        }
+                        iter ++ ;
+                    }
+                }
+                // cout << flag << endl;
+                // cout <<"----------"<<endl;
+                // cout << block_count.size()<<endl;               
             }         
         }
         i++;
     }
     fq_file.close();
-    cout <<"split reads num:::::::::::::::::"<<split_read_num<<endl;
+    fq2_file.close();
+    // cout <<"split reads num:::::::::::::::::"<<split_read_num<<endl;
     // return kmer_count_table;
 
 }
@@ -534,9 +448,14 @@ int main( int argc, char *argv[])
     // start
     cout << "Start split-area extract..."<<endl;
     memset(kmer_count_table, 0, sizeof(unsigned int)*array_size);
+    memset(block_record, 0, sizeof(bool)*22000000);
 
    
-    find_ref(fasta_file, coder, base, k, comple, interval_name, hit_ratio, perfect_hit_ratio);
+    long block_index = find_ref(fasta_file, coder, base, k, comple, hit_ratio, perfect_hit_ratio);
+    cout << "reading ref done."<<endl;
+
+    ofstream interval_file;
+    interval_file.open(interval_name, ios::out | ios::trunc);  
 
     long size = file_size(fq1);
     long each_size = size/thread_num;
@@ -551,31 +470,63 @@ int main( int argc, char *argv[])
             end = size;
         }
         cout <<start<<"\t"<<end<<endl;
-        threads.push_back(thread(read_fastq, fq1, k, coder, base, comple,  down_sam_ratio, start, end));
+        threads.push_back(thread(read_fastq, fq1, fq2, k, coder, base, comple,  down_sam_ratio, start, end));
     }
 	for (auto&th : threads)
 		th.join();
     threads.clear();
 
-    
-    for (int i=0; i<thread_num; i++){
-        start = i*each_size;
-        end = (i+1)*each_size;
-        if (i == thread_num-1){
-            end = size;
+    string fai_name = fasta_file + ".fai";
+    ifstream fai_file;
+    fai_file.open(fai_name, ios::in); 
+    string aa;
+    string line;
+    int ref_len;
+
+
+    long new_index = 0;
+    int ref_index = 0;
+    long ref_size = 0;
+    long extract_size = 0;
+    while(!fai_file.eof()){
+        getline(fai_file,line);
+        ref_index += 1;
+        std::istringstream iss(line);
+        if (!(iss >> aa >> ref_len)) { break; }
+        int start = 1;
+        int end = 1;
+        ref_size += ref_len;
+        for (int j=0; j<ref_len; j++){
+            if (j % block_size == 0){
+                new_index += 1;
+                if (block_record[new_index]){
+                    // cout <<j<< "\t"<<start<<"\t"<<end <<endl;
+                    if (j - end < 2 * block_size){
+                        end = j+block_size;
+                    }
+                    else{
+                        start = j -block_size;
+                        end = j + block_size;
+                        interval_file <<ref_index<< "\t"<<start <<"\t"<<end<<endl;
+                        // cout <<ref_index<< "\t"<<start <<"\t"<<end<<endl;
+                        extract_size += (end-start);
+                    }
+                    
+                }
+            }
         }
-        cout <<start<<"\t"<<end<<endl;
-        threads.push_back(thread(read_fastq, fq2, k, coder, base, comple,  down_sam_ratio, start, end));
+        interval_file <<ref_index<< "\t"<<start <<"\t"<<end<<endl;   
+        // cout <<ref_index<< "\t"<<start <<"\t"<<end<<endl;   
+        extract_size += (end-start); 
     }
-	for (auto&th : threads)
-		th.join();
-    threads.clear();
+    cout <<ref_size<< "\t"<<extract_size <<endl;   
 
     time_t now3 = time(0);
     cout << "Finish with time:\t" << now3-now1<<endl;
     
     delete [] kmer_count_table;
+    delete [] block_record;
+    interval_file.close();
+    fai_file.close();
     return 0;
 }
-
-

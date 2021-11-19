@@ -152,39 +152,6 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, long ref_index, lo
                     break;
                 }
             }
-
-            // method 2
-            // for (int m = 0; m < 5; m++){
-            // int diff = 0;
-            // int left = 0;
-            // int right = 0;
-            // int save[4];
-            // for (int n = 0; n < 2; n++){
-            //     left = (int)ref_depth[j-2-n];
-            //     right = (int)ref_depth[j-n];
-            //     save[n+2] = right;
-            //     save[n] = left;
-            //     if (left -right > 0.7*left & left -right > 0.7*right & left -right > 0 ){
-            //         diff += 1;
-            //     }
-            // }
-            // if ((int)ref_depth[j-3]-(int)ref_depth[j-1]> 0.7*(int)ref_depth[j-3] & 
-            //     (int)ref_depth[j-2]-(int)ref_depth[j]> 0.7*(int)ref_depth[j-2] &
-            //     (int)ref_depth[j-3]-(int)ref_depth[j]> 0.7*(int)ref_depth[j-3]   
-            // ){
-            //     diff = 2;
-            // }
-            // if (diff == 2){
-            //     peak_hit[j] = true;
-            //     // cout << (int)ref_depth[j]<< endl;
-            //     cout << j<<"\t"<< (int)ref_depth[j-3]<<"\t"<< (int)ref_depth[j-2]<<"\t"<< (int)ref_depth[j-1]<<"\t"<< (int)ref_depth[j]<<"\t"<<endl;
-            //     peak_num += 1;
-            //     // break;
-            // }   
-
-
-                // cout << diff << endl;
-            // }
             
         }
 
@@ -240,12 +207,13 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, long ref_index, lo
     //     extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
     //     interval_file << ref_index << "\t" << save_good_intervals[2*i] << "\t"<< save_good_intervals[2*i+1] << endl;
     // }
-    cout << ref_len<<"-------------\t------------------" <<peak_num << endl;
+    // cout << ref_len<<"-------------\t------------------" <<peak_num << endl;
     delete [] save_good_intervals;
     delete [] single_hit_num;
     delete [] trio_hit_num;
     delete [] save_peak_intervals;
     delete [] peak_hit;
+    delete [] ref_depth;
     // return save_good_intervals;
     return extract_ref_len;
 }
