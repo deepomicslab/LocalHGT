@@ -45,13 +45,17 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, long ref_index, lo
     unsigned char* ref_depth = new unsigned char[ref_len];
     int max_depth = 0;
     int peak_num = 0;
+
+    for (int j = 0; j < ref_len; j++){
+        peak_hit[j] = false;
+    }
     
     for (int j = 0; j < ref_len; j++){
         short hit_coder_num = 0;
         max_depth = 0;
         for (int p = 0; p < 3; p++){
             // if (record_ref_hit[ref_len*p+j] == true){
-            if (record_ref_hit[coder_num*j+p] >3){
+            if (record_ref_hit[coder_num*j+p] >=3){
                 hit_coder_num += 1;
                 // cout << j <<"hit"<<p << endl;
             }
@@ -118,55 +122,69 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, long ref_index, lo
 
         // find peak
         int w = 5;
-        peak_hit[j] = false;
+        // peak_hit[j] = false;
         if (j > 60){
             // method 1
-            // for (int m = 0; m < 5; m++){
-            //     int diff = 0;
-            //     int left = 0;
-            //     int right = 0;
-            //     int max_diff= 0;
-            //     int max_value = 0;
-            //     for (int n = 0; n < w; n++){
-            //         diff += (ref_depth[j-m-w-n] - ref_depth[j-n]);
-            //         left += ref_depth[j-m-w-n];
-            //         right += ref_depth[j-n];
-            //         if (ref_depth[j-m-w-n] > max_value){
-            //             max_value = ref_depth[j-m-w-n];
-            //             max_diff = (ref_depth[j-m-w-n] - ref_depth[j-n]);
-            //         }
-            //         if (ref_depth[j-n] > max_value){
-            //             max_value = ref_depth[j-n];
-            //             max_diff = (ref_depth[j-m-w-n] - ref_depth[j-n]);
-            //         }
-            //     }
-            //     diff -= max_diff; //avoid a large value impact the extraction
-            //     if (abs(diff) > 0.5 *left &  abs(diff) > 0.5 *right & abs(diff) > w){
-            //         peak_hit[j] = true;
-            //         peak_num += 1;
-            //         break;
-            //     }
-
-            // method 2
             for (int m = 0; m < 5; m++){
                 int diff = 0;
                 int left = 0;
                 int right = 0;
-                for (int n = 0; n < 5; n++){
-                    left = (int)ref_depth[j-m-w-n];
-                    right = (int)ref_depth[j-n];
-                    if (abs(left -right) > 0.5*left & abs(left -right) > 0.5*right & abs(left -right) > 1){
-                        diff += 1;
+                int max_diff= 0;
+                int max_value = 0;
+                for (int n = 0; n < w; n++){
+                    diff += (ref_depth[j-m-w-n] - ref_depth[j-n]);
+                    left += ref_depth[j-m-w-n];
+                    right += ref_depth[j-n];
+                    if (ref_depth[j-m-w-n] > max_value){
+                        max_value = ref_depth[j-m-w-n];
+                        max_diff = (ref_depth[j-m-w-n] - ref_depth[j-n]);
+                    }
+                    if (ref_depth[j-n] > max_value){
+                        max_value = ref_depth[j-n];
+                        max_diff = (ref_depth[j-m-w-n] - ref_depth[j-n]);
                     }
                 }
-                if (diff >= 0){
+                diff -= max_diff; //avoid a large value impact the extraction
+                if (abs(diff) > 0.5 *left &  abs(diff) > 0.5 *right & abs(diff) > w){
                     peak_hit[j] = true;
+                    cout <<j<<endl;
                     peak_num += 1;
                     break;
-                }   
+                }
+            }
+
+            // method 2
+            // for (int m = 0; m < 5; m++){
+            // int diff = 0;
+            // int left = 0;
+            // int right = 0;
+            // int save[4];
+            // for (int n = 0; n < 2; n++){
+            //     left = (int)ref_depth[j-2-n];
+            //     right = (int)ref_depth[j-n];
+            //     save[n+2] = right;
+            //     save[n] = left;
+            //     if (left -right > 0.7*left & left -right > 0.7*right & left -right > 0 ){
+            //         diff += 1;
+            //     }
+            // }
+            // if ((int)ref_depth[j-3]-(int)ref_depth[j-1]> 0.7*(int)ref_depth[j-3] & 
+            //     (int)ref_depth[j-2]-(int)ref_depth[j]> 0.7*(int)ref_depth[j-2] &
+            //     (int)ref_depth[j-3]-(int)ref_depth[j]> 0.7*(int)ref_depth[j-3]   
+            // ){
+            //     diff = 2;
+            // }
+            // if (diff == 2){
+            //     peak_hit[j] = true;
+            //     // cout << (int)ref_depth[j]<< endl;
+            //     cout << j<<"\t"<< (int)ref_depth[j-3]<<"\t"<< (int)ref_depth[j-2]<<"\t"<< (int)ref_depth[j-1]<<"\t"<< (int)ref_depth[j]<<"\t"<<endl;
+            //     peak_num += 1;
+            //     // break;
+            // }   
+
 
                 // cout << diff << endl;
-            }
+            // }
             
         }
 
@@ -222,7 +240,7 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, long ref_index, lo
     //     extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
     //     interval_file << ref_index << "\t" << save_good_intervals[2*i] << "\t"<< save_good_intervals[2*i+1] << endl;
     // }
-    // cout << ref_len<<"\t" <<peak_num << endl;
+    cout << ref_len<<"-------------\t------------------" <<peak_num << endl;
     delete [] save_good_intervals;
     delete [] single_hit_num;
     delete [] trio_hit_num;
@@ -757,7 +775,7 @@ int main( int argc, char *argv[])
     float perfect_hit_ratio = stod(accept_perfect_hit_ratio);
     long down_sampling_size = 2000000000; //2G bases
 
-    int thread_num = 10;
+    int thread_num = 5;
     long start = 0;
     long end = 0;
 
