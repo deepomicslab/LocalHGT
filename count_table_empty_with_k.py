@@ -17,7 +17,7 @@ class Order():
                 com = self.generate(k, ratio)
                 print (com)
                 os.system(com)
-
+os.system('g++ -pthread -o count_diff_kmer src/count_diff_kmer.cpp')
 order = Order()
 # order.run()
 os.system(order.generate(32, 13))
