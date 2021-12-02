@@ -24,19 +24,19 @@ const unsigned char least_depth = 3;
 // char* kmer_count_table = (char*)malloc(array_size);
 
 float cal_tab_empty_rate(long long array_size, unsigned char * kmer_count_table){
-    double empty_num = 0;
+    long double empty_num = 0;
     float empty_rate;
     float weak_rate = 0;
-    double weak_num = 0;
-    for (unsigned int j = 0; j < array_size; j++){  
+    long double weak_num = 0;
+    for (long long j = 0; j < array_size; j++){  
         if ((int)kmer_count_table[j] == 0){
             empty_num += 1;
         }
-        // else{
-        //     cout << (int)kmer_count_table[j] <<empty_num<< endl;
-        // }
         if ((int)kmer_count_table[j] != least_depth){
             weak_num += 1;
+        }
+        if (j%100000000 == 0){
+            cout << "count table:"<<j <<endl;
         }
         // cout << j << (int)kmer_count_table[j]<< empty_num <<endl;
 
@@ -97,9 +97,9 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
 
         if (i % 4 == 1){
             time_t t1 = time(0);
-            if (i % 10000000 == 1){
-                cout <<i<<"\treads\t" << t1-t0 <<endl;
-            }
+            // if (i % 10000000 == 1){
+            //     cout <<i<<"\treads\t" << t1-t0 <<endl;
+            // }
             if (i == 1){
                 read_len = reads_seq.length();//cal read length
             }
@@ -151,7 +151,6 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
     // return kmer_count_table;
 
 }
-// */
 
 bool * generate_coder(bool coder_num)
 {
@@ -197,15 +196,6 @@ bool * generate_coder(bool coder_num)
     coder[103+2*c] = 1;
 
     return coder;
-}
-
-int * generate_base(int k)
-{
-    static int base [32];
-    for (int i = 0; i<k; i++){       
-        base[i] = pow(2, k-i-1);
-    }
-    return base;
 }
 
 char * generate_complement(void)
@@ -301,7 +291,7 @@ long file_size(string filename)
 int main( int argc, char *argv[])
 {
     bool *coder;
-    int *base;
+    // int *base;
     char *comple;
     short *choose_coder;
     coder = generate_coder(3);
@@ -315,19 +305,22 @@ int main( int argc, char *argv[])
     long down_sampling_size = 2000000000; //2G bases
     const int k = stod(recept_k);
 
-    int thread_num = 5;
+    int thread_num = 10;
     long start = 0;
     long end = 0;
 
     // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
     int down_sam_ratio = stod(sample_ratio); // 13;
-    // const int k = 32;
     long long array_size = pow(2, k);
-    base = generate_base(k);
+    // base = generate_base(k);
     unsigned char *kmer_count_table = new unsigned char[array_size];
     memset(kmer_count_table, 0, sizeof(char)*array_size);
     // choose_coder = saved_random_coder(index_name);
     choose_coder = random_coder(k); 
+    int *base = new int [k];
+    for (int i = 0; i<k; i++){       
+        base[i] = pow(2, k-i-1);
+    }
 
     //multithread
 
@@ -371,12 +364,8 @@ int main( int argc, char *argv[])
     time_t now3 = time(0);
     cout << "Finish with time:\t" << now3-now1<<endl;
     
-    /*
-    read_fastq(fq1, k, coder, base, comple, choose_coder, down_sam_ratio);
-    read_fastq(fq2, k, coder, base, comple, choose_coder, down_sam_ratio);   
-    read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio);
-    */
     delete [] kmer_count_table;
+    delete [] base;
     return 0;
 }
 
