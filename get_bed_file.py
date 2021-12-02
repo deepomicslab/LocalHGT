@@ -12,6 +12,8 @@ def find_chr_name():
         array = line.strip().split()
         if int(array[1]) < 1:
             array[1] = 1
+        if abs((int(array[2]) - int(array[1]))) < 50:  #minimum frag len
+            continue
         print ('%s:%s-%s'%(index2name_dict[int(array[0])], array[1], array[2]), file = h)
         extract_len += (int(array[2]) - int(array[1]))
     f.close()

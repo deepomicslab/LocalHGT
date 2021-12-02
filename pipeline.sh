@@ -29,7 +29,7 @@ if [ ! -f $interval_file ];then
   rm ${interval_file}_tmp_*
 fi
 python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
-:<<!
+# :<<!
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
 
 bwa index $extracted_ref
