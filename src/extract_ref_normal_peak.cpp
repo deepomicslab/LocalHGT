@@ -31,7 +31,7 @@ class Peaks{
         int filter_peak_num = 0;
         int near = 5;
         int ref_gap = 500;
-        int ref_near = 200;
+        int ref_near = 500;
         int *peak_loci = new int[100000000];
         int *peak_filter = new int[100000000];
         unsigned int *peak_kmer = new unsigned int[array_size];
@@ -266,7 +266,7 @@ long slide_window(bool* record_ref_hit, int ref_len, int ref_index, long extract
                 for (int n = 0; n < w; n++){
                     diff += (single_hit_num[j-m-w-n] - single_hit_num[j-n]);
                 }
-                if (abs(diff) == w){
+                if (abs(diff) >= 3){
                     peak_hit[j] = true;
                     break;
                 }
