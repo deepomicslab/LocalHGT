@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <thread>
 #include <sstream>
+#include <map>
 
 
 using namespace std;
@@ -24,6 +25,50 @@ long long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 // char* kmer_count_table = (char*)malloc(array_size);
 
+class Split_reads{
+    public:
+        map<int, int> chr_kmer_count;
+        map<int, int> chr_peak_index;
+        int min_kmer_num = 2;
+        void add_peak(int peak_chr, int peak_pos, int peak_index);
+        void check_split(int* peak_filter);
+};
+
+void Split_reads::add_peak(int peak_chr, int peak_pos, int peak_index){
+    if (chr_kmer_count.find(peak_chr) == chr_kmer_count.end()){
+        chr_kmer_count[peak_chr] = 1;
+        chr_peak_index[peak_chr] = peak_index;
+    }
+    else{
+        chr_kmer_count[peak_chr] += 1;
+    }   
+}
+
+void Split_reads::check_split(int* peak_filter){
+    map<int, int>::iterator iter;
+    int chr, peak_index;
+    iter = chr_kmer_count.begin();
+    while(iter != chr_kmer_count.end()){
+        // cout << iter->first << ":"<< iter->second <<endl;
+        if (iter->second < min_kmer_num){
+            chr_kmer_count.erase(iter);
+        }
+        iter ++ ;
+    }
+
+    if (chr_kmer_count.size() > 1){
+        // map<int, int>::iterator iter;
+        iter = chr_kmer_count.begin();
+        while(iter != chr_kmer_count.end()){
+            // cout << iter->first << ":"<< iter->second <<endl;
+            chr = iter->first;
+            peak_index = chr_peak_index[chr];
+            peak_filter[peak_index] = 1;
+            iter ++ ;
+        }
+    }
+}
+
 
 class Peaks{
     public:
@@ -32,8 +77,8 @@ class Peaks{
         int near = 5;
         int ref_gap = 500;
         int ref_near = 500;
-        int *peak_loci = new int[100000000];
-        int *peak_filter = new int[100000000];
+        int *peak_loci = new int[1000000000];
+        int *peak_filter = new int[1000000000];
         unsigned int *peak_kmer = new unsigned int[array_size];
         // memset(peak_kmer, 0, sizeof(unsigned int)*array_size);
         void add_peak(int ref_index, int pos, unsigned int* record_ref_index,int ref_len);
@@ -56,6 +101,9 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
             }  
         }
     }  
+    if (my_peak_index > 500000000){
+        cout <<"too many peaks!"<<endl;
+    }
     my_peak_index += 1;  
 }
 
@@ -83,6 +131,9 @@ void Peaks::slide_reads(string fastq_file, bool* coder, int* base,
 
     while (fq_file >> reads_seq)
     {
+        if (i % 1000000 == 0){
+            cout << "recheck reads\t"<<i<<endl;
+        }
         if (i % 4 == 1){
             time_t t1 = time(0);
             if (i == 1){
@@ -550,7 +601,7 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
                     }
                     delete [] record_ref_hit;
                     delete [] record_ref_index;
-                    if (ref_index % 10000== 0){
+                    if (ref_index % 1000== 0){
                         time_t t1 = time(0);
                         cout << ref_index << "\t" <<slide_ref_len << " bp\t" << extract_ref_len
                          <<" bp\t" <<total_peak_num<<"\t" <<t1-t0<< endl;
