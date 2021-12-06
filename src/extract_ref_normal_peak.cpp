@@ -19,7 +19,7 @@ using namespace std;
 
 const short c = 300;
 const char coder_num = 3;
-const char least_depth = 3;
+const unsigned char least_depth = 3;
 const int k = 32;
 long long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
@@ -260,7 +260,7 @@ void Peaks::count_filtered_peak(string interval_name){
     cout <<"##########final_ref_len"<<final_ref_len<<endl;
 }
 
-long slide_window(bool* record_ref_hit, int ref_len, int ref_index, long extract_ref_len,
+long slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, long extract_ref_len,
                 ofstream & interval_file, float hit_ratio, float perfect_hit_ratio,
                 long & total_peak_num,Peaks & MyPeak,unsigned int* record_ref_index){ 
                 //find density hits regions
@@ -280,17 +280,24 @@ long slide_window(bool* record_ref_hit, int ref_len, int ref_index, long extract
     bool *peak_hit = new bool[ref_len];
     int* save_peak_intervals = new int[2*ref_len];
     int peak_index = 0;
+    unsigned char* ref_depth = new unsigned char[ref_len];
+    int max_depth = 0;
     
     for (int j = 0; j < ref_len; j++){
         short hit_coder_num = 0;
+        max_depth = 0;
         for (int p = 0; p < 3; p++){
             // if (record_ref_hit[ref_len*p+j] == true){
-            if (record_ref_hit[coder_num*j+p] == true){
+            if (record_ref_hit[coder_num*j+p] >= 3){
                 hit_coder_num += 1;
                 // cout << j <<"hit"<<p << endl;
             }
+            if (record_ref_hit[coder_num*j+p] > max_depth){
+                max_depth = record_ref_hit[coder_num*j+p];
+            }
         }
-        
+        // cout << j << "\t" << max_depth<<endl;
+        ref_depth[j] = max_depth;
         if (hit_coder_num == 3){
             trio_hit_num[j] = 1;
         }
@@ -354,13 +361,17 @@ long slide_window(bool* record_ref_hit, int ref_len, int ref_index, long extract
             for (int m = 0; m < 5; m++){
                 int diff = 0;
                 for (int n = 0; n < w; n++){
-                    diff += (single_hit_num[j-m-w-n] - single_hit_num[j-n]);
+                    // diff += (single_hit_num[j-m-w-n] - single_hit_num[j-n]);
+                    if (ref_depth[j-m-w-n] > ref_depth[j-n]){
+                        diff += 1;
+                    }
+                    else{
+                        if (ref_depth[j-n] > ref_depth[j-m-w-n]){
+                            diff -= 1;
+                        }                        
+                    }
+                    
                 }
-                // original
-                // if (abs(diff) >= 3){
-                //     peak_hit[j] = true;
-                //     break;
-                // }
                 if (diff >= DIFF){
                     peak_hit[j-m-w] = true;
                 }
@@ -370,8 +381,6 @@ long slide_window(bool* record_ref_hit, int ref_len, int ref_index, long extract
             }
             
         }
-        // find peak
-
     }
     if (conti_flag == true & good_window == true){
         end = ref_len;
@@ -408,27 +417,19 @@ long slide_window(bool* record_ref_hit, int ref_len, int ref_index, long extract
                     save_peak_intervals[2 * peak_index+1] = end;
                     peak_index += 1;
                 }
-
             }
-        }
-        
+        }    
     }
 
     for (int i = 0; i < peak_index; i++){
         extract_ref_len += (save_peak_intervals[2*i+1] - save_peak_intervals[2*i]);
-        // interval_file << ref_index << "\t" << save_peak_intervals[2*i] << "\t"<< save_peak_intervals[2*i+1] << endl;
     }
-    // for (int i = 0; i < frag_index; i++){
-    //     extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
-    //     interval_file << ref_index << "\t" << save_good_intervals[2*i] << "\t"<< save_good_intervals[2*i+1] << endl;
-    // }
-    // cout << frag_index << endl;
     delete [] save_good_intervals;
     delete [] single_hit_num;
     delete [] trio_hit_num;
     delete [] save_peak_intervals;
     delete [] peak_hit;
-    // return save_good_intervals;
+    delete [] ref_depth;
     return extract_ref_len;
 }
 
@@ -612,7 +613,7 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
 
 void read_index(bool* coder, int* base, int k, char* comple, string index_name, string interval_name,
                 short *choose_coder, float hit_ratio, float perfect_hit_ratio, Peaks & MyPeak){
-    bool *record_ref_hit; 
+    // bool *record_ref_hit; 
     unsigned int *record_ref_index;
     long total_peak_num = 0;
 
@@ -629,7 +630,7 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
     long ref_start = 0;
     long extract_ref_len = 0;
     long slide_ref_len = 0;
-    // unsigned char *record_ref_hit; 
+    unsigned char *record_ref_hit; 
     time_t t0 = time(0);
  
     long long start_point = 400;
@@ -649,17 +650,16 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
 
         int n = 0;
         int j = 0;
-        record_ref_hit = new bool[ref_len*coder_num];
+        record_ref_hit = new unsigned char[ref_len*coder_num];
         record_ref_index = new unsigned int [ref_len*coder_num];
         while (n < buffer_size){
             memcpy(&kmer_index, each_ref_buffer, sizeof(unsigned int));
             record_ref_index[j] = kmer_index;
-            if ((int)kmer_count_table[kmer_index] == least_depth & real_index != 0){
-                record_ref_hit[j] = true;
-                // cout <<(int)kmer_count_table[real_index] << "\t"<<i<<endl;
+            if (kmer_index != 0){
+                record_ref_hit[j] = kmer_count_table[kmer_index];
             }
             else{
-                record_ref_hit[j] = false;
+                record_ref_hit[j] = 0;
             }
             j += 1;
             each_ref_buffer = each_ref_buffer + sizeof(unsigned int);
@@ -964,12 +964,12 @@ int main( int argc, char *argv[])
     float perfect_hit_ratio = stod(accept_perfect_hit_ratio);
     long down_sampling_size = 2000000000; //2G bases
 
-    int thread_num = 5;
+    int thread_num = 10;
     long start = 0;
     long end = 0;
 
-    // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    int down_sam_ratio = 100;
+    int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
+    // int down_sam_ratio = 100;
     //index
     string index_name = fasta_file + ".index.dat";
     ifstream findex(index_name);
