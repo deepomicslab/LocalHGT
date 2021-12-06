@@ -29,6 +29,7 @@ if [ ! -f $interval_file ];then
   rm ${interval_file}_tmp_*
 fi
 python3 $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
+echo $ID is done.
 :<<!
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
 

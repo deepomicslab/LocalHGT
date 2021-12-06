@@ -25,10 +25,11 @@ long long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 // char* kmer_count_table = (char*)malloc(array_size);
 
-int MIN_KMER_NUM = 8;
-int NEAR = 5;
+int MIN_KMER_NUM = 6; //6
 int REF_NEAR = 200;
-int DIFF = 3;
+int DIFF = 3; //3
+int PEAK_W = 5; //5
+int NEAR = PEAK_W;
 
 class Split_reads{
     public:
@@ -91,7 +92,7 @@ class Peaks{
         void add_peak(int ref_index, int pos, unsigned int* record_ref_index,int ref_len);
         void delete_array(void);
         void slide_reads(string fastq_file, bool* coder, int* base, 
-                        char* comple, short *choose_coder);
+                        char* comple, short *choose_coder, int down_sam_ratio, long start, long end);
         void count_filtered_peak(string interval_name);
 };
 
@@ -115,7 +116,7 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
 }
 
 void Peaks::slide_reads(string fastq_file, bool* coder, int* base, 
-                        char* comple, short *choose_coder){
+                        char* comple, short *choose_coder, int down_sam_ratio, long start, long end){
 
     time_t t0 = time(0);
     ifstream fq_file; 
@@ -136,18 +137,36 @@ void Peaks::slide_reads(string fastq_file, bool* coder, int* base,
     srand(seed);
     int chr_index, peak_locus,peak_index;
 
+    long pos = 0;
+    for (long i = start; i>0; i--){
+        fq_file.seekg(i, ios::beg);
+        char j;
+        fq_file.get(j);
+        if (j == '@'){ //only read name has this symbol.
+            pos = i;
+            break;
+        }       
+    }
+    fq_file.seekg(pos, ios::beg);
+    long add_size = start;
+    cout<<start<<"\t"<<end<<"\t||||||||||\t"<<pos<<endl;
     while (fq_file >> reads_seq)
     {
         if (lines % 1000000 == 0){
             cout << "recheck reads\t"<<lines<<endl;
         }
+        if (add_size>=end){
+            break;
+        }
+        add_size += reads_seq.length();
+
         if (lines % 4 == 1){
             time_t t1 = time(0);
             if (lines == 1){
                 read_len = reads_seq.length();//cal read length
             }
-            r = rand() % 100 ;
-            if (r < 100){
+            r = rand() % 100;
+            if (r < down_sam_ratio){
                 for (int j = 0; j < read_len; j++){
                     reads_int[j] = (int)reads_seq[j];
                     reads_comple_int[j] = comple[reads_int[j]];
@@ -326,7 +345,7 @@ long slide_window(bool* record_ref_hit, int ref_len, int ref_index, long extract
         }
 
         // find peak
-        int w = 5;
+        int w = PEAK_W;
         peak_hit[j] = false;
         if (j > 60){
             for (int m = 0; m < 5; m++){
@@ -669,7 +688,7 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
     ifstream fq_file; 
     fq_file.open(fastq_file);
 
-    long pos;
+    long pos = 0;
     for (long i = start; i>0; i--){
         fq_file.seekg(i, ios::beg);
         char j;
@@ -995,9 +1014,38 @@ int main( int argc, char *argv[])
     read_index(coder, base, k, comple, index_name, interval_name, choose_coder, 
                 hit_ratio, perfect_hit_ratio,MyPeak);
 
-    
-    MyPeak.slide_reads(fq1, coder, base, comple, choose_coder);
-    MyPeak.slide_reads(fq2, coder, base, comple, choose_coder);
+    down_sam_ratio = 1000;
+
+    for (int i=0; i<thread_num; i++){
+        start = i*each_size;
+        end = (i+1)*each_size;
+        if (i == thread_num-1){
+            end = size;
+        }
+        cout <<start<<"\t"<<end<<endl;
+        threads.push_back(thread(&Peaks::slide_reads, MyPeak, fq1, coder, base, comple, choose_coder, down_sam_ratio, start, end));
+    }
+	for (auto&th : threads)
+		th.join();
+    threads.clear();
+
+    for (int i=0; i<thread_num; i++){
+        start = i*each_size;
+        end = (i+1)*each_size;
+        if (i == thread_num-1){
+            end = size;
+        }
+        cout <<start<<"\t"<<end<<endl;
+        threads.push_back(thread(&Peaks::slide_reads, MyPeak, fq2, coder, base, comple, choose_coder, down_sam_ratio, start, end));
+    }
+	for (auto&th : threads)
+		th.join();
+    threads.clear();
+
+
+
+    // MyPeak.slide_reads(fq1, coder, base, comple, choose_coder, down_sam_ratio, 0, 2000000000);
+    // MyPeak.slide_reads(fq2, coder, base, comple, choose_coder, down_sam_ratio, 0, 2000000000);
     MyPeak.count_filtered_peak(interval_name);
     cout<< MyPeak.filter_peak_num<<"---------peak number:"<<MyPeak.my_peak_index<<endl;
     MyPeak.delete_array();
