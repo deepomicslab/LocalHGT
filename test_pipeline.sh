@@ -28,8 +28,8 @@ if [ ! -f $interval_file ];then
   cat ${interval_file}_tmp_* >$interval_file
   rm ${interval_file}_tmp_*
 fi
-python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
-# :<<!
+python3 $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
+:<<!
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
 
 bwa index $extracted_ref
@@ -41,7 +41,7 @@ echo Time taken to prepare ref is ${take} seconds. >> ${sample}.log
 ##################skip bam-sorting#################
 bwa mem -M -t 5 -R "@RG\tID:id\tSM:sample\tLB:lib" $extracted_ref $fq1 $fq2 > $sample.unique.sam
 
-python $dir/extractSplitReads_BwaMem.py -i $sample.unique.sam >$sample.splitters.sam
+python3 $dir/extractSplitReads_BwaMem.py -i $sample.unique.sam >$sample.splitters.sam
 # samtools view -h -q 20 $sample.sam > $sample.unique.sam
 # rm $sample.sam
 
@@ -49,9 +49,9 @@ end=$(date +%s)
 take=$(( end - start ))
 echo Time taken to map reads is ${take} seconds. >> ${sample}.log
 
-python $dir/get_raw_bkp.py -u $sample.unique.sam -o $sample.raw.txt
+python3 $dir/get_raw_bkp.py -u $sample.unique.sam -o $sample.raw.txt
 
-python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.sam \
+python3 $dir/accurate_bkp.py -g $original_ref -u $sample.unique.sam \
 -s $sample.splitters.sam -a $sample.raw.txt -o $sample.acc.txt
 !
 end=$(date +%s)
@@ -84,7 +84,7 @@ echo Time taken to execute commands is ${take} seconds. >> ${sample}.log
 
 # # Extract split reads
 # samtools view -h $sample.bam \
-#   | python /mnt/d/breakpoints/script/extractSplitReads_BwaMem.py -i stdin \
+#   | python3 /mnt/d/breakpoints/script/extractSplitReads_BwaMem.py -i stdin \
 #   | samtools view -Sb > $sample.unsort.splitters.bam
 # # Sort split reads bam file
 # samtools sort -o $sample.splitters.bam $sample.unsort.splitters.bam
@@ -93,9 +93,9 @@ echo Time taken to execute commands is ${take} seconds. >> ${sample}.log
 # samtools index $sample.unique.bam
 # samtools index $sample.splitters.bam
 
-# python /mnt/d/breakpoints/script/get_raw_bkp_v2.py -u $sample.unique.bam \
+# python3 /mnt/d/breakpoints/script/get_raw_bkp_v2.py -u $sample.unique.bam \
 # -o $sample.raw.txt
-# python /mnt/d/breakpoints/script/accurate_bkp.py -g $original_ref -u $sample.unique.bam \
+# python3 /mnt/d/breakpoints/script/accurate_bkp.py -g $original_ref -u $sample.unique.bam \
 # -s $sample.splitters.bam -a $sample.raw.txt -o $sample.acc.txt
 
 

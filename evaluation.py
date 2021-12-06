@@ -297,8 +297,9 @@ def snp():
             ba.get_ID(index)    
             sa = Sample(ba.sample, true_dir)
             ref_accuracy, ref_len = sa.eva_ref(local_dir)
-            local_pe = sa.eva_tool(local_dir)
-            print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy)
+            print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb")
+            # local_pe = sa.eva_tool(local_dir)
+            # print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy)
 """
             lemon_pe = sa.eva_tool(lemon_dir)
             local_pe = sa.eva_tool(local_dir)

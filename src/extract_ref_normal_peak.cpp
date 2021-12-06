@@ -20,16 +20,21 @@ using namespace std;
 const short c = 300;
 const char coder_num = 3;
 const char least_depth = 3;
-const int k = 32;
+const int k = 30;
 long long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 // char* kmer_count_table = (char*)malloc(array_size);
+
+int MIN_KMER_NUM = 8;
+int NEAR = 5;
+int REF_NEAR = 200;
+int DIFF = 3;
 
 class Split_reads{
     public:
         map<int, int> chr_kmer_count;
         map<int, int> chr_peak_index;
-        int min_kmer_num = 2;
+        int min_kmer_num = MIN_KMER_NUM;
         void add_peak(int peak_chr, int peak_pos, int peak_index);
         void check_split(int* peak_filter);
 };
@@ -55,7 +60,7 @@ void Split_reads::check_split(int* peak_filter){
         }
         iter ++ ;
     }
-
+    // cout <<"********************"<<endl;
     if (chr_kmer_count.size() > 1){
         // map<int, int>::iterator iter;
         iter = chr_kmer_count.begin();
@@ -66,19 +71,21 @@ void Split_reads::check_split(int* peak_filter){
             peak_filter[peak_index] = 1;
             iter ++ ;
         }
+        // cout << "------------------"<<endl;
     }
+    
 }
-
 
 class Peaks{
     public:
         int my_peak_index = 0;
         int filter_peak_num = 0;
-        int near = 5;
+        int near = NEAR;
         int ref_gap = 500;
-        int ref_near = 500;
-        int *peak_loci = new int[1000000000];
-        int *peak_filter = new int[1000000000];
+        int ref_near = REF_NEAR;
+        int max_peak_num = 500000000;
+        int *peak_loci = new int[max_peak_num*2];
+        int *peak_filter = new int[max_peak_num*2];
         unsigned int *peak_kmer = new unsigned int[array_size];
         // memset(peak_kmer, 0, sizeof(unsigned int)*array_size);
         void add_peak(int ref_index, int pos, unsigned int* record_ref_index,int ref_len);
@@ -93,7 +100,7 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
     peak_loci[2*my_peak_index+1] = pos;
     
     int index;
-    for (int near_pos = pos - near; near_pos<pos + near; near_pos++){
+    for (int near_pos = pos - near; near_pos < pos + 1; near_pos++){
         if (near_pos>0 & near_pos<ref_len){
             for (int p = 0; p < 3; p++){
                 index = coder_num*near_pos+p;
@@ -101,7 +108,7 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
             }  
         }
     }  
-    if (my_peak_index > 500000000){
+    if (my_peak_index > max_peak_num){
         cout <<"too many peaks!"<<endl;
     }
     my_peak_index += 1;  
@@ -116,7 +123,7 @@ void Peaks::slide_reads(string fastq_file, bool* coder, int* base,
     string reads_seq;
     int reads_int [150];
     int reads_comple_int [150];
-    unsigned int i = 0;
+    unsigned int lines = 0;
     int converted_reads [450];
     int complemented_reads [450];
     int m;
@@ -131,12 +138,12 @@ void Peaks::slide_reads(string fastq_file, bool* coder, int* base,
 
     while (fq_file >> reads_seq)
     {
-        if (i % 1000000 == 0){
-            cout << "recheck reads\t"<<i<<endl;
+        if (lines % 1000000 == 0){
+            cout << "recheck reads\t"<<lines<<endl;
         }
-        if (i % 4 == 1){
+        if (lines % 4 == 1){
             time_t t1 = time(0);
-            if (i == 1){
+            if (lines == 1){
                 read_len = reads_seq.length();//cal read length
             }
             r = rand() % 100 ;
@@ -146,6 +153,7 @@ void Peaks::slide_reads(string fastq_file, bool* coder, int* base,
                     reads_comple_int[j] = comple[reads_int[j]];
                 }
                 int peak_chr = 0;
+                Split_reads each_read;
                 for (int j = 0; j < read_len-k+1; j++){
                     for (int i = 0; i < 3; i++){
                         kmer_index = 0;
@@ -168,24 +176,29 @@ void Peaks::slide_reads(string fastq_file, bool* coder, int* base,
                         else{
                             real_index = kmer_index;
                         }
+                        
                         if (peak_kmer[real_index] != 0){
-                            chr_index = peak_loci[2*peak_kmer[real_index]];
-                            peak_locus = peak_loci[2*peak_kmer[real_index]+1];
-                            if (peak_chr != 0 & chr_index != peak_chr){
-                                peak_filter[peak_index] = 1;
-                                peak_filter[peak_kmer[real_index]] = 1;
-                                // cout << peak_chr<<"\t"<< chr_index<< "\t"<<peak_locus<<endl;
-                            }
-                            peak_index = peak_kmer[real_index];
-                            peak_chr = chr_index;
+                            each_read.add_peak(peak_loci[2*peak_kmer[real_index]], peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index]);
+                            // cout << peak_loci[2*peak_kmer[real_index]]<<"\t"<<peak_loci[2*peak_kmer[real_index]+1]<<endl;
+                            // chr_index = peak_loci[2*peak_kmer[real_index]];
+                            // peak_locus = peak_loci[2*peak_kmer[real_index]+1];
+                            // if (peak_chr != 0 & chr_index != peak_chr){
+                            //     peak_filter[peak_index] = 1;
+                            //     peak_filter[peak_kmer[real_index]] = 1;
+                            //     // cout << peak_chr<<"\t"<< chr_index<< "\t"<<peak_locus<<endl;
+                            // }
+                            // peak_index = peak_kmer[real_index];
+                            // peak_chr = chr_index;
                             
                         }
                         
                     }
                 }
+                // cout << "****************"<<endl;
+                each_read.check_split(peak_filter);
             }         
         }
-        i++;
+        lines++;
     }
     fq_file.close();
 }
@@ -202,6 +215,7 @@ void Peaks::count_filtered_peak(string interval_name){
     int start = 1;
     int end = 1;
     int chr = 1;
+    long final_ref_len = 0;
     for (int i = 0; i < my_peak_index; i++){
         if (peak_filter[i] == 1 ){
             filter_peak_num += 1;
@@ -210,6 +224,7 @@ void Peaks::count_filtered_peak(string interval_name){
             }
             else{
                 interval_file << chr << "\t" << start << "\t"<< end << endl;
+                final_ref_len += (end - start);
                 chr = peak_loci[2*i];
                 start = peak_loci[2*i+1]-ref_near;
                 end = peak_loci[2*i+1]+ref_near;
@@ -218,7 +233,9 @@ void Peaks::count_filtered_peak(string interval_name){
         }
     }
     interval_file << chr << "\t" << start << "\t"<< end << endl;
+    final_ref_len += (end - start);
     interval_file.close();
+    cout <<"##########final_ref_len"<<final_ref_len<<endl;
 }
 
 long slide_window(bool* record_ref_hit, int ref_len, int ref_index, long extract_ref_len,
@@ -317,11 +334,17 @@ long slide_window(bool* record_ref_hit, int ref_len, int ref_index, long extract
                 for (int n = 0; n < w; n++){
                     diff += (single_hit_num[j-m-w-n] - single_hit_num[j-n]);
                 }
-                if (abs(diff) >= 3){
-                    peak_hit[j] = true;
-                    break;
+                // original
+                // if (abs(diff) >= 3){
+                //     peak_hit[j] = true;
+                //     break;
+                // }
+                if (diff >= DIFF){
+                    peak_hit[j-m-w] = true;
                 }
-                // cout << diff << endl;
+                if (diff <= -DIFF){
+                    peak_hit[j] = true;
+                }
             }
             
         }
@@ -664,7 +687,8 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
     int reads_int [150];
     int reads_comple_int [150];
 
-    unsigned int i = 0;
+    // unsigned int i = 0;
+    unsigned int lines = 0;
     int converted_reads [450];
     int complemented_reads [450];
     int m;
@@ -684,12 +708,12 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
         }
         add_size += reads_seq.length();
 
-        if (i % 4 == 1){
+        if (lines % 4 == 1){
             time_t t1 = time(0);
-            if (i % 10000000 == 1){
-                cout <<i<<"reads\t" << t1-t0 <<endl;
+            if (lines % 10000000 == 1){
+                cout <<lines<<"reads\t" << t1-t0 <<endl;
             }
-            if (i == 1){
+            if (lines == 1){
                 read_len = reads_seq.length();//cal read length
             }
             // srand((unsigned)time(NULL));
@@ -734,7 +758,7 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
                 }
             }         
         }
-        i++;
+        lines++;
     }
     fq_file.close();
     // return kmer_count_table;
