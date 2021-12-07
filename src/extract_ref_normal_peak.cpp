@@ -27,8 +27,8 @@ char *kmer_count_table = new char[array_size];
 
 int MIN_KMER_NUM = 6; //6
 int REF_NEAR = 200;
-int DIFF = 2; //3
-int PEAK_W = 3; //5
+int DIFF = 2; //2
+int PEAK_W = 3; //3
 int NEAR = PEAK_W; //PEAK_W
 int SKIP_N = 5;
 int MIN_READS = 1;
@@ -95,7 +95,7 @@ class Peaks{
         int near = NEAR;
         int ref_gap = 500;
         int ref_near = REF_NEAR;
-        int max_peak_num = 500000000;
+        int max_peak_num = 1000000000;
         int *peak_loci = new int[max_peak_num*2];
         int *peak_filter = new int[max_peak_num];
         unsigned int *peak_kmer = new unsigned int[array_size];
@@ -166,7 +166,6 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
     fq_file.seekg(pos, ios::beg);
     fq_file_2.seekg(pos, ios::beg);
     long add_size = start;
-    // cout<<start<<"\t"<<end<<"\t||||||||||\t"<<pos<<endl;
     while (fq_file >> reads_seq)
     {
         fq_file_2>>reads_seq_2;
@@ -178,7 +177,16 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
         }
         add_size += reads_seq.length();
         if (lines == 0){
-            cout << reads_seq<<"\tshould be the same with\t"<< reads_seq_2<< endl;
+            string delimiter = "/";
+            string read_name_forward = reads_seq.substr(0, reads_seq.find(delimiter));
+            string read_name_reverse = reads_seq_2.substr(0, reads_seq_2.find(delimiter));
+            if (read_name_forward != read_name_reverse){
+                cout << read_name_forward<<"\tshould be the same with\t"<< read_name_reverse<< endl;
+            }
+            // else{
+            //     cout << read_name_forward<<"\tis same with\t"<< read_name_reverse<< endl;
+            // }
+            
         }
 
         if (lines % 4 == 1){
@@ -329,7 +337,7 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
         max_depth = 0;
         for (int p = 0; p < 3; p++){
             // if (record_ref_hit[ref_len*p+j] == true){
-            if (record_ref_hit[coder_num*j+p] >= 3){
+            if (record_ref_hit[coder_num*j+p] == least_depth){
                 hit_coder_num += 1;
                 // cout << j <<"hit"<<p << endl;
             }
@@ -1078,7 +1086,7 @@ int main( int argc, char *argv[])
     read_index(coder, base, k, comple, index_name, interval_name, choose_coder, 
                 hit_ratio, perfect_hit_ratio,MyPeak);
     cout << "raw peaks is done."<<endl;
-    // down_sam_ratio = 13;
+    down_sam_ratio = 30;
 
     for (int i=0; i<thread_num; i++){
         start = i*each_size;
