@@ -65,27 +65,9 @@ def check_if_bkp_in_extracted_ref(true, interval_file):
         if bed_obj.search(single_locus):
             i += 1
             # print ('Have ref:', true_locus)
-        # else:
-        #     print ('Lack ref:', single_locus)
+        else:
+            print ('Lack ref:', single_locus)
     return round(float(i)/len(all_pos),2), bed_obj.ref_len
-
-def read_interval(interval_file, true_locus):
-    gap = 100
-    cover_flag = False
-    f = open(interval_file)
-    for line in f:
-        line = line.strip()
-        if line == '':
-            continue
-        chr_name = line.split(":")[0]
-        start = int(line.split(":")[1].split("-")[0])
-        end = int(line.split(":")[1].split("-")[1])
-        if chr_name == true_locus[0] and int(true_locus[1]) > start + gap and int(true_locus[1]) < end - gap:
-        # if chr_name == true_locus[0] and int(true_locus[1]) > start and int(true_locus[1]) < end:
-            cover_flag = True
-            # print (true_locus, line)
-    f.close()
-    return cover_flag
 
 def read_all_frag(true):
     all_pos = []
@@ -135,9 +117,9 @@ def compare(true_bkp, our_bkp):
                 right += 1
                 identified = True
                 break
-    #     if identified == False:
-    #         print ("Missed bkp:", true)
-    # print ("-----------")  
+        if identified == False:
+            print ("Missed bkp:", true)
+    print ("-----------")  
     accuracy = right/len(true_bkp)
 
     #find false positive locus
@@ -289,7 +271,7 @@ def snp():
     fi = Figure()
     ba = Parameters()
 
-    for snp_rate in ba.snp_level[1:-1]: # 0.01-0.09
+    for snp_rate in ba.snp_level[1:-5]: # 0.01-0.09
     # for snp_rate in [0.05]:
         ba.change_snp_rate(snp_rate)
         for index in range(ba.iteration_times):
