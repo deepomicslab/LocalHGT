@@ -25,7 +25,7 @@ long long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 // char* kmer_count_table = (char*)malloc(array_size);
 
-int MIN_KMER_NUM = 2; //6
+int MIN_KMER_NUM = 6; //6
 int REF_NEAR = 200;
 int DIFF = 2; //3
 int PEAK_W = 3; //5
@@ -103,7 +103,7 @@ class Peaks{
         void init(void);
         void add_peak(int ref_index, int pos, unsigned int* record_ref_index,int ref_len);
         void delete_array(void);
-        void slide_reads(string fastq_file, bool* coder, int* base, 
+        void slide_reads(string fastq_file, string fastq_file_2, bool* coder, int* base, 
                         char* comple, short *choose_coder, int down_sam_ratio, long start, long end);
         void count_filtered_peak(string interval_name);
 };
@@ -129,13 +129,15 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
     my_peak_index += 1;  
 }
 
-void Peaks::slide_reads(string fastq_file, bool* coder, int* base, 
+void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int* base, 
                         char* comple, short *choose_coder, int down_sam_ratio, long start, long end){
 
     time_t t0 = time(0);
     ifstream fq_file; 
+    ifstream fq_file_2;
     fq_file.open(fastq_file);
-    string reads_seq;
+    fq_file_2.open(fastq_file_2);
+    string reads_seq, reads_seq_2;
     int reads_int [150];
     int reads_comple_int [150];
     unsigned int lines = 0;
@@ -162,10 +164,12 @@ void Peaks::slide_reads(string fastq_file, bool* coder, int* base,
         }       
     }
     fq_file.seekg(pos, ios::beg);
+    fq_file_2.seekg(pos, ios::beg);
     long add_size = start;
     // cout<<start<<"\t"<<end<<"\t||||||||||\t"<<pos<<endl;
     while (fq_file >> reads_seq)
     {
+        fq_file_2>>reads_seq_2;
         if (lines % 1000000 == 1000000-1){
             cout << "recheck reads\t"<<lines<<endl;
         }
@@ -173,9 +177,9 @@ void Peaks::slide_reads(string fastq_file, bool* coder, int* base,
             break;
         }
         add_size += reads_seq.length();
-        // if (lines == 1){
-        //     cout << reads_seq << endl;
-        // }
+        if (lines == 0){
+            cout << reads_seq<<"\tshould be the same with\t"<< reads_seq_2<< endl;
+        }
 
         if (lines % 4 == 1){
             time_t t1 = time(0);
@@ -184,12 +188,12 @@ void Peaks::slide_reads(string fastq_file, bool* coder, int* base,
             }
             r = rand() % 100;
             if (r < down_sam_ratio){
+                Split_reads each_read;
+
                 for (int j = 0; j < read_len; j++){
                     reads_int[j] = (int)reads_seq[j];
                     reads_comple_int[j] = comple[reads_int[j]];
                 }
-                int peak_chr = 0;
-                Split_reads each_read;
                 for (int j = 0; j < read_len-k+1; j++){
                     for (int i = 0; i < 3; i++){
                         kmer_index = 0;
@@ -215,8 +219,41 @@ void Peaks::slide_reads(string fastq_file, bool* coder, int* base,
                         
                         if (peak_kmer[real_index] != 0 & all_valid){
                             each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index]);
+                        }  
+                    }
+                }
+
+                //reverse reads
+                for (int j = 0; j < read_len; j++){
+                    reads_int[j] = (int)reads_seq_2[j];
+                    reads_comple_int[j] = comple[reads_int[j]];
+                }
+                for (int j = 0; j < read_len-k+1; j++){
+                    for (int i = 0; i < 3; i++){
+                        kmer_index = 0;
+                        comple_kmer_index = 0;
+                        bool all_valid = true;
+                        for (int z = 0; z<k; z++){
+                            m = coder[c*choose_coder[z*3+i]+reads_int[j+z]]; // choose_coder[z*3+i] indicate which coder
+                            n = coder[c*choose_coder[(k-1-z)*3+i]+reads_comple_int[j+z]];
+                            if (m == 5){
+                                all_valid = false;
+                                break;
+                            }
+                            kmer_index += m*base[z]; 
+                            comple_kmer_index += n*base[(k-1-z)];
+                              
+                        }
+                        if (kmer_index > comple_kmer_index){ //use a smaller index
+                            real_index = comple_kmer_index;
+                        }   
+                        else{
+                            real_index = kmer_index;
                         }
                         
+                        if (peak_kmer[real_index] != 0 & all_valid){
+                            each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index]);
+                        }  
                     }
                 }
                 // cout << "****************"<<endl;
@@ -226,6 +263,7 @@ void Peaks::slide_reads(string fastq_file, bool* coder, int* base,
         lines++;
     }
     fq_file.close();
+    fq_file_2.close();
 }
 
 void Peaks::delete_array(void){
@@ -391,9 +429,9 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
             }
             
         }
-        if (ref_index == 21 & j > 125910 -100 & j < 125910 + 100){
-            cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
-        }
+        // if (ref_index == 21 & j > 125910 -100 & j < 125910 + 100){
+        //     cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
+        // }
 
     }
     if (conti_flag == true & good_window == true){
@@ -983,7 +1021,7 @@ int main( int argc, char *argv[])
     long end = 0;
 
     // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    int down_sam_ratio = 100;
+    int down_sam_ratio = 13;
     //index
     string index_name = fasta_file + ".index.dat";
     ifstream findex(index_name);
@@ -1048,24 +1086,12 @@ int main( int argc, char *argv[])
         if (i == thread_num-1){
             end = size;
         }
-        threads.push_back(thread(&Peaks::slide_reads, MyPeak, fq1, coder, base, comple, choose_coder, down_sam_ratio, start, end));
+        threads.push_back(thread(&Peaks::slide_reads, MyPeak, fq1, fq2, coder, base, comple, choose_coder, down_sam_ratio, start, end));
     }
 	for (auto&th : threads)
 		th.join();
     threads.clear();
 
-    for (int i=0; i<thread_num; i++){
-        start = i*each_size;
-        end = (i+1)*each_size;
-        if (i == thread_num-1){
-            end = size;
-        }
-        // cout <<start<<"\t"<<end<<endl;
-        threads.push_back(thread(&Peaks::slide_reads, MyPeak, fq2, coder, base, comple, choose_coder, down_sam_ratio, start, end));
-    }
-	for (auto&th : threads)
-		th.join();
-    threads.clear();
 
     cout << "filtering peaks is done."<<endl;
 
