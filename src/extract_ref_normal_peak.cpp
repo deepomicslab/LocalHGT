@@ -25,12 +25,12 @@ long long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 // char* kmer_count_table = (char*)malloc(array_size);
 
-int MIN_KMER_NUM = 6; // 6
+int MIN_KMER_NUM = 5; // 6
 int REF_NEAR = 500; // 300
 int DIFF = 2; // 2
-int PEAK_W = 3; // 3
+int PEAK_W = 5; // 3
 int NEAR = 10; // PEAK_W 10
-int SKIP_N = 20; // 5
+int SKIP_N = 10; // 5
 int MIN_READS = 1; // 1
 
 class Split_reads{
@@ -93,6 +93,7 @@ class Peaks{
         int my_peak_index = 0;
         int filter_peak_num = 0;
         int near = NEAR;
+        int merge_close_peak = 50;
         int ref_gap = 500;
         int ref_near = REF_NEAR;
         int max_peak_num = 1000000000;
@@ -101,32 +102,57 @@ class Peaks{
         unsigned int *peak_kmer = new unsigned int[array_size];
 
         void init(void);
-        void add_peak(int ref_index, int pos, unsigned int* record_ref_index,int ref_len);
+        void add_peak(int ref_index, int pos, unsigned int* record_ref_index,int ref_len, long & total_peak_num);
         void delete_array(void);
         void slide_reads(string fastq_file, string fastq_file_2, bool* coder, int* base, 
                         char* comple, short *choose_coder, int down_sam_ratio, long start, long end);
         void count_filtered_peak(string interval_name);
+        bool merge_peak(int ref_index, int pos);
 };
 
-void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int ref_len){
-    peak_loci[2*my_peak_index] = ref_index;
-    peak_loci[2*my_peak_index+1] = pos;
-    
-    int index;
-    for (int near_pos = pos - near; near_pos < pos + 1; near_pos++){
-        if (near_pos>=0 & near_pos<=ref_len){
-            for (int p = 0; p < 3; p++){
-                index = coder_num*near_pos+p;
-                peak_kmer[record_ref_index[index]] = my_peak_index;
-                // cout << record_ref_index[index] << endl;
-            }  
-        }
-    }  
-    // cout << "-----------"<<endl;
-    if (my_peak_index > max_peak_num){
-        cout <<"too many peaks!"<<endl;
+void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int ref_len, long & total_peak_num){
+    // cout << Peaks::merge_peak(ref_index, pos)<<endl;
+    if (Peaks::merge_peak(ref_index, pos)){
+        int index;
+        for (int near_pos = pos - near; near_pos < pos + 1; near_pos++){
+            if (near_pos>=0 & near_pos<=ref_len){
+                for (int p = 0; p < 3; p++){
+                    index = coder_num*near_pos+p;
+                    peak_kmer[record_ref_index[index]] = my_peak_index - 1;
+                }  
+            }
+        }  
     }
-    my_peak_index += 1;  
+    else{
+        peak_loci[2*my_peak_index] = ref_index;
+        peak_loci[2*my_peak_index+1] = pos;
+        int index;
+        for (int near_pos = pos - near; near_pos < pos + 1; near_pos++){
+            if (near_pos>=0 & near_pos<=ref_len){
+                for (int p = 0; p < 3; p++){
+                    index = coder_num*near_pos+p;
+                    peak_kmer[record_ref_index[index]] = my_peak_index;
+                    // cout << record_ref_index[index] << endl;
+                }  
+            }
+        }  
+        // cout << "-----------"<<endl;
+        if (my_peak_index > max_peak_num){
+            cout <<"too many peaks!"<<endl;
+        }
+        my_peak_index += 1; 
+        total_peak_num += 1;
+    }
+}
+
+bool Peaks::merge_peak(int ref_index, int pos){
+    bool exist_peak = false;
+    if (my_peak_index > 0){
+        if (ref_index == peak_loci[2*my_peak_index-2] & pos - peak_loci[2*my_peak_index-1] < merge_close_peak){
+            exist_peak = true;
+        }
+    }
+    return exist_peak;
 }
 
 void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int* base, 
@@ -440,13 +466,13 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
             }        
         }
     }
-    if (ref_index == 31){
-        for (int j = 0; j < ref_len; j++){
-            if(j > 68066 - 100 & j < 68066 + 100){
-                cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
-            }
-        }
-    }
+    // if (ref_index == 36){
+    //     for (int j = 0; j < ref_len; j++){
+    //         if(j > 125843 - 100 & j < 125843 + 100){
+    //             cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
+    //         }
+    //     }
+    // }
 
     if (conti_flag == true & good_window == true){
         end = ref_len;
@@ -465,8 +491,7 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
         // extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
         for (int j =save_good_intervals[2*i]; j <save_good_intervals[2*i+1];j++ ){
             if (peak_hit[j] == true){
-                total_peak_num += 1;
-                MyPeak.add_peak(ref_index, j, record_ref_index, ref_len);
+                MyPeak.add_peak(ref_index, j, record_ref_index, ref_len,total_peak_num);
                 start = j - 200;
                 end = j + 200;
                 if (end > ref_len){
@@ -1052,8 +1077,8 @@ int main( int argc, char *argv[])
     memset(kmer_count_table, 0, sizeof(char)*array_size);
     choose_coder = saved_random_coder(index_name);
 
-    fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.1.fq";
-    fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.2.fq";
+    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.1.fq";
+    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.2.fq";
 
     long size = file_size(fq1);
     long each_size = size/thread_num;
@@ -1095,8 +1120,8 @@ int main( int argc, char *argv[])
     cout << "raw peaks is done."<<endl;
     down_sam_ratio = 30;
 
-    fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.1.fq";
-    fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.2.fq";
+    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.1.fq";
+    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.2.fq";
 
     for (int i=0; i<thread_num; i++){
         start = i*each_size;
