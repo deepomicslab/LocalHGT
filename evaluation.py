@@ -18,11 +18,12 @@ from datetime import datetime
 from simulation import Parameters
 
 tolerate_dist = 50
+ref_gap = 50
 
 class Read_bed(object):
     def __init__(self):
         self.true_interval = {}
-        self.gap = 100
+        self.gap = ref_gap
         self.ref_len = 0
 
     def read(self, interval_file):

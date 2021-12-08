@@ -25,13 +25,13 @@ long long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 // char* kmer_count_table = (char*)malloc(array_size);
 
-int MIN_KMER_NUM = 6; //6
-int REF_NEAR = 200;
-int DIFF = 2; //2
-int PEAK_W = 3; //3
-int NEAR = PEAK_W; //PEAK_W
-int SKIP_N = 5;
-int MIN_READS = 1;
+int MIN_KMER_NUM = 6; // 6
+int REF_NEAR = 300; // 300
+int DIFF = 2; // 2
+int PEAK_W = 3; // 3
+int NEAR = PEAK_W; // PEAK_W
+int SKIP_N = 20; // 5
+int MIN_READS = 1; // 1
 
 class Split_reads{
     public:
@@ -289,6 +289,10 @@ void Peaks::count_filtered_peak(string interval_name){
     long final_ref_len = 0;
     for (int i = 0; i < my_peak_index; i++){
         if (peak_filter[i] >= MIN_READS ){
+            // if (peak_loci[2*i] == 36){
+            //     cout << peak_loci[2*i] << "\t" << peak_loci[2*i+1] << endl;
+            // }
+            
             filter_peak_num += 1;
             if (chr == peak_loci[2*i] & peak_loci[2*i+1]-ref_near - end < ref_gap){
                 end = peak_loci[2*i+1]+ref_near;
@@ -433,15 +437,15 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
                             // cout << "-----------------"<<endl;
                     break;
                 }
-
-            }
-            
+            }        
         }
-        // if (ref_index == 21 & j > 125910 -100 & j < 125910 + 100){
-        //     cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
-        // }
-
     }
+
+    // for (int j = 0; j < ref_len; j++){
+    //     if (ref_index == 36 & j > 89115 -100 & j < 89115 + 100){
+    //         cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
+    //     }
+    // }
     if (conti_flag == true & good_window == true){
         end = ref_len;
         if (frag_index > 0 & start - save_good_intervals[2*frag_index-1] < window ){
