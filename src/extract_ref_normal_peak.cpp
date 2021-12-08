@@ -26,10 +26,10 @@ char *kmer_count_table = new char[array_size];
 // char* kmer_count_table = (char*)malloc(array_size);
 
 int MIN_KMER_NUM = 6; // 6
-int REF_NEAR = 300; // 300
+int REF_NEAR = 500; // 300
 int DIFF = 2; // 2
 int PEAK_W = 3; // 3
-int NEAR = PEAK_W; // PEAK_W
+int NEAR = 10; // PEAK_W 10
 int SKIP_N = 20; // 5
 int MIN_READS = 1; // 1
 
@@ -440,12 +440,14 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
             }        
         }
     }
+    if (ref_index == 31){
+        for (int j = 0; j < ref_len; j++){
+            if(j > 68066 - 100 & j < 68066 + 100){
+                cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
+            }
+        }
+    }
 
-    // for (int j = 0; j < ref_len; j++){
-    //     if (ref_index == 36 & j > 89115 -100 & j < 89115 + 100){
-    //         cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
-    //     }
-    // }
     if (conti_flag == true & good_window == true){
         end = ref_len;
         if (frag_index > 0 & start - save_good_intervals[2*frag_index-1] < window ){
@@ -743,7 +745,7 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
             cout << "read index ending." <<endl;
             break;
         }
-        if (ref_index % 1000 == 0){
+        if (ref_index % 10000 == 0){
             time_t t1 = time(0);
             cout << ref_index << "\t" <<slide_ref_len << " bp\t" << extract_ref_len <<" bp\t" << total_peak_num << "peaks\t"<<t1-t0<< endl;
         } 
@@ -1046,12 +1048,12 @@ int main( int argc, char *argv[])
         cout << "Reference index is detected." << endl;
     }
 
-    // start
     cout << "Start extract..."<<endl;
     memset(kmer_count_table, 0, sizeof(char)*array_size);
     choose_coder = saved_random_coder(index_name);
 
-    //multithread
+    fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.1.fq";
+    fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.2.fq";
 
     long size = file_size(fq1);
     long each_size = size/thread_num;
@@ -1087,10 +1089,14 @@ int main( int argc, char *argv[])
     cout << "reads finish.\t" << now2 - now1 << endl;
     Peaks MyPeak;
     memset(MyPeak.peak_filter, 0, sizeof(int)*MyPeak.max_peak_num);
+    memset(MyPeak.peak_kmer, 0, sizeof(unsigned int)*array_size);
     read_index(coder, base, k, comple, index_name, interval_name, choose_coder, 
                 hit_ratio, perfect_hit_ratio,MyPeak);
     cout << "raw peaks is done."<<endl;
     down_sam_ratio = 30;
+
+    fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.1.fq";
+    fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.2.fq";
 
     for (int i=0; i<thread_num; i++){
         start = i*each_size;
@@ -1109,8 +1115,6 @@ int main( int argc, char *argv[])
 
 
 
-    // MyPeak.slide_reads(fq1, coder, base, comple, choose_coder, down_sam_ratio, 0, 2000000000);
-    // MyPeak.slide_reads(fq2, coder, base, comple, choose_coder, down_sam_ratio, 0, 2000000000);
     MyPeak.count_filtered_peak(interval_name);
     cout<<"filtered peak number:" <<MyPeak.filter_peak_num<<"\toriginal peak number:"<<MyPeak.my_peak_index<<endl;
     MyPeak.delete_array();
