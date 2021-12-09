@@ -1263,19 +1263,27 @@ int main( int argc, char *argv[])
     Peaks MyPeak;
     memset(MyPeak.peak_filter, 0, sizeof(int)*MyPeak.max_peak_num);
     memset(MyPeak.peak_kmer, 0, sizeof(unsigned int)*array_size);
-    long * split_ref_cutoffs = split_ref(index_name, fasta_file, thread_num);
+
+    int ref_thread_num;
+    if (thread_num > 2){
+        ref_thread_num = 2;
+    }
+    else{
+        ref_thread_num = thread_num;
+    }
+    long * split_ref_cutoffs = split_ref(index_name, fasta_file, ref_thread_num);
     long extract_ref_len = 0;
     long slide_ref_len = 0;
     long total_peak_num = 0;
     // std::mutex mylock;
-    for (int i=0; i<thread_num; i++){
+    for (int i=0; i<ref_thread_num; i++){
         start = split_ref_cutoffs[3*i];
         if (start == 0){
             break;
         }
         end = split_ref_cutoffs[3*i+1];
         int start_ref_index = split_ref_cutoffs[3*i+2];
-        cout << start << "\t" <<end<< endl;
+        cout << "Thread N.O."<<i << "\t"<< start << "\t" <<end<< endl;
         // read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end);
         threads.push_back(thread(read_index, coder, base, k, comple, index_name, interval_name,
          choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end, 
