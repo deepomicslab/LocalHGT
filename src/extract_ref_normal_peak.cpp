@@ -13,6 +13,7 @@
 #include <thread>
 #include <sstream>
 #include <map>
+#include <mutex>
 
 
 using namespace std;
@@ -339,10 +340,11 @@ void Peaks::count_filtered_peak(string interval_name){
     cout <<"final_ref_len is:\t"<<final_ref_len<<endl;
 }
 
-long slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, long extract_ref_len,
+void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, long & extract_ref_len,
                 ofstream & interval_file, float hit_ratio, float perfect_hit_ratio,
                 long & total_peak_num,Peaks & MyPeak,unsigned int* record_ref_index){ 
                 //find density hits regions
+    
     int frag_index = 0;
     int window = 500;
     int one_coder_bases = 0; // the number of bases supported by at least one coder in a window
@@ -521,7 +523,7 @@ long slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
     delete [] save_peak_intervals;
     delete [] peak_hit;
     delete [] ref_depth;
-    return extract_ref_len;
+    // return extract_ref_len;
 }
 
 float cal_tab_empty_rate(){
@@ -703,8 +705,98 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
 }
 
 void read_index(bool* coder, int* base, int k, char* comple, string index_name, string interval_name,
+                short *choose_coder, float hit_ratio, float perfect_hit_ratio, Peaks & MyPeak, long start, 
+                long end, int start_ref_index, long&  extract_ref_len, long & slide_ref_len, long & total_peak_num){
+
+    // long extract_ref_len = 0;
+    // long slide_ref_len = 0;
+    // long total_peak_num = 0;
+
+    unsigned int *record_ref_index;
+    ifstream index_file;
+    ofstream interval_file;
+    index_file.open(index_name, ios::in | ios::binary); 
+    interval_file.open(interval_name, ios::out | ios::trunc);
+    unsigned int real_index;
+    unsigned int kmer_index;
+    long i = 0;
+    int ref_len, ref_index;
+    ref_index = start_ref_index;
+
+    unsigned char *record_ref_hit; 
+    time_t t0 = time(0);
+ 
+    long long start_point = start;
+    int buffer_size;
+    cout <<"Start slide ref..."<<endl;
+
+    index_file.seekg (0, index_file.end);
+    long long length = index_file.tellg();
+    cout <<start_ref_index <<"\t"<< start_point<<endl;
+
+
+    // /*
+    index_file.seekg(start, ios::beg);
+    while (!index_file.eof()){
+        index_file.read(reinterpret_cast<char*>(&real_index), sizeof(unsigned int));
+        ref_len = real_index;
+        // cout <<start<< "####### each ref length" << ref_len << endl;
+        buffer_size = (ref_len-k+1)*coder_num*4;
+        char *each_ref_buffer = new char[buffer_size];
+        index_file.read(each_ref_buffer, buffer_size);
+
+        int n = 0;
+        int j = 0;
+        record_ref_hit = new unsigned char[ref_len*coder_num];
+        record_ref_index = new unsigned int [ref_len*coder_num];
+        while (n < buffer_size){
+            memcpy(&kmer_index, each_ref_buffer, sizeof(unsigned int));
+            record_ref_index[j] = kmer_index;
+            if (kmer_index != 0){
+                record_ref_hit[j] = kmer_count_table[kmer_index];
+            }
+            else{
+                record_ref_hit[j] = 0;
+            }
+            j += 1;
+            each_ref_buffer = each_ref_buffer + sizeof(unsigned int);
+            n = n + sizeof(unsigned int);
+        }
+        // std::lock_guard<std::mutex> mylock_guard(mylock);
+        slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, 
+                                        perfect_hit_ratio,total_peak_num,MyPeak,record_ref_index);
+        slide_ref_len += ref_len;
+        start_point += 4;
+        start_point += buffer_size;
+        each_ref_buffer = each_ref_buffer - buffer_size; //move the pointer to the start
+        delete [] each_ref_buffer;
+        delete [] record_ref_hit;
+        delete [] record_ref_index;
+        // if (ref_index % 1 == 0){
+        //     time_t t1 = time(0);
+        //     cout <<"########\t" <<start<<"\t"<<ref_index << "\t" <<slide_ref_len << " bp\t" <<
+        //      extract_ref_len <<" bp\t" << total_peak_num << "peaks\t"<<t1-t0<< endl;
+        // } 
+        ref_index += 1;
+        if (start_point >= end){
+            // cout << length << "\t" << end <<endl;
+            cout << "read index ending." <<endl;
+            break;
+        }
+       
+        i += 1;
+        real_index = 0;
+    }   
+    // */    
+    index_file.close();  
+    interval_file.close();
+    time_t t1 = time(0);
+    cout << slide_ref_len << " bp\t" << extract_ref_len <<" bp\t" <<total_peak_num<<"peaks\t" <<t1-t0<< endl;
+    cout << "##########end" << end << "\t"<< start_point<<endl;
+}
+
+void read_index_BK(bool* coder, int* base, int k, char* comple, string index_name, string interval_name,
                 short *choose_coder, float hit_ratio, float perfect_hit_ratio, Peaks & MyPeak){
-    // bool *record_ref_hit; 
     unsigned int *record_ref_index;
     long total_peak_num = 0;
 
@@ -716,9 +808,7 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
     unsigned int kmer_index;
     long i = 0;
     int ref_len, ref_index;
-    long ref_end = 0;
     ref_index = 1;
-    long ref_start = 0;
     long extract_ref_len = 0;
     long slide_ref_len = 0;
     unsigned char *record_ref_hit; 
@@ -731,7 +821,7 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
     index_file.seekg (0, index_file.end);
     long long length = index_file.tellg();
 
-    index_file.seekg(400, ios::beg);
+    index_file.seekg(start_point, ios::beg);
     while (!index_file.eof()){
         index_file.read(reinterpret_cast<char*>(&real_index), sizeof(unsigned int));
         ref_len = real_index;
@@ -756,7 +846,7 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
             each_ref_buffer = each_ref_buffer + sizeof(unsigned int);
             n = n + sizeof(unsigned int);
         }
-        extract_ref_len = slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, 
+        slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, 
                                         perfect_hit_ratio,total_peak_num,MyPeak,record_ref_index);
         slide_ref_len += ref_len;
         start_point += 4;
@@ -773,8 +863,7 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
         if (ref_index % 10000 == 0){
             time_t t1 = time(0);
             cout << ref_index << "\t" <<slide_ref_len << " bp\t" << extract_ref_len <<" bp\t" << total_peak_num << "peaks\t"<<t1-t0<< endl;
-        } 
-        
+        }        
         i += 1;
         real_index = 0;
     }       
@@ -1034,6 +1123,68 @@ long file_size(string filename)
     return size;  
 }  
 
+long * split_ref(string index_name, string fasta_file, int thread_num){
+
+    ifstream index_file;
+    index_file.open(index_name, ios::in | ios::binary); 
+
+    static long split_ref_cutoffs[300];
+    int cut_index = 0;
+    long index_size = file_size(index_name);
+    long each_index_size = index_size/thread_num + 1;
+    string fai_name = fasta_file + ".fai";
+    ifstream fai_file;
+    fai_file.open(fai_name, ios::in); 
+    string aa;
+    string line;
+    int ref_len;
+    long add;
+    long pos = 100 * 4;
+    long start_byte, end_byte;
+    start_byte = pos;
+    long start_ref_index = 1;
+    long end_ref_index = 0;
+
+    while(1){
+        end_ref_index += 1;
+
+        index_file.seekg(pos, ios::beg);
+        index_file.read(reinterpret_cast<char*>(&ref_len), sizeof(unsigned int));
+        // cout << ref_len << "\t" <<end_ref_index<<endl;
+
+        add = 4*((ref_len-k+1)*coder_num+1); //the size of the genome.
+        if (pos -start_byte > each_index_size){
+            end_byte = pos + add;
+            cout << start_byte <<"\tsplit bytes\t"<<end_byte<<"\t"<<ref_len<<"index"<< start_ref_index<<endl;
+            split_ref_cutoffs[3*cut_index] = start_byte;
+            split_ref_cutoffs[3*cut_index+1] = end_byte;
+            split_ref_cutoffs[3*cut_index+2] = start_ref_index;
+            cut_index += 1;
+            start_byte = end_byte;     
+            start_ref_index = end_ref_index;   
+        }
+        pos += add;
+        if (pos >= index_size){
+            break;
+        }
+        
+    }
+
+    end_byte = index_size;
+    split_ref_cutoffs[3*cut_index] = start_byte;
+    split_ref_cutoffs[3*cut_index+1] = end_byte;
+    split_ref_cutoffs[3*cut_index+2] = start_ref_index;
+    split_ref_cutoffs[3*cut_index+3] = 0; // indicate the end
+    cout << start_byte <<"\tsplit bytes\t"<<end_byte<<"\t"<<ref_len<<"index"<< start_ref_index<<endl;
+    index_file.close();
+    return split_ref_cutoffs;
+}
+
+int test(void){
+    cout << "sdfdgdfg" << endl;
+    return 0;
+}
+
 int main( int argc, char *argv[])
 {
     bool *coder;
@@ -1055,7 +1206,7 @@ int main( int argc, char *argv[])
     float perfect_hit_ratio = stod(accept_perfect_hit_ratio);
     long down_sampling_size = 2000000000; //2G bases
 
-    int thread_num = 10;
+    int thread_num = 1;
     long start = 0;
     long end = 0;
 
@@ -1097,8 +1248,7 @@ int main( int argc, char *argv[])
 	for (auto&th : threads)
 		th.join();
     threads.clear();
-
-    
+  
     for (int i=0; i<thread_num; i++){
         start = i*each_size;
         end = (i+1)*each_size;
@@ -1112,11 +1262,35 @@ int main( int argc, char *argv[])
     threads.clear();
     time_t now2 = time(0);
     cout << "reads finish.\t" << now2 - now1 << endl;
+
+
     Peaks MyPeak;
     memset(MyPeak.peak_filter, 0, sizeof(int)*MyPeak.max_peak_num);
     memset(MyPeak.peak_kmer, 0, sizeof(unsigned int)*array_size);
-    read_index(coder, base, k, comple, index_name, interval_name, choose_coder, 
-                hit_ratio, perfect_hit_ratio,MyPeak);
+    long * split_ref_cutoffs = split_ref(index_name, fasta_file, thread_num);
+    long extract_ref_len = 0;
+    long slide_ref_len = 0;
+    long total_peak_num = 0;
+    // std::mutex mylock;
+    for (int i=0; i<thread_num; i++){
+        start = split_ref_cutoffs[3*i];
+        if (start == 0){
+            break;
+        }
+        end = split_ref_cutoffs[3*i+1];
+        int start_ref_index = split_ref_cutoffs[3*i+2];
+        cout << start << "\t" <<end<< endl;
+        // read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end);
+        threads.push_back(thread(read_index, coder, base, k, comple, index_name, interval_name,
+         choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end, 
+         start_ref_index,std::ref(extract_ref_len),std::ref(slide_ref_len),std::ref(total_peak_num)));
+    }
+	for (auto&th : threads)
+		th.join();
+    threads.clear();
+
+    // read_index(coder, base, k, comple, index_name, interval_name, choose_coder, 
+    //             hit_ratio, perfect_hit_ratio,MyPeak);
     cout << "raw peaks is done."<<endl;
     down_sam_ratio = 30;
 
