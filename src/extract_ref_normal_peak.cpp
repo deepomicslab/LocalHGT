@@ -33,6 +33,7 @@ int PEAK_W = 5; // 3
 int NEAR = 10; // PEAK_W 10
 int SKIP_N = 10; // 5
 int MIN_READS = 1; // 1
+std::mutex mtx;  
 
 class Split_reads{
     public:
@@ -144,6 +145,7 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
         my_peak_index += 1; 
         total_peak_num += 1;
     }
+    
 }
 
 bool Peaks::merge_peak(int ref_index, int pos){
@@ -451,18 +453,10 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
                 }
                 if (diff >= DIFF){
                     peak_hit[j-m-w] = true;
-                            // for (int n = 0; n < w; n++){
-                            //     cout << single_hit_num[j-m-w-n] << "\t" << single_hit_num[j-n] << "\t" << j <<endl;
-                            // }
-                            // cout << "-----------------"<<endl;
                     break;
                 }
                 if (diff <= -DIFF){
                     peak_hit[j] = true;
-                            // for (int n = 0; n < w; n++){
-                            //     cout << single_hit_num[j-m-w-n] << "\t" << single_hit_num[j-n] << "\t" << j <<endl;
-                            // }
-                            // cout << "-----------------"<<endl;
                     break;
                 }
             }        
@@ -491,6 +485,7 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
 
     for (int i = 0; i < frag_index; i++){
         // extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
+        mtx.lock();
         for (int j =save_good_intervals[2*i]; j <save_good_intervals[2*i+1];j++ ){
             if (peak_hit[j] == true){
                 MyPeak.add_peak(ref_index, j, record_ref_index, ref_len,total_peak_num);
@@ -511,7 +506,8 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
                     peak_index += 1;
                 }
             }
-        }    
+        } 
+        mtx.unlock();
     }
 
     for (int i = 0; i < frag_index; i++){
@@ -762,9 +758,10 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
             each_ref_buffer = each_ref_buffer + sizeof(unsigned int);
             n = n + sizeof(unsigned int);
         }
-        // std::lock_guard<std::mutex> mylock_guard(mylock);
+        // mtx.lock();
         slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, 
                                         perfect_hit_ratio,total_peak_num,MyPeak,record_ref_index);
+        // mtx.unlock(); 
         slide_ref_len += ref_len;
         start_point += 4;
         start_point += buffer_size;
@@ -772,15 +769,15 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
         delete [] each_ref_buffer;
         delete [] record_ref_hit;
         delete [] record_ref_index;
-        // if (ref_index % 1 == 0){
-        //     time_t t1 = time(0);
-        //     cout <<"########\t" <<start<<"\t"<<ref_index << "\t" <<slide_ref_len << " bp\t" <<
-        //      extract_ref_len <<" bp\t" << total_peak_num << "peaks\t"<<t1-t0<< endl;
-        // } 
+        if (ref_index % 10000 == 0){
+            time_t t1 = time(0);
+            cout <<"#\t" <<start<<"\t"<<ref_index << "\t" <<slide_ref_len << " bp\t" <<
+             extract_ref_len <<" bp\t" << total_peak_num << "peaks\t"<<t1-t0<< endl;
+        } 
         ref_index += 1;
         if (start_point >= end){
-            // cout << length << "\t" << end <<endl;
-            cout << "read index ending." <<endl;
+            // cout << length << "\t" << start_point <<endl;
+            // cout << "read index ending." <<endl;
             break;
         }
        
@@ -1143,14 +1140,13 @@ long * split_ref(string index_name, string fasta_file, int thread_num){
     long start_byte, end_byte;
     start_byte = pos;
     long start_ref_index = 1;
-    long end_ref_index = 0;
+    long count_ref_index = 0;
 
     while(1){
-        end_ref_index += 1;
+        count_ref_index += 1;
 
         index_file.seekg(pos, ios::beg);
         index_file.read(reinterpret_cast<char*>(&ref_len), sizeof(unsigned int));
-        // cout << ref_len << "\t" <<end_ref_index<<endl;
 
         add = 4*((ref_len-k+1)*coder_num+1); //the size of the genome.
         if (pos -start_byte > each_index_size){
@@ -1161,7 +1157,7 @@ long * split_ref(string index_name, string fasta_file, int thread_num){
             split_ref_cutoffs[3*cut_index+2] = start_ref_index;
             cut_index += 1;
             start_byte = end_byte;     
-            start_ref_index = end_ref_index;   
+            start_ref_index = count_ref_index + 1;   
         }
         pos += add;
         if (pos >= index_size){
@@ -1206,7 +1202,7 @@ int main( int argc, char *argv[])
     float perfect_hit_ratio = stod(accept_perfect_hit_ratio);
     long down_sampling_size = 2000000000; //2G bases
 
-    int thread_num = 1;
+    int thread_num = 10;
     long start = 0;
     long end = 0;
 

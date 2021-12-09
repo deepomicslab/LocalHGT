@@ -23,7 +23,7 @@ if [ -f $original_ref.fai ];then
   samtools faidx $original_ref
 fi
 
-$dir/test $fq1 $fq2 $original_ref $interval_file $6 $7
+$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7
 if [ ! -f $interval_file ];then
   cat ${interval_file}_tmp_* >$interval_file
   rm ${interval_file}_tmp_*
