@@ -32,7 +32,7 @@ int DIFF = 2; // 2
 int PEAK_W = 5; // 3
 int NEAR = 10; // PEAK_W 10
 int SKIP_N = 10; // 5
-int MIN_READS = 4; // 1
+int MIN_READS = 1; // 1
 std::mutex mtx;  
 
 class Split_reads{
@@ -595,8 +595,7 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
             slide_ref_len += ref_len;
             // cout << chr_name <<"\t"<< ref_index <<"\t" << ref_len << endl;
             if (ref_len > k){   // just to skip the first empty seq
-                len_file << chr_name <<"\t"<< ref_index+1 <<"\t" << ref_len <<"\t" << slide_ref_len << endl;
-
+                len_file << chr_name <<"\t"<< ref_index <<"\t" << ref_len <<"\t" << slide_ref_len << endl;
                 for (int i = 0; i < 3; i++){
                     kmer_index = 0; // start kmer
                     comple_kmer_index = 0;
@@ -699,6 +698,7 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
         delete [] ref_int;
         delete [] ref_comple_int;
         time_t t1 = time(0);
+        len_file << chr_name <<"\t"<< ref_index <<"\t" << ref_len <<"\t" << slide_ref_len << endl;
         cout << "Last chr:\t" << chr_name<<"\t" << ref_index << "\t" <<ref_len <<" bp\t"<<slide_ref_len<<" bp\t" <<t1-t0<< endl;
     }
 
@@ -1128,7 +1128,7 @@ long file_size(string filename)
     return size;  
 }  
 
-long * split_ref(string index_name, string fasta_file, int thread_num){
+long * split_ref_BK(string index_name, string fasta_file, int thread_num){
 
     ifstream index_file;
     index_file.open(index_name, ios::in | ios::binary); 
@@ -1184,9 +1184,9 @@ long * split_ref(string index_name, string fasta_file, int thread_num){
     return split_ref_cutoffs;
 }
 
-/*
-long * split_ref_new(string index_name, string fasta_file, int thread_num){
-    instream len_file;
+// /*
+long * split_ref(string index_name, string fasta_file, int thread_num){
+    ifstream len_file;
     len_file.open(fasta_file+".genome.len.txt", ios::in);
 
     static long split_ref_cutoffs[300];
@@ -1211,7 +1211,7 @@ long * split_ref_new(string index_name, string fasta_file, int thread_num){
         add = 4*((ref_len-k+1)*coder_num+1); //the size of the genome.
         if (pos -start_byte > each_index_size){
             end_byte = pos + add;
-            cout << start_byte <<"\t--\t"<<end_byte<<"\t"<<ref_len<<"index"<< start_ref_index<<endl;
+            cout << start_byte <<"--"<<end_byte<<"\t"<<ref_len<<"index"<< start_ref_index<<endl;
             split_ref_cutoffs[3*cut_index] = start_byte;
             split_ref_cutoffs[3*cut_index+1] = end_byte;
             split_ref_cutoffs[3*cut_index+2] = start_ref_index;
@@ -1235,7 +1235,7 @@ long * split_ref_new(string index_name, string fasta_file, int thread_num){
     len_file.close();
     return split_ref_cutoffs;
 }
-*/
+// */
 
 int main( int argc, char *argv[])
 {
@@ -1265,7 +1265,7 @@ int main( int argc, char *argv[])
     // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
     int down_sam_ratio = 13;
     //index
-    string index_name = fasta_file + ".index.dat";
+    string index_name = fasta_file + ".k" + to_string(k) + ".index.dat";
     ifstream findex(index_name);
     if (! findex.good()){
         cout << "Reference index not detected, start index..." << endl;
@@ -1352,7 +1352,7 @@ int main( int argc, char *argv[])
     // read_index(coder, base, k, comple, index_name, interval_name, choose_coder, 
     //             hit_ratio, perfect_hit_ratio,MyPeak);
     cout << "raw peaks is done."<<endl;
-    down_sam_ratio = 100;
+    down_sam_ratio = 30;
 
     // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.1.fq";
     // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.2.fq";
