@@ -32,7 +32,7 @@ int DIFF = 2; // 2
 int PEAK_W = 5; // 3
 int NEAR = 10; // PEAK_W 10
 int SKIP_N = 10; // 5
-int MIN_READS = 5; // 1
+int MIN_READS = 4; // 1
 std::mutex mtx;  
 
 class Split_reads{
@@ -553,7 +553,7 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
     ofstream index_file;
     ofstream len_file;
     index_file.open(index_name, ios::out | ios::binary);
-    len_file.open(fasta_file+"_genome_len.txt", ios::out | ios::binary);
+    len_file.open(fasta_file+".genome.len.txt", ios::out);
     fa_file.open(fasta_file, ios::in);
     string ref_seq, line_seq;
     ref_seq = "\0";
@@ -590,11 +590,12 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
             slide_ref_len += ref_len;
             // cout << chr_name <<"\t"<< ref_index <<"\t" << ref_len << endl;
             if (ref_len > k){   // just to skip the first empty seq
+                len_file << chr_name <<"\t"<< ref_index+1 <<"\t" << ref_len <<"\t" << slide_ref_len << endl;
+
                 for (int i = 0; i < 3; i++){
                     kmer_index = 0; // start kmer
                     comple_kmer_index = 0;
-                }
-                len_file << chr_name <<"\t"<< ref_index <<"\t" << ref_len <<"\t" << slide_ref_len << endl;
+                } 
                 int *ref_int = new int[ref_len];
                 int *ref_comple_int = new int[ref_len];
                 for (int j = 0; j < ref_len; j++){
@@ -1175,6 +1176,58 @@ long * split_ref(string index_name, string fasta_file, int thread_num){
     split_ref_cutoffs[3*cut_index+3] = 0; // indicate the end
     cout << start_byte <<"\tsplit bytes\t"<<end_byte<<"\t"<<ref_len<<"index"<< start_ref_index<<endl;
     index_file.close();
+    return split_ref_cutoffs;
+}
+
+
+long * split_ref_new(string index_name, string fasta_file, int thread_num){
+    ofstream len_file;
+    len_file.open(fasta_file+".genome.len.txt", ios::in);
+
+    static long split_ref_cutoffs[300];
+    int cut_index = 0;
+    long index_size = file_size(index_name);
+    long each_index_size = index_size/thread_num + 1;
+
+    int ref_len, ref_index;
+    long slide_ref_len;
+    string chr_name;
+
+    long add;
+    long pos = 100 * 4;
+    long start_byte, end_byte;
+    start_byte = pos;
+    long start_ref_index = 1;
+    long count_ref_index = 0;
+
+    while(len_file >> chr_name >> ref_index >> ref_len >> slide_ref_len ){
+        count_ref_index += 1;
+
+        add = 4*((ref_len-k+1)*coder_num+1); //the size of the genome.
+        if (pos -start_byte > each_index_size){
+            end_byte = pos + add;
+            cout << start_byte <<"\t--\t"<<end_byte<<"\t"<<ref_len<<"index"<< start_ref_index<<endl;
+            split_ref_cutoffs[3*cut_index] = start_byte;
+            split_ref_cutoffs[3*cut_index+1] = end_byte;
+            split_ref_cutoffs[3*cut_index+2] = start_ref_index;
+            cut_index += 1;
+            start_byte = end_byte;     
+            start_ref_index = count_ref_index + 1;   
+        }
+        pos += add;
+        if (pos >= index_size){
+            break;
+        }
+        
+    }
+
+    end_byte = index_size;
+    split_ref_cutoffs[3*cut_index] = start_byte;
+    split_ref_cutoffs[3*cut_index+1] = end_byte;
+    split_ref_cutoffs[3*cut_index+2] = start_ref_index;
+    split_ref_cutoffs[3*cut_index+3] = 0; // indicate the end
+    cout << start_byte <<"\t--\t"<<end_byte<<"\t"<<ref_len<<"index"<< start_ref_index<<endl;
+    len_file.close();
     return split_ref_cutoffs;
 }
 
