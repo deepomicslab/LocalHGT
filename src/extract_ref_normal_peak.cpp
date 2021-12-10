@@ -151,7 +151,12 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
 bool Peaks::merge_peak(int ref_index, int pos){
     bool exist_peak = false;
     if (my_peak_index > 0){
-        if (ref_index == peak_loci[2*my_peak_index-2] & pos - peak_loci[2*my_peak_index-1] < merge_close_peak){
+        // if (ref_index == peak_loci[2*my_peak_index-2] & pos - peak_loci[2*my_peak_index-1] < merge_close_peak){
+        //     exist_peak = true;
+        // }
+        // with density peaks, the position of all the loci is the first one, the error can be heavy.
+        // so use window~50bp, the peaks locate in the same window are merged as one, which the pos is that of the first adding peak's.
+        if (ref_index == peak_loci[2*my_peak_index-2] & pos/merge_close_peak == peak_loci[2*my_peak_index-1]/merge_close_peak){
             exist_peak = true;
         }
     }
@@ -1179,9 +1184,9 @@ long * split_ref(string index_name, string fasta_file, int thread_num){
     return split_ref_cutoffs;
 }
 
-
+/*
 long * split_ref_new(string index_name, string fasta_file, int thread_num){
-    ofstream len_file;
+    instream len_file;
     len_file.open(fasta_file+".genome.len.txt", ios::in);
 
     static long split_ref_cutoffs[300];
@@ -1230,6 +1235,7 @@ long * split_ref_new(string index_name, string fasta_file, int thread_num){
     len_file.close();
     return split_ref_cutoffs;
 }
+*/
 
 int main( int argc, char *argv[])
 {
@@ -1362,11 +1368,7 @@ int main( int argc, char *argv[])
 	for (auto&th : threads)
 		th.join();
     threads.clear();
-
-
     cout << "filtering peaks is done."<<endl;
-
-
 
     MyPeak.count_filtered_peak(interval_name);
     cout<<"filtered peak number:" <<MyPeak.filter_peak_num<<"\toriginal peak number:"<<MyPeak.my_peak_index<<endl;

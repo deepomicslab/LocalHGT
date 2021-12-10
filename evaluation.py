@@ -305,8 +305,8 @@ if __name__ == "__main__":
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results/"
 
-    # cami()
-    snp()
+    cami()
+    # snp()
 
 
 
