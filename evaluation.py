@@ -251,7 +251,7 @@ def cami():
     ba = Parameters()
     ba.get_dir(true_dir)
 
-    for snp_rate in [0.01, 0.03, 0.05]:
+    for snp_rate in [0.01]:
         ba.change_snp_rate(snp_rate)
         index = 0
         ba.get_ID(index)

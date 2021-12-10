@@ -26,13 +26,13 @@ long long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 // char* kmer_count_table = (char*)malloc(array_size);
 
-int MIN_KMER_NUM = 5; // 6
+int MIN_KMER_NUM = 6; // 6
 int REF_NEAR = 500; // 300
 int DIFF = 2; // 2
 int PEAK_W = 5; // 3
 int NEAR = 10; // PEAK_W 10
 int SKIP_N = 10; // 5
-int MIN_READS = 1; // 1
+int MIN_READS = 5; // 1
 std::mutex mtx;  
 
 class Split_reads{
@@ -259,7 +259,6 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
                         }  
                     }
                 }
-
                 //reverse reads
                 for (int j = 0; j < read_len; j++){
                     reads_int[j] = (int)reads_seq_2[j];
@@ -278,8 +277,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
                                 break;
                             }
                             kmer_index += m*base[z]; 
-                            comple_kmer_index += n*base[(k-1-z)];
-                              
+                            comple_kmer_index += n*base[(k-1-z)];                             
                         }
                         if (kmer_index > comple_kmer_index){ //use a smaller index
                             real_index = comple_kmer_index;
@@ -319,7 +317,7 @@ void Peaks::count_filtered_peak(string interval_name){
     for (int i = 0; i < my_peak_index; i++){
         if (peak_filter[i] >= MIN_READS ){
             // if (peak_loci[2*i] == 36){
-            //     cout << peak_loci[2*i] << "\t" << peak_loci[2*i+1] << endl;
+                // cout<<peak_filter[i] <<"\t" << peak_loci[2*i] << "\t" << peak_loci[2*i+1] << endl;
             // }
             
             filter_peak_num += 1;
@@ -553,7 +551,9 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
 {
     ifstream fa_file;
     ofstream index_file;
+    ofstream len_file;
     index_file.open(index_name, ios::out | ios::binary);
+    len_file.open(fasta_file+"_genome_len.txt", ios::out | ios::binary);
     fa_file.open(fasta_file, ios::in);
     string ref_seq, line_seq;
     ref_seq = "\0";
@@ -589,11 +589,12 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
             ref_len= ref_seq.length();
             slide_ref_len += ref_len;
             // cout << chr_name <<"\t"<< ref_index <<"\t" << ref_len << endl;
-            if (ref_len > k){   
+            if (ref_len > k){   // just to skip the first empty seq
                 for (int i = 0; i < 3; i++){
                     kmer_index = 0; // start kmer
                     comple_kmer_index = 0;
                 }
+                len_file << chr_name <<"\t"<< ref_index <<"\t" << ref_len <<"\t" << slide_ref_len << endl;
                 int *ref_int = new int[ref_len];
                 int *ref_comple_int = new int[ref_len];
                 for (int j = 0; j < ref_len; j++){
@@ -626,15 +627,15 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
                         if (all_valid == false){
                             real_index = 0;
                         }
-                        index_file.write((char *)(&real_index), sizeof(real_index));
-                        
+                        index_file.write((char *)(&real_index), sizeof(real_index));      
                     }
                 }
-                
-                // cout << chr_name<<"\t"<<endl;
                 delete [] ref_int;
                 delete [] ref_comple_int;
             }
+            // else{
+            //     cout << chr_name<<"\t is an incorrect genome, too short."<<endl;
+            // }
             if (ref_index % 1000 == 0){
                 time_t t1 = time(0);
                 cout << chr_name<<"\t" << ref_index << "\t" <<ref_len <<" bp\t"<<slide_ref_len<<" bp\t" <<t1-t0<< endl;
@@ -698,6 +699,7 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
     cout << "Index is done."<< "\t" << extract_ref_len << endl;
     fa_file.close();
     index_file.close();
+    len_file.close();
 }
 
 void read_index(bool* coder, int* base, int k, char* comple, string index_name, string interval_name,
@@ -1176,11 +1178,6 @@ long * split_ref(string index_name, string fasta_file, int thread_num){
     return split_ref_cutoffs;
 }
 
-int test(void){
-    cout << "sdfdgdfg" << endl;
-    return 0;
-}
-
 int main( int argc, char *argv[])
 {
     bool *coder;
@@ -1265,8 +1262,8 @@ int main( int argc, char *argv[])
     memset(MyPeak.peak_kmer, 0, sizeof(unsigned int)*array_size);
 
     int ref_thread_num;
-    if (thread_num > 2){
-        ref_thread_num = 2;
+    if (thread_num > 5){
+        ref_thread_num = 5;
     }
     else{
         ref_thread_num = thread_num;
@@ -1296,7 +1293,7 @@ int main( int argc, char *argv[])
     // read_index(coder, base, k, comple, index_name, interval_name, choose_coder, 
     //             hit_ratio, perfect_hit_ratio,MyPeak);
     cout << "raw peaks is done."<<endl;
-    down_sam_ratio = 30;
+    down_sam_ratio = 100;
 
     // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.1.fq";
     // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.2.fq";
