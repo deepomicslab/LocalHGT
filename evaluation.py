@@ -251,7 +251,7 @@ def cami():
     ba = Parameters()
     ba.get_dir(true_dir)
 
-    for snp_rate in [0.01]:
+    for snp_rate in [0.01, 0.03]:
         ba.change_snp_rate(snp_rate)
         index = 0
         ba.get_ID(index)
@@ -261,22 +261,23 @@ def cami():
             sa.change_ID(cami_ID)
             ref_accuracy, ref_len = sa.eva_ref(local_dir)
             print ("############ref" ,cami_ID, ref_accuracy, ref_len, "Mb")
-"""
+# """
             local_pe = sa.eva_tool(local_dir)           
-            local_pe.add_ref(ref_accuracy, ref_len)
+            # local_pe.add_ref(ref_accuracy, ref_len)
             print (cami_ID, local_pe.user_time, local_pe.accuracy, local_pe.max_mem)
-            print ("ref", local_pe.ref_accuracy, local_pe.ref_len, "Mb")
-"""
+            # print ("ref", local_pe.ref_accuracy, local_pe.ref_len, "Mb")
+# """
 
 def snp():
     fi = Figure()
     ba = Parameters()
 
     for snp_rate in ba.snp_level[1:-5]: # 0.01-0.09
+        if snp_rate == 0.07:
+            continue
     # for snp_rate in [0.05]:
         ba.change_snp_rate(snp_rate)
         for index in range(ba.iteration_times):
-        # for index in range(9, 10):
             ba.get_ID(index)    
             sa = Sample(ba.sample, true_dir)
             ref_accuracy, ref_len = sa.eva_ref(local_dir)
