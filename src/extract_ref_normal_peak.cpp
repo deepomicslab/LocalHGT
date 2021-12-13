@@ -21,11 +21,11 @@ using namespace std;
 const short c = 300;
 const char coder_num = 3;
 const unsigned char least_depth = 3;
-const int k = 30;
+const int k = 32;
 long long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 
-int MIN_KMER_NUM = 6; // 6
+int MIN_BASE_NUM = 3; // 6
 int REF_NEAR = 500; // 300
 int DIFF = 2; // 2
 int PEAK_W = 5; // 3
@@ -40,19 +40,41 @@ class Split_reads{
         map<int, int> chr_kmer_count;
         map<int, int> filter_kmer_count;
         map<int, int> chr_peak_index;
-        int min_kmer_num = MIN_KMER_NUM;
-        void count_peak_kmer(int peak_chr, int peak_pos, int peak_index);
+        int min_base_num = MIN_BASE_NUM;
+        int base_hits = 0;
+        int base_kmer [3];
+        int tem_index = 0;
+        bool valid_base = false;
+        void count_peak_kmer(int peak_chr, int peak_pos, int peak_index, int coder_index);
         void check_split(int* peak_filter);
 };
 
-void Split_reads::count_peak_kmer(int peak_chr, int peak_pos, int peak_index){
-    if (chr_kmer_count.find(peak_chr) == chr_kmer_count.end()){
-        chr_kmer_count[peak_chr] = 1;
-        chr_peak_index[peak_chr] = peak_index; // the first peak of the genome
+void Split_reads::count_peak_kmer(int peak_chr, int peak_pos, int peak_index, int coder_index){
+    base_kmer[coder_index] = peak_index;
+    if (coder_index = coder_num -1){
+        valid_base = true;
+        tem_index = 0;
+        for (int i = 0; i < 3; i++){
+            if (base_kmer[i] != 0){
+                if (tem_index != 0 & base_kmer[i] != tem_index){
+                    valid_base = false;
+                }
+                tem_index = base_kmer[i];
+            }
+        }
+
+        if (valid_base){
+            if (chr_kmer_count.find(peak_chr) == chr_kmer_count.end()){
+                chr_kmer_count[peak_chr] = 1;
+                chr_peak_index[peak_chr] = peak_index; // the first peak of the genome
+            }
+            else{
+                chr_kmer_count[peak_chr] += 1;
+            }   
+            base_hits += 1;
+        }
     }
-    else{
-        chr_kmer_count[peak_chr] += 1;
-    }   
+
 }
 
 void Split_reads::check_split(int* peak_filter){
@@ -68,13 +90,13 @@ void Split_reads::check_split(int* peak_filter){
 
     iter = chr_kmer_count.begin();
     while(iter != chr_kmer_count.end()){
-        cout << iter->first << ":"<< iter->second <<endl;
-        if (iter->second >= min_kmer_num){
+        // cout << iter->first << ":"<< iter->second <<endl;
+        if (iter->second >= min_base_num){
             filter_kmer_count[iter->first] = iter->second;
         }
         iter ++ ;
     }
-    cout << "------------------"<<endl;
+    // cout << "------------------"<<endl;
     if (filter_kmer_count.size() > 1){
         // map<int, int>::iterator iter;
         iter = filter_kmer_count.begin();
@@ -194,8 +216,8 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
     seed = time(0);
     srand(seed);
     int chr_index, peak_locus,peak_index;
-    int for_hits = 0;
-    int rev_hits = 0;
+
+
 
     long pos = 0;
     for (long i = start; i>0; i--){
@@ -239,8 +261,6 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
             r = rand() % 100;
             if (r < down_sam_ratio){
                 Split_reads each_read;
-                for_hits = 0;
-                rev_hits = 0;
                 for (int j = 0; j < read_len; j++){
                     reads_int[j] = (int)reads_seq[j];
                     reads_comple_int[j] = comple[reads_int[j]];
@@ -267,12 +287,11 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
                         else{
                             real_index = kmer_index;
                         }
-                        
                         if (peak_kmer[real_index] != 0 & all_valid){
-                            each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index]);
-                            for_hits += 1;
+                            each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], 
+                                                peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index], i);
                         }  
-                        cout << j << "\t" << i << "\t" << peak_kmer[real_index] << endl;
+                        // cout << j << "\t" << i << "\t" << peak_kmer[real_index] << endl;
                     }
                 }
                 //reverse reads
@@ -303,21 +322,21 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
                         }
                         
                         if (peak_kmer[real_index] != 0 & all_valid){
-                            each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index]);
-                            rev_hits += 1;
+                            each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], 
+                                        peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index], i);
                         }  
-                        cout << j << "\t" << i << "\t" << peak_kmer[real_index] << endl;
+                        // cout << j << "\t" << i << "\t" << peak_kmer[real_index] << endl;
                     }
                 }
                 // cout << "****************"<<endl;
                 // cout << for_hits << "\t" << rev_hits << endl;
-                if (for_hits + rev_hits >= MIN_KMER_NUM){
+                if (each_read.base_hits >= each_read.min_base_num){
                     each_read.check_split(peak_filter);
                 }
                 
             }         
         }
-        lines++;
+        lines ++;
     }
     fq_file.close();
     fq_file_2.close();
@@ -1137,7 +1156,7 @@ int main( int argc, char *argv[])
     float perfect_hit_ratio = stod(accept_perfect_hit_ratio);
     long down_sampling_size = 2000000000; //2G bases
 
-    int thread_num = 1;
+    int thread_num = 10;
     long start = 0;
     long end = 0;
 
