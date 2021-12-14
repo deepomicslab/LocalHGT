@@ -22,17 +22,17 @@ const short c = 300;
 const char coder_num = 3;
 const unsigned char least_depth = 3;
 const int k = 32;
-long long array_size = pow(2, k);
+long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 
-int MIN_BASE_NUM = 3; // 6
+int MIN_BASE_NUM = 10; // 6
 int REF_NEAR = 500; // 300
 int DIFF = 2; // 2
 int PEAK_W = 5; // 3
 int NEAR = 10; // PEAK_W 10
 int SKIP_N = 10; // 5 10
 int MIN_READS = 1; // 1
-int MAX_PEAK_NUM = 100000000;
+int MAX_PEAK_NUM = 500000000;
 std::mutex mtx;  
 
 class Split_reads{
@@ -40,40 +40,91 @@ class Split_reads{
         map<int, int> chr_kmer_count;
         map<int, int> filter_kmer_count;
         map<int, int> chr_peak_index;
+        
         int min_base_num = MIN_BASE_NUM;
         int base_hits = 0;
-        int base_kmer [3];
+        int base_kmer[3];
+        int base_chr[3];
         int tem_index = 0;
         bool valid_base = false;
         void count_peak_kmer(int peak_chr, int peak_pos, int peak_index, int coder_index);
         void check_split(int* peak_filter);
+        void init_array(void);
 };
 
-void Split_reads::count_peak_kmer(int peak_chr, int peak_pos, int peak_index, int coder_index){
-    base_kmer[coder_index] = peak_index;
-    if (coder_index = coder_num -1){
-        valid_base = true;
-        tem_index = 0;
-        for (int i = 0; i < 3; i++){
-            if (base_kmer[i] != 0){
-                if (tem_index != 0 & base_kmer[i] != tem_index){
-                    valid_base = false;
-                }
-                tem_index = base_kmer[i];
-            }
-        }
+void Split_reads::init_array(void){
+    memset(base_kmer, 0, sizeof(int)*3);
+}
 
-        if (valid_base){
-            if (chr_kmer_count.find(peak_chr) == chr_kmer_count.end()){
-                chr_kmer_count[peak_chr] = 1;
-                chr_peak_index[peak_chr] = peak_index; // the first peak of the genome
+void Split_reads::count_peak_kmer(int peak_chr, int peak_pos, int peak_index, int coder_index){
+    // base_kmer[coder_index] = peak_index;
+    // if (coder_index = coder_num -1){
+    //     valid_base = true;
+    //     tem_index = 0;
+    //     for (int i = 0; i < 3; i++){
+    //         if (base_kmer[i] != 0){
+    //             if (tem_index != 0 & base_kmer[i] != tem_index){
+    //                 valid_base = false;
+    //             }
+    //             tem_index = base_kmer[i];
+    //         }
+    //     }
+
+    //     if (valid_base){
+    //         if (chr_kmer_count.find(peak_chr) == chr_kmer_count.end()){
+    //             chr_kmer_count[peak_chr] = 1;
+    //             chr_peak_index[peak_chr] = peak_index; // the first peak of the genome
+    //         }
+    //         else{
+    //             chr_kmer_count[peak_chr] += 1;
+    //         }   
+    //         base_hits += 1;
+    //     }
+    // }
+    // /*
+    map<int, int>::iterator chr_iter;
+    base_kmer[coder_index] = peak_index;
+    base_chr[coder_index] = peak_chr;
+    if (coder_index = coder_num -1){
+        int select_chr = 0;
+        int select_index = 0;
+        int select_num = 0;
+        for (int i = 0; i < 3; i++){
+            // cout << base_kmer[i] << "\t" << base_chr[i] << endl;
+            if (base_kmer[i] != 0){
+                chr_iter = chr_kmer_count.find(base_chr[i]);
+                if (chr_iter != chr_kmer_count.end()){
+                    if (chr_iter->second >= select_num){
+                        select_index = base_kmer[i];
+                        select_chr = base_chr[i];
+                        select_num = chr_iter->second;
+                        // cout << i << "\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << chr_iter->second << endl; 
+                    }
+                }
+                else{
+                    if (select_index == 0){
+                        select_index = base_kmer[i];
+                        select_chr = base_chr[i];
+                        select_num = 0;     
+                    }
+                }
+
             }
-            else{
-                chr_kmer_count[peak_chr] += 1;
-            }   
-            base_hits += 1;
         }
+        // cout << select_index << "---" << select_chr << endl;
+
+
+        if (chr_kmer_count.find(select_chr) == chr_kmer_count.end()){
+            chr_kmer_count[select_chr] = 1;
+            chr_peak_index[select_chr] = select_index; // the first peak of the genome
+        }
+        else{
+            chr_kmer_count[select_chr] += 1;
+        }   
+        base_hits += 1;
+
     }
+    // */
 
 }
 
@@ -96,7 +147,7 @@ void Split_reads::check_split(int* peak_filter){
         }
         iter ++ ;
     }
-    // cout << "------------------"<<endl;
+    
     if (filter_kmer_count.size() > 1){
         // map<int, int>::iterator iter;
         iter = filter_kmer_count.begin();
@@ -107,6 +158,7 @@ void Split_reads::check_split(int* peak_filter){
             peak_filter[peak_index] += 1;
             iter ++ ;
         }
+        // cout << "------------------"<<endl;
         
     }
     
@@ -170,7 +222,7 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
         }  
         // cout << "-----------"<<endl;
         if (my_peak_index > max_peak_num){
-            cout <<"too many peaks!"<<endl;
+            cout <<"Too many peaks! Please indicate larger max_peak_num."<<endl;
         }
         my_peak_index += 1; 
         total_peak_num += 1;
@@ -236,7 +288,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
     {
         fq_file_2>>reads_seq_2;
         if (lines % 1000000 == 1000000-1){
-            cout << "recheck reads\t"<<lines<<endl;
+            cout <<start<< " recheck reads\t"<<lines<<endl;
         }
         if (add_size>=end){
             break;
@@ -266,6 +318,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
                     reads_comple_int[j] = comple[reads_int[j]];
                 }
                 for (int j = 0; j < read_len-k+1; j++){
+                    each_read.init_array();
                     for (int i = 0; i < 3; i++){
                         kmer_index = 0;
                         comple_kmer_index = 0;
@@ -300,6 +353,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
                     reads_comple_int[j] = comple[reads_int[j]];
                 }
                 for (int j = 0; j < read_len-k+1; j++){
+                    each_read.init_array();
                     for (int i = 0; i < 3; i++){
                         kmer_index = 0;
                         comple_kmer_index = 0;
@@ -328,8 +382,6 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
                         // cout << j << "\t" << i << "\t" << peak_kmer[real_index] << endl;
                     }
                 }
-                // cout << "****************"<<endl;
-                // cout << for_hits << "\t" << rev_hits << endl;
                 if (each_read.base_hits >= each_read.min_base_num){
                     each_read.check_split(peak_filter);
                 }
@@ -632,6 +684,7 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
             // cout << chr_name <<"\t"<< ref_index <<"\t" << ref_len << endl;
             if (ref_len > k){   // just to skip the first empty seq
                 len_file << chr_name <<"\t"<< ref_index <<"\t" << ref_len <<"\t" << slide_ref_len << endl;
+                // /*
                 for (int i = 0; i < 3; i++){
                     kmer_index = 0; // start kmer
                     comple_kmer_index = 0;
@@ -673,6 +726,7 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
                 }
                 delete [] ref_int;
                 delete [] ref_comple_int;
+                // */
             }
             // else{
             //     cout << chr_name<<"\t is an incorrect genome, too short."<<endl;
@@ -766,12 +820,12 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
     unsigned char *record_ref_hit; 
     time_t t0 = time(0);
  
-    long long start_point = start;
+    long start_point = start;
     int buffer_size;
     cout <<"Start slide ref..."<<endl;
 
     index_file.seekg (0, index_file.end);
-    long long length = index_file.tellg();
+    long length = index_file.tellg();
     cout <<start_ref_index <<"\t"<< start_point<<endl;
 
 
@@ -813,7 +867,7 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
         delete [] each_ref_buffer;
         delete [] record_ref_hit;
         delete [] record_ref_index;
-        if (ref_index % 100000 == 0){
+        if (ref_index % 10000 == 0){
             time_t t1 = time(0);
             cout <<"#\t" <<start<<"\t"<<ref_index << "\t" <<slide_ref_len << " bp\t" <<
              extract_ref_len <<" bp\t" << total_peak_num << "peaks\t"<<t1-t0<< endl;
@@ -1247,7 +1301,7 @@ int main( int argc, char *argv[])
 		th.join();
     threads.clear();
     cout << "raw peaks is done."<<endl;
-    // down_sam_ratio = 100;
+    // down_sam_ratio = 50;
 
     // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.1.fq";
     // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.2.fq";
@@ -1258,6 +1312,7 @@ int main( int argc, char *argv[])
         if (i == thread_num-1){
             end = size;
         }
+        // cout << "Reads thread N.O."<<i << "\t"<< start << "\t" <<end<< endl;
         threads.push_back(thread(&Peaks::slide_reads, MyPeak, fq1, fq2, coder, base, comple, choose_coder, down_sam_ratio, start, end));
     }
 	for (auto&th : threads)

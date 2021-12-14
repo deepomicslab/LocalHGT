@@ -16,12 +16,12 @@ if [ -f $interval_file ];then
   rm $interval_file
 fi
 
-if [ -f $original_ref.fai ];then
-  echo "{reference}.fai file exists."
-  else
-  echo "start samtools faidx reference..."
-  samtools faidx $original_ref
-fi
+# if [ -f $original_ref.fai ];then
+#   echo "{reference}.fai file exists."
+#   else
+#   echo "start samtools faidx reference..."
+#   samtools faidx $original_ref
+# fi
 
 $dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7
 if [ ! -f $interval_file ];then

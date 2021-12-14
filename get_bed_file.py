@@ -32,20 +32,29 @@ def get_name():
             print (name, file = f)
         f.close()
 
+# def index2name():
+#     index2name_dict = {}
+#     name_file = reffile + '.name'
+#     ref_index = 1
+#     for line in open(name_file):
+#         index2name_dict[ref_index] = line.strip()
+#         ref_index += 1
+#     return index2name_dict
+
 def index2name():
     index2name_dict = {}
-    name_file = reffile + '.name'
-    ref_index = 1
+    name_file = reffile + '.genome.len.txt'
     for line in open(name_file):
-        index2name_dict[ref_index] = line.strip()
-        ref_index += 1
+        array = line.strip().split()
+        ref_index = int(array[1])
+        index2name_dict[ref_index] = array[0]
     return index2name_dict
 
 if __name__ == "__main__":
     reffile = sys.argv[1]
     extracted_ref_interval_file = sys.argv[2]
 
-    get_name()
+    # get_name()
     index2name_dict = index2name()
     extract_len = find_chr_name()
     print ("extracted ref length is:", extract_len)
