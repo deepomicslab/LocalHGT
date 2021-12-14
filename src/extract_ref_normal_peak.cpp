@@ -25,7 +25,7 @@ const int k = 32;
 long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 
-int MIN_BASE_NUM = 10; // 6
+int MIN_BASE_NUM = 6; // 6 10
 int REF_NEAR = 500; // 300
 int DIFF = 2; // 2
 int PEAK_W = 5; // 3
@@ -33,6 +33,7 @@ int NEAR = 10; // PEAK_W 10
 int SKIP_N = 10; // 5 10
 int MIN_READS = 1; // 1
 int MAX_PEAK_NUM = 500000000;
+int thread_num = 10;
 std::mutex mtx;  
 
 class Split_reads{
@@ -50,6 +51,7 @@ class Split_reads{
         void count_peak_kmer(int peak_chr, int peak_pos, int peak_index, int coder_index);
         void check_split(int* peak_filter);
         void init_array(void);
+        void judge_base(void);
 };
 
 void Split_reads::init_array(void){
@@ -57,63 +59,43 @@ void Split_reads::init_array(void){
 }
 
 void Split_reads::count_peak_kmer(int peak_chr, int peak_pos, int peak_index, int coder_index){
-    // base_kmer[coder_index] = peak_index;
-    // if (coder_index = coder_num -1){
-    //     valid_base = true;
-    //     tem_index = 0;
-    //     for (int i = 0; i < 3; i++){
-    //         if (base_kmer[i] != 0){
-    //             if (tem_index != 0 & base_kmer[i] != tem_index){
-    //                 valid_base = false;
-    //             }
-    //             tem_index = base_kmer[i];
-    //         }
-    //     }
-
-    //     if (valid_base){
-    //         if (chr_kmer_count.find(peak_chr) == chr_kmer_count.end()){
-    //             chr_kmer_count[peak_chr] = 1;
-    //             chr_peak_index[peak_chr] = peak_index; // the first peak of the genome
-    //         }
-    //         else{
-    //             chr_kmer_count[peak_chr] += 1;
-    //         }   
-    //         base_hits += 1;
-    //     }
-    // }
-    // /*
-    map<int, int>::iterator chr_iter;
     base_kmer[coder_index] = peak_index;
     base_chr[coder_index] = peak_chr;
-    if (coder_index = coder_num -1){
-        int select_chr = 0;
-        int select_index = 0;
-        int select_num = 0;
-        for (int i = 0; i < 3; i++){
-            // cout << base_kmer[i] << "\t" << base_chr[i] << endl;
-            if (base_kmer[i] != 0){
-                chr_iter = chr_kmer_count.find(base_chr[i]);
-                if (chr_iter != chr_kmer_count.end()){
-                    if (chr_iter->second >= select_num){
-                        select_index = base_kmer[i];
-                        select_chr = base_chr[i];
-                        select_num = chr_iter->second;
-                        // cout << i << "\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << chr_iter->second << endl; 
-                    }
-                }
-                else{
-                    if (select_index == 0){
-                        select_index = base_kmer[i];
-                        select_chr = base_chr[i];
-                        select_num = 0;     
-                    }
-                }
+}
 
+void Split_reads::judge_base(void){
+    map<int, int>::iterator chr_iter;
+    int select_chr = 0;
+    int select_index = 0;
+    int select_num = 0;
+    bool flag = false;
+    for (int i = 0; i < 3; i++){
+        // cout << base_kmer[i] << "\t" << base_chr[i] << endl;
+        if (base_kmer[i] != 0){
+            flag = true;
+            chr_iter = chr_kmer_count.find(base_chr[i]);
+            if (chr_iter != chr_kmer_count.end()){
+                if (chr_iter->second >= select_num){
+                    select_index = base_kmer[i];
+                    select_chr = base_chr[i];
+                    select_num = chr_iter->second;
+                    // cout << i << "##\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << chr_iter->second << endl; 
+                }
             }
+            else{
+                // cout << i << "##\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << endl; 
+                if (select_index == 0){
+                    select_index = base_kmer[i];
+                    select_chr = base_chr[i];
+                    select_num = 0;     
+                }
+            }
+
         }
-        // cout << select_index << "---" << select_chr << endl;
+    }
+    // cout << select_index << "---" << select_chr << "\t" <<coder_index <<endl;
 
-
+    if (flag){
         if (chr_kmer_count.find(select_chr) == chr_kmer_count.end()){
             chr_kmer_count[select_chr] = 1;
             chr_peak_index[select_chr] = select_index; // the first peak of the genome
@@ -122,10 +104,7 @@ void Split_reads::count_peak_kmer(int peak_chr, int peak_pos, int peak_index, in
             chr_kmer_count[select_chr] += 1;
         }   
         base_hits += 1;
-
     }
-    // */
-
 }
 
 void Split_reads::check_split(int* peak_filter){
@@ -147,6 +126,7 @@ void Split_reads::check_split(int* peak_filter){
         }
         iter ++ ;
     }
+    // cout << "*******************"<<endl;
     
     if (filter_kmer_count.size() > 1){
         // map<int, int>::iterator iter;
@@ -264,14 +244,9 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
     unsigned int kmer_index, comple_kmer_index, real_index, b;   
     int r ;
     short read_len = 0;
-    unsigned seed;
-    seed = time(0);
-    srand(seed);
     int chr_index, peak_locus,peak_index;
-
-
-
     long pos = 0;
+
     for (long i = start; i>0; i--){
         fq_file.seekg(i, ios::beg);
         char j;
@@ -340,12 +315,14 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
                         else{
                             real_index = kmer_index;
                         }
+                        // cout << j << "\t" << i << "\t" << peak_kmer[real_index] << "\t" << peak_loci[2*peak_kmer[real_index]]<<endl;
                         if (peak_kmer[real_index] != 0 & all_valid){
                             each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], 
                                                 peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index], i);
                         }  
-                        // cout << j << "\t" << i << "\t" << peak_kmer[real_index] << endl;
+                        
                     }
+                    each_read.judge_base();
                 }
                 //reverse reads
                 for (int j = 0; j < read_len; j++){
@@ -374,13 +351,13 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
                         else{
                             real_index = kmer_index;
                         }
-                        
+                        // cout << j << "\t" << i << "\t" << peak_kmer[real_index] << "\t" << peak_loci[2*peak_kmer[real_index]]<<endl;
                         if (peak_kmer[real_index] != 0 & all_valid){
                             each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], 
                                         peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index], i);
                         }  
-                        // cout << j << "\t" << i << "\t" << peak_kmer[real_index] << endl;
                     }
+                    each_read.judge_base();
                 }
                 if (each_read.base_hits >= each_read.min_base_num){
                     each_read.check_split(peak_filter);
@@ -553,9 +530,9 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
             }        
         }
     }
-    // if (ref_index == 35){
+    // if (ref_index == 31){
     //     for (int j = 0; j < ref_len; j++){
-    //         if(j > 944871 - 100 & j < 944871 + 100){
+    //         if(j > 68066 - 200 & j < 68066 + 200){
     //             cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
     //         }
     //     }
@@ -915,7 +892,6 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
     int reads_int [150];
     int reads_comple_int [150];
 
-    // unsigned int i = 0;
     unsigned int lines = 0;
     int converted_reads [450];
     int complemented_reads [450];
@@ -924,10 +900,6 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
     unsigned int kmer_index, comple_kmer_index, real_index, b;   
     int r ;
     short read_len = 0;
-    // char abnormal_base[150];
-    unsigned seed;
-    seed = time(0);
-    srand(seed);
 
     while (fq_file >> reads_seq)
     {
@@ -944,9 +916,11 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
             if (lines == 1){
                 read_len = reads_seq.length();//cal read length
             }
-            // srand((unsigned)time(NULL));
             r = rand() % 100 ;
-            // cout <<r << "r"<<endl;
+            // if (lines < 100){
+            //     cout <<r << "r"<<endl;
+            // }
+            
             if (r < down_sam_ratio){
                 for (int j = 0; j < read_len; j++){
                     reads_int[j] = (int)reads_seq[j];
@@ -1208,11 +1182,15 @@ int main( int argc, char *argv[])
     string accept_perfect_hit_ratio = argv[6];
     float hit_ratio = stod(accept_hit_ratio);
     float perfect_hit_ratio = stod(accept_perfect_hit_ratio);
-    long down_sampling_size = 2000000000; //2G bases
+    long down_sampling_size = 2500000000; //2G bases
 
-    int thread_num = 10;
+    
     long start = 0;
     long end = 0;
+
+    unsigned seed;
+    seed = time(0);
+    srand(seed);
 
     // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
     int down_sam_ratio = 13;
