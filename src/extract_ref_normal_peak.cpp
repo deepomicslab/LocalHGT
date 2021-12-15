@@ -28,7 +28,7 @@ char *kmer_count_table = new char[array_size];
 int MIN_BASE_NUM = 6; // 6 10
 int REF_NEAR = 500; // 300
 int DIFF = 2; // 2
-int PEAK_W = 5; // 3
+int PEAK_W = 5; // 5
 int NEAR = 10; // PEAK_W 10
 int SKIP_N = 10; // 5 10
 int MIN_READS = 1; // 1
@@ -1193,7 +1193,7 @@ int main( int argc, char *argv[])
     srand(seed);
 
     // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    int down_sam_ratio = 13;
+    int down_sam_ratio = 10;
     //index
     string index_name = fasta_file + ".k" + to_string(k) + ".index.dat";
     ifstream findex(index_name);
