@@ -29,8 +29,8 @@ int MIN_BASE_NUM = 6; // 6 10
 int REF_NEAR = 500; // 300
 int DIFF = 2; // 2
 int PEAK_W = 5; // 5
-int NEAR = 10; // PEAK_W 10
-int SKIP_N = 64; // 5 10
+int NEAR = 0; // PEAK_W 10
+int SKIP_N = 60; // 5 10
 int MIN_READS = 1; // 1
 int MAX_PEAK_NUM = 500000000;
 int thread_num = 10;
@@ -433,6 +433,7 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
     int peak_index = 0;
     unsigned char* ref_depth = new unsigned char[ref_len];
     int max_depth = 0;
+    int left, right, diff;
     
     for (int j = 0; j < ref_len; j++){
         short hit_coder_num = 0;
@@ -508,17 +509,25 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
         // find peak
         int w = PEAK_W;
         peak_hit[j] = false;
+
         if (j > SKIP_N + 2 * PEAK_W){
-            for (int m = 0; m < SKIP_N; m++){
-                int diff = 0;
-                for (int n = 0; n < w; n++){
-                    if (single_hit_num[j-m-w-n] > single_hit_num[j-n]){
-                        diff += 1;
+            left = 0;
+            right = 0;
+            for (int n = 0; n < w; n++){
+                right += single_hit_num[j-n];
+            }
+
+            for (int m = k; m < SKIP_N; m++){
+                if (m == 0){
+                    for (int n = 0; n < w; n++){
+                        left += single_hit_num[j-w-n];
                     }
-                    if (single_hit_num[j-m-w-n] < single_hit_num[j-n]){
-                        diff -= 1;
-                    }  
                 }
+                else{
+                    left = left - single_hit_num[j-m-w+1] + single_hit_num[j-w-w+1-m];
+                }
+                diff = left - right;
+
                 if (diff >= DIFF){
                     peak_hit[j-m-w] = true;
                     // break;
@@ -530,13 +539,13 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
             }        
         }
     }
-    if (ref_index == 23){
-        for (int j = 0; j < ref_len; j++){
-            if(j > 64988 - 200 & j < 64988 + 200){
-                cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
-            }
-        }
-    }
+    // if (ref_index == 23){
+    //     for (int j = 0; j < ref_len; j++){
+    //         if(j > 64988 - 200 & j < 64988 + 200){
+    //             cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
+    //         }
+    //     }
+    // }
 
     if (conti_flag == true & good_window == true){
         end = ref_len;
@@ -1193,7 +1202,7 @@ int main( int argc, char *argv[])
     srand(seed);
 
     // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    int down_sam_ratio = 13;
+    int down_sam_ratio = 20;
     //index
     string index_name = fasta_file + ".k" + to_string(k) + ".index.dat";
     ifstream findex(index_name);
@@ -1210,8 +1219,8 @@ int main( int argc, char *argv[])
     memset(kmer_count_table, 0, sizeof(char)*array_size);
     choose_coder = saved_random_coder(index_name);
 
-    fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.1.fq";
-    fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.2.fq";
+    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.1.fq";
+    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.2.fq";
 
     long size = file_size(fq1);
     long each_size = size/thread_num;
@@ -1281,8 +1290,8 @@ int main( int argc, char *argv[])
     cout << "raw peaks is done."<<endl;
     // down_sam_ratio = 50;
 
-    fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.1.fq";
-    fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.2.fq";
+    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.1.fq";
+    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.2.fq";
 
     for (int i=0; i<thread_num; i++){
         start = i*each_size;

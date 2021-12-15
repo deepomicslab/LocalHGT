@@ -12,6 +12,8 @@
 
 using namespace std;
 // ifstream readin(fname.c_str());
+
+int TEST;
  
 long file_size2(string filename)  
 {  
@@ -58,66 +60,75 @@ void read_fastq(string fastq_file, long start, long end){
     mid_file.close();
 }
 
+void print_d(void){
+    TEST += 1;
+    cout << TEST << endl;
+}
 
 int main(){
-
-    string index_name = "/mnt/d/breakpoints/HGT/test/ref.index.dat";
-    string fai_name = "/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.fai";
-    ifstream index_file;
-    ifstream fai_file;
-    fai_file.open(fai_name, ios::in); 
-    string line;
-    string aa;
-    int ref_len;
-
-
-    int thread_num = 4;
-    long index_size = file_size2(index_name);
-    long each_index_size = index_size/thread_num + 1;
-    cout <<index_size<<endl;
-    cout <<each_index_size<<endl;
-
-    unsigned int real_index = 0;
-
-    index_file.open(index_name, ios::in | ios::binary); 
-    long pos = 100 * 4;
-    index_file.seekg(pos, ios::beg);
-    long start, end;
-    start = pos;
-    int i = 0;
-    int k = 32;
-    int coder_num =3;
-    long add;
-
-    long a = 0;
-    cout <<start <<endl;
-    while(!fai_file.eof()){
-        getline(fai_file,line);
-        std::istringstream iss(line);
-        if (!(iss >> aa >> ref_len)) { break; }
-        a += ref_len;
-        // cout <<ref_len<< "\t"<< a<<endl;
-        index_file.read(reinterpret_cast<char*>(&real_index), sizeof(unsigned int));
-        add = 4*((ref_len-k+1)*coder_num+1); //the size of the genome.
-        if (pos -start > each_index_size){
-            end = pos + add;
-            cout << start <<"hh\t"<<end<<"\t"<<ref_len <<endl;
-            // break;
-            start = end;
-        
-        }
-        pos += add;
-
-        i += 1;
-    }
-
-    cout << start <<"hh\t"<<index_size<<"\t"<<ref_len <<endl;
-    cout <<i<<"\tend\t"<<a<<endl;
-
-    fai_file.close();
-    index_file.close();
-    return 0;
+    TEST = 10;
+    print_d();
 }
+
+// int main(){
+
+//     string index_name = "/mnt/d/breakpoints/HGT/test/ref.index.dat";
+//     string fai_name = "/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.fai";
+//     ifstream index_file;
+//     ifstream fai_file;
+//     fai_file.open(fai_name, ios::in); 
+//     string line;
+//     string aa;
+//     int ref_len;
+
+
+//     int thread_num = 4;
+//     long index_size = file_size2(index_name);
+//     long each_index_size = index_size/thread_num + 1;
+//     cout <<index_size<<endl;
+//     cout <<each_index_size<<endl;
+
+//     unsigned int real_index = 0;
+
+//     index_file.open(index_name, ios::in | ios::binary); 
+//     long pos = 100 * 4;
+//     index_file.seekg(pos, ios::beg);
+//     long start, end;
+//     start = pos;
+//     int i = 0;
+//     int k = 32;
+//     int coder_num =3;
+//     long add;
+
+//     long a = 0;
+//     cout <<start <<endl;
+//     while(!fai_file.eof()){
+//         getline(fai_file,line);
+//         std::istringstream iss(line);
+//         if (!(iss >> aa >> ref_len)) { break; }
+//         a += ref_len;
+//         // cout <<ref_len<< "\t"<< a<<endl;
+//         index_file.read(reinterpret_cast<char*>(&real_index), sizeof(unsigned int));
+//         add = 4*((ref_len-k+1)*coder_num+1); //the size of the genome.
+//         if (pos -start > each_index_size){
+//             end = pos + add;
+//             cout << start <<"hh\t"<<end<<"\t"<<ref_len <<endl;
+//             // break;
+//             start = end;
+        
+//         }
+//         pos += add;
+
+//         i += 1;
+//     }
+
+//     cout << start <<"hh\t"<<index_size<<"\t"<<ref_len <<endl;
+//     cout <<i<<"\tend\t"<<a<<endl;
+
+//     fai_file.close();
+//     index_file.close();
+//     return 0;
+// }
 
 // int main(){
 
