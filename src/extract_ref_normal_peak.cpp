@@ -30,7 +30,7 @@ int REF_NEAR = 500; // 300
 int DIFF = 2; // 2
 int PEAK_W = 5; // 5
 int NEAR = 10; // PEAK_W 10
-int SKIP_N = 10; // 5 10
+int SKIP_N = 64; // 5 10
 int MIN_READS = 1; // 1
 int MAX_PEAK_NUM = 500000000;
 int thread_num = 10;
@@ -508,7 +508,7 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
         // find peak
         int w = PEAK_W;
         peak_hit[j] = false;
-        if (j > 60){
+        if (j > SKIP_N + 2 * PEAK_W){
             for (int m = 0; m < SKIP_N; m++){
                 int diff = 0;
                 for (int n = 0; n < w; n++){
@@ -521,22 +521,22 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
                 }
                 if (diff >= DIFF){
                     peak_hit[j-m-w] = true;
-                    break;
+                    // break;
                 }
                 if (diff <= -DIFF){
                     peak_hit[j] = true;
-                    break;
+                    // break;
                 }
             }        
         }
     }
-    // if (ref_index == 31){
-    //     for (int j = 0; j < ref_len; j++){
-    //         if(j > 68066 - 200 & j < 68066 + 200){
-    //             cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
-    //         }
-    //     }
-    // }
+    if (ref_index == 23){
+        for (int j = 0; j < ref_len; j++){
+            if(j > 64988 - 200 & j < 64988 + 200){
+                cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
+            }
+        }
+    }
 
     if (conti_flag == true & good_window == true){
         end = ref_len;
@@ -1182,7 +1182,7 @@ int main( int argc, char *argv[])
     string accept_perfect_hit_ratio = argv[6];
     float hit_ratio = stod(accept_hit_ratio);
     float perfect_hit_ratio = stod(accept_perfect_hit_ratio);
-    long down_sampling_size = 2500000000; //2G bases
+    long down_sampling_size = 2000000000; //2G bases
 
     
     long start = 0;
@@ -1193,7 +1193,7 @@ int main( int argc, char *argv[])
     srand(seed);
 
     // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    int down_sam_ratio = 10;
+    int down_sam_ratio = 13;
     //index
     string index_name = fasta_file + ".k" + to_string(k) + ".index.dat";
     ifstream findex(index_name);
@@ -1210,8 +1210,8 @@ int main( int argc, char *argv[])
     memset(kmer_count_table, 0, sizeof(char)*array_size);
     choose_coder = saved_random_coder(index_name);
 
-    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.1.fq";
-    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.2.fq";
+    fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.1.fq";
+    fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.2.fq";
 
     long size = file_size(fq1);
     long each_size = size/thread_num;
@@ -1281,8 +1281,8 @@ int main( int argc, char *argv[])
     cout << "raw peaks is done."<<endl;
     // down_sam_ratio = 50;
 
-    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.1.fq";
-    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.2.fq";
+    fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.1.fq";
+    fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.2.fq";
 
     for (int i=0; i<thread_num; i++){
         start = i*each_size;
