@@ -251,7 +251,7 @@ def cami():
     ba = Parameters()
     ba.get_dir(true_dir)
 
-    for snp_rate in [0.01, 0.03, 0.05]:
+    for snp_rate in [0.01, 0.02, 0.03, 0.04, 0.05]:
         ba.change_snp_rate(snp_rate)
         index = 0
         ba.get_ID(index)
@@ -306,8 +306,8 @@ if __name__ == "__main__":
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results/"
 
-    cami()
-    # snp()
+    # cami()
+    snp()
 
 
 

@@ -202,7 +202,7 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
         }  
         // cout << "-----------"<<endl;
         if (my_peak_index > max_peak_num){
-            cout <<"Too many peaks! Please indicate larger max_peak_num."<<endl;
+            cout <<"Too many peaks! We recommand reduce the sampling size, or you can indicate larger max_peak_num."<<endl;
         }
         my_peak_index += 1; 
         total_peak_num += 1;
@@ -431,25 +431,16 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
     bool *peak_hit = new bool[ref_len];
     int* save_peak_intervals = new int[2*ref_len];
     int peak_index = 0;
-    unsigned char* ref_depth = new unsigned char[ref_len];
-    int max_depth = 0;
     int left, right, diff;
     
     for (int j = 0; j < ref_len; j++){
         short hit_coder_num = 0;
-        max_depth = 0;
         for (int p = 0; p < 3; p++){
             // if (record_ref_hit[ref_len*p+j] == true){
             if (record_ref_hit[coder_num*j+p] == least_depth){
                 hit_coder_num += 1;
-                // cout << j <<"hit"<<p << endl;
-            }
-            if (record_ref_hit[coder_num*j+p] > max_depth){
-                max_depth = record_ref_hit[coder_num*j+p];
             }
         }
-        // cout << j << "\t" << max_depth<<endl;
-        ref_depth[j] = max_depth;
         if (hit_coder_num == 3){
             trio_hit_num[j] = 1;
         }
@@ -542,7 +533,7 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
     // if (ref_index == 23){
     //     for (int j = 0; j < ref_len; j++){
     //         if(j > 64988 - 200 & j < 64988 + 200){
-    //             cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)ref_depth[j]<<"\t"<<peak_hit[j]<<endl;
+    //             cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)single_hit_num[j]<<"\t"<<peak_hit[j]<<endl;
     //         }
     //     }
     // }
@@ -595,7 +586,6 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
     delete [] trio_hit_num;
     delete [] save_peak_intervals;
     delete [] peak_hit;
-    delete [] ref_depth;
     // return extract_ref_len;
 }
 
@@ -1202,7 +1192,7 @@ int main( int argc, char *argv[])
     srand(seed);
 
     // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    int down_sam_ratio = 20;
+    int down_sam_ratio = 15;
     //index
     string index_name = fasta_file + ".k" + to_string(k) + ".index.dat";
     ifstream findex(index_name);
