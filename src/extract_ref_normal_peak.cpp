@@ -32,7 +32,7 @@ int PEAK_W = 5; // 5
 int NEAR = 0; // PEAK_W 10
 int SKIP_N = 60; // 5 10
 int MIN_READS = 1; // 1
-int MAX_PEAK_NUM = 500000000;
+int MAX_PEAK_NUM = 200000000;
 int thread_num = 10;
 std::mutex mtx;  
 
@@ -49,7 +49,7 @@ class Split_reads{
         int tem_index = 0;
         bool valid_base = false;
         void count_peak_kmer(int peak_chr, int peak_pos, int peak_index, int coder_index);
-        void check_split(int* peak_filter);
+        void check_split(unsigned char* peak_filter);
         void init_array(void);
         void judge_base(void);
 };
@@ -107,7 +107,7 @@ void Split_reads::judge_base(void){
     }
 }
 
-void Split_reads::check_split(int* peak_filter){
+void Split_reads::check_split(unsigned char* peak_filter){
     map<int, int>::iterator iter;
     int chr, peak_index;
 
@@ -135,7 +135,10 @@ void Split_reads::check_split(int* peak_filter){
             // cout << iter->first << ":"<< iter->second <<endl;
             chr = iter->first;
             peak_index = chr_peak_index[chr];
-            peak_filter[peak_index] += 1;
+            if ((int) peak_filter[peak_index] < 254){
+                peak_filter[peak_index] += 1;
+            }
+            
             iter ++ ;
         }
         // cout << "------------------"<<endl;
@@ -154,7 +157,7 @@ class Peaks{
         int ref_near = REF_NEAR;
         int max_peak_num = MAX_PEAK_NUM;
         int *peak_loci = new int[max_peak_num*2];
-        int *peak_filter = new int[max_peak_num];
+        unsigned char *peak_filter = new unsigned char[max_peak_num];
         unsigned int *peak_kmer = new unsigned int[array_size];
 
         void init(void);
@@ -385,11 +388,7 @@ void Peaks::count_filtered_peak(string interval_name){
     int chr = 1;
     long final_ref_len = 0;
     for (int i = 0; i < my_peak_index; i++){
-        if (peak_filter[i] >= MIN_READS ){
-            // if (peak_loci[2*i] == 36){
-                // cout<<peak_filter[i] <<"\t" << peak_loci[2*i] << "\t" << peak_loci[2*i+1] << endl;
-            // }
-            
+        if ((int)peak_filter[i] >= MIN_READS ){
             filter_peak_num += 1;
             if (chr == peak_loci[2*i] & peak_loci[2*i+1]-ref_near - end < ref_gap){
                 end = peak_loci[2*i+1]+ref_near;
@@ -1246,7 +1245,7 @@ int main( int argc, char *argv[])
 
 
     Peaks MyPeak;
-    memset(MyPeak.peak_filter, 0, sizeof(int)*MyPeak.max_peak_num);
+    memset(MyPeak.peak_filter, 0, sizeof(unsigned char)*MyPeak.max_peak_num);
     memset(MyPeak.peak_kmer, 0, sizeof(unsigned int)*array_size);
 
     int ref_thread_num;
