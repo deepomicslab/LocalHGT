@@ -151,31 +151,44 @@ void Split_reads::check_split(unsigned char* peak_filter){
 
 class Peaks{
     public:
-        int my_peak_index = 0;
+        // int my_peak_index = 0;
+        int *peak_index_array;
         int filter_peak_num = 0;
         int near = NEAR;
         int merge_close_peak = 50;
         int ref_gap = 500;
         int ref_near = REF_NEAR;
         int max_peak_num = MAX_PEAK_NUM;
+        int each_thread_peak_num;
         int *peak_loci = new int[max_peak_num*2];
         unsigned char *peak_filter = new unsigned char[max_peak_num];
         unsigned int *peak_kmer = new unsigned int[array_size];
-
-        void init(void);
+        int thread_num;
+        void init(int thread_num);
         void add_peak(int ref_index, int pos, unsigned int* record_ref_index,int ref_len, 
-                    long & total_peak_num, unsigned char* record_ref_hit);
+                    long & total_peak_num, unsigned char* record_ref_hit, int thread_index);
         void delete_array(void);
         void slide_reads(string fastq_file, string fastq_file_2, bool* coder, int* base, 
                         char* comple, short *choose_coder, int down_sam_ratio, long start, long end);
         void count_filtered_peak(string interval_name);
-        bool merge_peak(int ref_index, int pos);
+        bool merge_peak(int ref_index, int pos, int my_peak_index);
 };
 
+void Peaks::init(int obtain_thread_num){
+    thread_num = obtain_thread_num;
+    peak_index_array = new int[thread_num];
+    each_thread_peak_num = max_peak_num/thread_num;
+    for (int j = 0; j < thread_num; j++){
+        peak_index_array[j] = 0 + each_thread_peak_num*j;
+    }
+    
+}
+
 void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int ref_len, 
-                    long & total_peak_num, unsigned char* record_ref_hit){
+                    long & total_peak_num, unsigned char* record_ref_hit, int thread_index){
     // cout << Peaks::merge_peak(ref_index, pos)<<endl;
-    if (Peaks::merge_peak(ref_index, pos)){
+    int my_peak_index = peak_index_array[thread_index];
+    if (Peaks::merge_peak(ref_index, pos,my_peak_index)){
         int index;
         for (int near_pos = pos - near; near_pos < pos + 1; near_pos++){
             if (near_pos>=0 & near_pos<=ref_len){
@@ -203,16 +216,17 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
             }
         }  
         // cout << "-----------"<<endl;
-        if (my_peak_index > max_peak_num){
+        if (my_peak_index >= max_peak_num){
             cout <<"Too many peaks! We recommand reduce the sampling size, or you can indicate larger max_peak_num."<<endl;
         }
         my_peak_index += 1; 
         total_peak_num += 1;
     }
+    peak_index_array[thread_index] = my_peak_index;
     
 }
 
-bool Peaks::merge_peak(int ref_index, int pos){
+bool Peaks::merge_peak(int ref_index, int pos, int my_peak_index){
     bool exist_peak = false;
     if (my_peak_index > 0){
         // if (ref_index == peak_loci[2*my_peak_index-2] & pos - peak_loci[2*my_peak_index-1] < merge_close_peak){
@@ -377,40 +391,47 @@ void Peaks::delete_array(void){
     delete [] peak_loci;
     delete [] peak_kmer;
     delete [] peak_filter;
+    delete [] peak_index_array;
 }
 
 void Peaks::count_filtered_peak(string interval_name){
     ofstream interval_file;
     interval_file.open(interval_name, ios::out | ios::trunc);
-    int start = 1;
-    int end = 1;
-    int chr = 1;
+
     long final_ref_len = 0;
-    for (int i = 0; i < my_peak_index; i++){
-        if ((int)peak_filter[i] >= MIN_READS ){
-            filter_peak_num += 1;
-            if (chr == peak_loci[2*i] & peak_loci[2*i+1]-ref_near - end < ref_gap){
-                end = peak_loci[2*i+1]+ref_near;
+    for (int j = 0; j < thread_num; j++){
+        int my_peak_index = peak_index_array[j];
+        int start = 1;
+        int end = 1;
+        int chr = 1;
+        for (int i = each_thread_peak_num*j; i < my_peak_index; i++){
+            if ((int)peak_filter[i] >= MIN_READS ){
+                filter_peak_num += 1;
+                if (chr == peak_loci[2*i] & peak_loci[2*i+1]-ref_near - end < ref_gap){
+                    end = peak_loci[2*i+1]+ref_near;
+                }
+                else{
+                    interval_file << chr << "\t" << start << "\t"<< end << endl;
+                    final_ref_len += (end - start);
+                    chr = peak_loci[2*i];
+                    start = peak_loci[2*i+1]-ref_near;
+                    end = peak_loci[2*i+1]+ref_near;
+                }
+                
             }
-            else{
-                interval_file << chr << "\t" << start << "\t"<< end << endl;
-                final_ref_len += (end - start);
-                chr = peak_loci[2*i];
-                start = peak_loci[2*i+1]-ref_near;
-                end = peak_loci[2*i+1]+ref_near;
-            }
-            
+
         }
+        interval_file << chr << "\t" << start << "\t"<< end << endl;
+        final_ref_len += (end - start);
     }
-    interval_file << chr << "\t" << start << "\t"<< end << endl;
-    final_ref_len += (end - start);
+
     interval_file.close();
     cout <<"final_ref_len is:\t"<<final_ref_len<<endl;
 }
 
 void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, long & extract_ref_len,
                 ofstream & interval_file, float hit_ratio, float perfect_hit_ratio,
-                long & total_peak_num,Peaks & MyPeak,unsigned int* record_ref_index){ 
+                long & total_peak_num,Peaks & MyPeak,unsigned int* record_ref_index, int thread_index){ 
                 //find density hits regions
     
     int frag_index = 0;
@@ -551,10 +572,11 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
 
     for (int i = 0; i < frag_index; i++){
         // extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
-        mtx.lock();
+        // mtx.lock();
         for (int j =save_good_intervals[2*i]; j <save_good_intervals[2*i+1];j++ ){
             if (peak_hit[j] == true){
-                MyPeak.add_peak(ref_index, j, record_ref_index, ref_len, total_peak_num, record_ref_hit);
+                MyPeak.add_peak(ref_index, j, record_ref_index, ref_len, total_peak_num, 
+                                record_ref_hit,thread_index);
                 start = j - 200;
                 end = j + 200;
                 if (end > ref_len){
@@ -573,7 +595,7 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
                 }
             }
         } 
-        mtx.unlock();
+        // mtx.unlock();
     }
 
     for (int i = 0; i < frag_index; i++){
@@ -774,7 +796,7 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
 
 void read_index(bool* coder, int* base, int k, char* comple, string index_name, string interval_name,
                 short *choose_coder, float hit_ratio, float perfect_hit_ratio, Peaks & MyPeak, long start, 
-                long end, int start_ref_index, long&  extract_ref_len, long & slide_ref_len, long & total_peak_num){
+                long end, int start_ref_index, long&  extract_ref_len, long & slide_ref_len, long & total_peak_num, int thread_index){
 
     // long extract_ref_len = 0;
     // long slide_ref_len = 0;
@@ -832,7 +854,7 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
         }
         // mtx.lock();
         slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, 
-                                        perfect_hit_ratio,total_peak_num,MyPeak,record_ref_index);
+                                        perfect_hit_ratio,total_peak_num,MyPeak,record_ref_index,thread_index);
         // mtx.unlock(); 
         slide_ref_len += ref_len;
         start_point += 4;
@@ -1246,6 +1268,7 @@ int main( int argc, char *argv[])
 
 
     Peaks MyPeak;
+    MyPeak.init(thread_num);
     memset(MyPeak.peak_filter, 0, sizeof(unsigned char)*MyPeak.max_peak_num);
     memset(MyPeak.peak_kmer, 0, sizeof(unsigned int)*array_size);
 
@@ -1272,7 +1295,7 @@ int main( int argc, char *argv[])
         // read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end);
         threads.push_back(thread(read_index, coder, base, k, comple, index_name, interval_name,
          choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end, 
-         start_ref_index,std::ref(extract_ref_len),std::ref(slide_ref_len),std::ref(total_peak_num)));
+         start_ref_index,std::ref(extract_ref_len),std::ref(slide_ref_len),std::ref(total_peak_num), i));
     }
 	for (auto&th : threads)
 		th.join();
@@ -1298,7 +1321,7 @@ int main( int argc, char *argv[])
     cout << "filtering peaks is done."<<endl;
 
     MyPeak.count_filtered_peak(interval_name);
-    cout<<"filtered peak number:" <<MyPeak.filter_peak_num<<"\toriginal peak number:"<<MyPeak.my_peak_index<<endl;
+    cout<<"filtered peak number:" <<MyPeak.filter_peak_num<<endl;
     MyPeak.delete_array();
     delete [] kmer_count_table;
     time_t now3 = time(0);
