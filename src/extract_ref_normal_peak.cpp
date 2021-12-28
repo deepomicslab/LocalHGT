@@ -25,12 +25,14 @@ const int k = 32;
 long array_size = pow(2, k);
 char *kmer_count_table = new char[array_size];
 
-int MIN_BASE_NUM = 6; // 6 10
-int REF_NEAR = 500; // 300
+int MIN_BASE_NUM = 6; // 6 
+int REF_NEAR = 500; // 500
 int DIFF = 2; // 2
 int PEAK_W = 5; // 5
-int NEAR = 0; // PEAK_W 10
-int SKIP_N = 60; // 5 10
+int NEAR = 0; // 0
+int SKIP_N = 2*k; // 60
+int SKIP_S = k; //k
+int SKIP_A = 1;
 int MIN_READS = 1; // 1
 int MAX_PEAK_NUM = 200000000;
 int thread_num = 10;
@@ -182,9 +184,6 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
                     if (record_ref_hit[index] > 0){
                         peak_kmer[record_ref_index[index]] = my_peak_index - 1;
                     }
-                    // else{
-                    //     cout << "----" <<endl;
-                    // }
                 }  
             }
         }  
@@ -507,8 +506,8 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
                 right += single_hit_num[j-n];
             }
 
-            for (int m = k; m < SKIP_N; m++){
-                if (m == 0){
+            for (int m = SKIP_S; m < SKIP_N; m+= SKIP_A){ // compare * windows
+                if (m == SKIP_S){
                     for (int n = 0; n < w; n++){
                         left += single_hit_num[j-w-n];
                     }
@@ -529,9 +528,9 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
             }        
         }
     }
-    // if (ref_index == 23){
+    // if (ref_index == 5){
     //     for (int j = 0; j < ref_len; j++){
-    //         if(j > 64988 - 200 & j < 64988 + 200){
+    //         if(j > 133808 - 100 & j < 133808 + 100){
     //             cout << j<<"\t"<<single_hit_num[j] << "\t"<<(int)single_hit_num[j]<<"\t"<<peak_hit[j]<<endl;
     //         }
     //     }
@@ -1150,13 +1149,14 @@ long * split_ref(string index_name, string fasta_file, int thread_num){
         }
         
     }
-
-    end_byte = index_size;
-    split_ref_cutoffs[3*cut_index] = start_byte;
-    split_ref_cutoffs[3*cut_index+1] = end_byte;
-    split_ref_cutoffs[3*cut_index+2] = start_ref_index;
-    split_ref_cutoffs[3*cut_index+3] = 0; // indicate the end
-    cout << start_byte <<"\t--\t"<<end_byte<<"\t"<<ref_len<<"index"<< start_ref_index<<endl;
+    if (start_byte != index_size){
+        end_byte = index_size;
+        split_ref_cutoffs[3*cut_index] = start_byte;
+        split_ref_cutoffs[3*cut_index+1] = end_byte;
+        split_ref_cutoffs[3*cut_index+2] = start_ref_index;
+        split_ref_cutoffs[3*cut_index+3] = 0; // indicate the end
+        cout << start_byte <<"\t--\t"<<end_byte<<"\t"<<ref_len<<"index"<< start_ref_index<<endl;
+    }
     len_file.close();
     return split_ref_cutoffs;
 }
@@ -1187,11 +1187,12 @@ int main( int argc, char *argv[])
     long end = 0;
 
     unsigned seed;
-    seed = time(0);
+    // seed = time(0);
+    seed = 1;
     srand(seed);
 
     // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    int down_sam_ratio = 15;
+    int down_sam_ratio = 13;
     //index
     string index_name = fasta_file + ".k" + to_string(k) + ".index.dat";
     ifstream findex(index_name);
@@ -1208,8 +1209,8 @@ int main( int argc, char *argv[])
     memset(kmer_count_table, 0, sizeof(char)*array_size);
     choose_coder = saved_random_coder(index_name);
 
-    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.1.fq";
-    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0_high.2.fq";
+    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.05_depth50_reads150_sample_0_high.1.fq";
+    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.05_depth50_reads150_sample_0_high.2.fq";
 
     long size = file_size(fq1);
     long each_size = size/thread_num;
@@ -1279,8 +1280,8 @@ int main( int argc, char *argv[])
     cout << "raw peaks is done."<<endl;
     // down_sam_ratio = 50;
 
-    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.1.fq";
-    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.01_depth50_reads150_sample_0.2.fq";
+    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.05_depth50_reads150_sample_0.1.fq";
+    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.05_depth50_reads150_sample_0.2.fq";
 
     for (int i=0; i<thread_num; i++){
         start = i*each_size;

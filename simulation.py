@@ -318,8 +318,8 @@ def UHGG_snp(uniq_segs_loci):
     pa.add_segs(uniq_segs_loci)
     pa.get_uniq_len()
 
-    # for snp_rate in pa.snp_level:
-    for snp_rate in [0.06, 0.07, 0.08, 0.09]:
+    for snp_rate in pa.snp_level:
+    # for snp_rate in [0.06, 0.07, 0.08, 0.09]:
         pa.change_snp_rate(snp_rate)
         for index in range(pa.iteration_times):
             pa.get_ID(index)
@@ -355,7 +355,7 @@ def UHGG_cami():
     pa = Parameters()
     pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
 
-    for snp_rate in [0.02, 0.04]:
+    for snp_rate in pa.snp_level: #[0.02, 0.04]:
         pa.change_snp_rate(snp_rate)
         index = 0
         pa.get_ID(index)
@@ -387,7 +387,7 @@ class Parameters():
         self.scaffold_num = self.HGT_num
         self.snp_rate = 0.01
         self.indel_rate = self.snp_rate * 0.1  
-        self.depth = 50
+        self.depth = 100
         self.reads_len = 150
         self.iteration_times = 1
         self.donor_in_flag = False
@@ -397,7 +397,7 @@ class Parameters():
         self.cami_data = {'low':'RL_S001__insert_270', 'medium':'RM2_S001__insert_270',\
          'high':'RH_S001__insert_270'}
         self.complexity_level = ['high', 'low', 'medium']
-        self.snp_level = [round(x*0.01,2) for x in range(11)]
+        self.snp_level = [round(x*0.01,2) for x in range(1,6)]
         
         self.uniq_segs_loci = {}
         self.species_dict = {}
@@ -496,6 +496,8 @@ if __name__ == "__main__":
     blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
 
     # generate_complexity()
+
+
     # if os.path.isfile(uniq_segs_file):
     #     uniq_segs_loci = np.load(uniq_segs_file, allow_pickle='TRUE').item()
     # else:

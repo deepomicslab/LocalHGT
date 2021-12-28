@@ -272,7 +272,7 @@ def snp():
     fi = Figure()
     ba = Parameters()
 
-    for snp_rate in ba.snp_level[1:-2]: # 0.01-0.09
+    for snp_rate in ba.snp_level: # 0.01-0.09
         # if snp_rate == 0.07:
         #     continue
     # for snp_rate in [0.05]:
@@ -305,9 +305,9 @@ if __name__ == "__main__":
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results/"
-
-    # cami()
-    snp()
+    print ("evaluation")
+    cami()
+    # snp()
 
 
 
