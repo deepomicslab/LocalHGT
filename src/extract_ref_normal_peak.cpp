@@ -1213,8 +1213,8 @@ int main( int argc, char *argv[])
     seed = 1;
     srand(seed);
 
-    // int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    int down_sam_ratio = 13;
+    int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
+    // int down_sam_ratio = 13;
     //index
     string index_name = fasta_file + ".k" + to_string(k) + ".index.dat";
     ifstream findex(index_name);

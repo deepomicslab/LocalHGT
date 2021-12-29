@@ -175,7 +175,7 @@ class Sample():
             return '_'.join(array[:6])
 
     def eva_tool(self, tool_dir):
-        acc_file = tool_dir + '/' + self.ID + '.acc.txt'
+        acc_file = tool_dir + '/' + self.ID + '.acc.csv'
         bkp = read_lemon(acc_file)
         accuracy, FDR = compare(self.true_bkp, bkp)
         time_file = tool_dir + '/' + self.ID + '.time'

@@ -351,6 +351,48 @@ def UHGG_snp(uniq_segs_loci):
                     pa.add_species(species_dict, seq_dict)                  
                     if_success = random_HGT(pa)
 
+def UHGG_depth(uniq_segs_loci): 
+    species_dict = {} 
+    pa = Parameters()
+    pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_depth/")
+    pa.add_segs(uniq_segs_loci)
+    pa.get_uniq_len()
+
+    # for snp_rate in pa.snp_level:
+    # # for snp_rate in [0.06, 0.07, 0.08, 0.09]:
+    #     pa.change_snp_rate(snp_rate)
+    for depth in [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]:
+        pa.change_depth(depth)
+        for index in range(10):
+            pa.get_ID(index)
+            if_success = 0
+            while if_success == 0:
+                ############random select scaffold###########
+                all_ref = pa.outdir + '/%s.fa'%(pa.sample)
+                fasta_sequences = SeqIO.parse(open(pa.origin_ref),'fasta')       
+                f = open(all_ref, 'w')
+                select_num = 0
+                for record in fasta_sequences:
+                    if len(record.seq) < pa.min_genome:
+                        continue
+                    if pa.uniq_len[str(record.id)] < pa.min_uniq_len:
+                        continue
+                    if np.random.random() < pa.random_rate:
+                        rec1 = SeqRecord(record.seq, id=str(record.id), description="simulation")
+                        SeqIO.write(rec1, f, "fasta") 
+                        # uniq_segs_loci[str(record.id)] = [[1, len(record.seq)]]
+                        species_dict[str(record.id)] = str(record.id)
+                        select_num += 1
+                    if select_num == pa.scaffold_num + pa.HGT_num:
+                        break
+
+                f.close()
+                print ('%s scaffolds were extracted.'%(select_num))
+                if select_num ==pa.scaffold_num + pa.HGT_num:
+                    seq_dict = read_fasta(all_ref)  
+                    pa.add_species(species_dict, seq_dict)                  
+                    if_success = random_HGT(pa)
+
 def UHGG_cami(): 
     pa = Parameters()
     pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
@@ -420,6 +462,9 @@ class Parameters():
     def change_snp_rate(self, snp_rate):
         self.snp_rate = snp_rate
         self.indel_rate = snp_rate * 0.1
+
+    def change_depth(self, depth):
+        self.depth = depth
 
     def get_ID(self, index):
         self.sample = 'species%s_snp%s_depth%s_reads%s_sample_%s'%(self.scaffold_num, \
@@ -498,15 +543,16 @@ if __name__ == "__main__":
     # generate_complexity()
 
 
-    # if os.path.isfile(uniq_segs_file):
-    #     uniq_segs_loci = np.load(uniq_segs_file, allow_pickle='TRUE').item()
-    # else:
-    #     uniq_segs_loci = extract_uniq_region(blast_file)  
-    #     np.save(uniq_segs_file, uniq_segs_loci) 
-    # t1 = time.time()
-    # print ('Uniq extraction is done.', t1 - t0)
-    # print ("genome num:", len(uniq_segs_loci))
+    if os.path.isfile(uniq_segs_file):
+        uniq_segs_loci = np.load(uniq_segs_file, allow_pickle='TRUE').item()
+    else:
+        uniq_segs_loci = extract_uniq_region(blast_file)  
+        np.save(uniq_segs_file, uniq_segs_loci) 
+    t1 = time.time()
+    print ('Uniq extraction is done.', t1 - t0)
+    print ("genome num:", len(uniq_segs_loci))
     # UHGG_snp(uniq_segs_loci)
+    UHGG_depth(uniq_segs_loci)
 
 
-    UHGG_cami()
+    # UHGG_cami()

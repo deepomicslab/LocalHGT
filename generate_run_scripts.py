@@ -10,7 +10,7 @@ class Batch(Parameters):
         self.workdir = "/mnt/d/breakpoints/HGT/"
         self.fq_dir = ''
         self.result_dir = ''
-        self.localHGT = "/mnt/d/breakpoints/script/test_pipeline.sh"
+        self.localHGT = "/mnt/d/breakpoints/script/pipeline.sh"
         self.hit = 0.1
         self.perfect_hit = 0.08
         self.fq1 = ''
