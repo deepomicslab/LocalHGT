@@ -221,6 +221,7 @@ class Figure():
     def __init__(self):
         self.data = []
         self.df = []
+        self.variation = "Depth"
     
     def add_local_sample(self, pe, va): # any performance Object
         self.data.append([pe.user_time, pe.accuracy, pe.FDR, \
@@ -232,17 +233,28 @@ class Figure():
 
     def convert_df(self):
         self.df=pd.DataFrame(self.data,columns=['CPU time', 'Sensitivity','FDR', 'Max Memory (G)', \
-        'Ref Accuracy',  'Extracted Ref (M)', 'Methods', 'Variation'])
+        'Ref Accuracy',  'Extracted Ref (M)', 'Methods', self.variation])
 
     def plot(self):
         self.convert_df()
+        fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+        sns.barplot(ax = axes[0], x=self.variation,y='Sensitivity',hue= 'Methods',data=self.df)
+        sns.barplot(ax = axes[1], x=self.variation,y='FDR', hue= 'Methods',data=self.df) 
+        axes[1].set_ylim(0,0.05)    
+        #     plt.xticks(rotation=0)
+        give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+        plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))
+
+    def plot_all(self):
+        self.convert_df()
         fig, axes = plt.subplots(3, 2, figsize=(15,10))
-        sns.barplot(ax = axes[0][0], x='Variation',y='Sensitivity',hue= 'Methods',data=self.df)
-        sns.barplot(ax = axes[0][1], x='Variation',y='FDR', hue= 'Methods',data=self.df) 
-        sns.barplot(ax = axes[1][0], x='Variation',y='Max Memory (G)',hue= 'Methods',data=self.df)
-        sns.barplot(ax = axes[1][1], x='Variation',y='CPU time', hue= 'Methods',data=self.df) 
-        sns.barplot(ax = axes[2][0], x='Variation',y='Extracted Ref (M)',hue= 'Methods',data=self.df)
-        sns.barplot(ax = axes[2][1], x='Variation',y='Ref Accuracy', hue= 'Methods',data=self.df)        
+        sns.barplot(ax = axes[0][0], x=self.variation,y='Sensitivity',hue= 'Methods',data=self.df)
+        sns.barplot(ax = axes[0][1], x=self.variation,y='FDR', hue= 'Methods',data=self.df) 
+        axes[0,1].set_ylim(0,0.05)
+        sns.barplot(ax = axes[1][0], x=self.variation,y='Max Memory (G)',hue= 'Methods',data=self.df)
+        sns.barplot(ax = axes[1][1], x=self.variation,y='CPU time', hue= 'Methods',data=self.df) 
+        sns.barplot(ax = axes[2][0], x=self.variation,y='Extracted Ref (M)',hue= 'Methods',data=self.df)
+        sns.barplot(ax = axes[2][1], x=self.variation,y='Ref Accuracy', hue= 'Methods',data=self.df)        
         #     plt.xticks(rotation=0)
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
         plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))

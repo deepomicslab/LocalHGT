@@ -18,7 +18,7 @@ min_match_score = 1.6  #0.8
 min_seq_len = 15
 cigar_dict = {0:'M',1:'M',2:'M',3:'M',4:'N',5:'N'}
 tolerate_read_mismatch_num = 20
-bkp2end = 10
+bkp2end = 15
 
 def compute_scores(dna1, dna2):
     # StripedSmithWaterman docs:
@@ -133,9 +133,11 @@ class Each_Split_Read(object):
         self.pos1 = read.reference_start
         self.pos2 = int(read.get_tag('SA').split(',')[1])
         self.qname = read.qname
-        self.mapped_base_num = 0
         self.hard_clipped = 0
         self.end_point = False
+
+        if self.qname not in reads_mapped_len:
+            reads_mapped_len[self.qname] = 0
 
         if args['n'] == 1:
             self.update_pos()
@@ -161,10 +163,7 @@ class Each_Split_Read(object):
                 self.seq2 = read.query_sequence[:m]
         # if self.qname == "GUT_GENOME000330_7-26442_1":
         #     print (self.qname, self.clipped_direction, len(self.seq1), len(self.seq2))
-        if self.qname not in reads_mapped_len:
-            reads_mapped_len[self.qname] = self.mapped_base_num
-        else:
-            reads_mapped_len[self.qname] += self.mapped_base_num
+
 
     def update_pos(self):
         seg1_len = int(self.ref1.split(':')[1].split('-')[1]) - int(self.ref1.split(':')[1].split('-')[0])
@@ -196,12 +195,9 @@ class Each_Split_Read(object):
             else:
                 break
 
-        
         for ci in read.cigar: # record mapped_length
             if cigar_dict[ci[0]] == 'M':
-                self.mapped_base_num += ci[1]  
-            if ci[0] == 5:
-                self.hard_clipped += ci[1]  
+                reads_mapped_len[self.qname] += ci[1]
 
         if r > l :
             self.clipped_direction = 'right'
@@ -307,13 +303,11 @@ def choose_acc_from_cluster(cluster):
             extract_ref_direction = 'left'
         #for right clipped seq, if the seg is reverse-complement, extract seq from left to the breakpoint.
         #else, we extract seq from the breakpoint to right
-        test = ['GUT_GENOME096290_3', '253000', 'GUT_GENOME000330_7', '111517'] \
-            + ['GUT_GENOME096508_9', '3056393', 'GUT_GENOME096544_12', '2833'] +\
-             ['GUT_GENOME096533_10', '587', 'GUT_GENOME096508_9', '3613757']
-        if readobj.ref1 in test and readobj.ref2 in test:
+        # test = ['GUT_GENOME096057_1', '1846830', 'GUT_GENOME000623_3', '251697']
+        # if readobj.ref1 in test and readobj.ref2 in test:
 
-            print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
-                readobj.mapped_len, readobj.clipped_direction, readobj.end_point)
+        #     print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
+        #         readobj.mapped_len, readobj.clipped_direction, readobj.end_point)
 
         read_seq = readobj.seq1
         read_seq_len = len(read_seq)
@@ -383,11 +377,11 @@ def choose_acc_from_cluster(cluster):
                 acc_bkp_list.append(acc1)
             elif score2 > min_match_score:
                 acc_bkp_list.append(acc2)
-            if readobj.ref1 in test and readobj.ref2 in test:
+            # if readobj.ref1 in test and readobj.ref2 in test:
 
-                print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
-                    readobj.mapped_len, readobj.clipped_direction, score1, score2, read_seq,\
-                     ref_seq, read_seq_len, reads_mapped_len[readobj.qname])
+            #     print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
+            #         readobj.mapped_len, readobj.clipped_direction, score1, score2, read_seq,\
+            #          ref_seq, read_seq_len, reads_mapped_len[readobj.qname])
             break #keep searching accurate bkp until the acc pos is found.
         
 class Acc_Bkp(object):
