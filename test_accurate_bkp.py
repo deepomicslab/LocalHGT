@@ -17,8 +17,6 @@ from get_raw_bkp import getInsertSize, readFilter
 min_match_score = 1.6  #0.8
 min_seq_len = 15
 cigar_dict = {0:'M',1:'M',2:'M',3:'M',4:'N',5:'N'}
-tolerate_read_mismatch_num = 20
-bkp2end = 10
 
 def compute_scores(dna1, dna2):
     # StripedSmithWaterman docs:
@@ -134,8 +132,6 @@ class Each_Split_Read(object):
         self.pos2 = int(read.get_tag('SA').split(',')[1])
         self.qname = read.qname
         self.mapped_base_num = 0
-        self.hard_clipped = 0
-        self.end_point = False
 
         if args['n'] == 1:
             self.update_pos()
@@ -167,13 +163,6 @@ class Each_Split_Read(object):
             reads_mapped_len[self.qname] += self.mapped_base_num
 
     def update_pos(self):
-        seg1_len = int(self.ref1.split(':')[1].split('-')[1]) - int(self.ref1.split(':')[1].split('-')[0])
-        seg2_len = int(self.ref2.split(':')[1].split('-')[1]) - int(self.ref2.split(':')[1].split('-')[0])
-        seg1_start = int(self.ref1.split(':')[1].split('-')[0])
-        seg2_start = int(self.ref2.split(':')[1].split('-')[0])
-        if (seg1_start > 100 and self.pos1 < bkp2end) or (seg2_start > 100 and self.pos2 < bkp2end) \
-            or seg1_len - self.pos1 < bkp2end or seg2_len - self.pos2 < bkp2end:
-            self.end_point = True
         self.pos1 += int(self.ref1.split(':')[1].split('-')[0])
         self.pos2 += int(self.ref2.split(':')[1].split('-')[0])
 
@@ -200,8 +189,6 @@ class Each_Split_Read(object):
         for ci in read.cigar: # record mapped_length
             if cigar_dict[ci[0]] == 'M':
                 self.mapped_base_num += ci[1]  
-            if ci[0] == 5:
-                self.hard_clipped += ci[1]  
 
         if r > l :
             self.clipped_direction = 'right'
@@ -290,9 +277,7 @@ def choose_acc_from_cluster(cluster):
     score2 = 0
     inte = 2 * rlen # search with a larger interval
     for readobj in cluster.support_reads:
-        if reads_mapped_len[readobj.qname] < rlen - tolerate_read_mismatch_num:
-            continue
-        if readobj.end_point == True: #the pos is near the segment end, so may be false positive
+        if reads_mapped_len[readobj.qname] < rlen - 20:
             continue
         score1 = 0
         my_pos1 = 0
@@ -307,13 +292,11 @@ def choose_acc_from_cluster(cluster):
             extract_ref_direction = 'left'
         #for right clipped seq, if the seg is reverse-complement, extract seq from left to the breakpoint.
         #else, we extract seq from the breakpoint to right
-        test = ['GUT_GENOME096290_3', '253000', 'GUT_GENOME000330_7', '111517'] \
-            + ['GUT_GENOME096508_9', '3056393', 'GUT_GENOME096544_12', '2833'] +\
-             ['GUT_GENOME096533_10', '587', 'GUT_GENOME096508_9', '3613757']
+        test = ['GUT_GENOME096290_3', '253000', 'GUT_GENOME000330_7', '111517']# + ['GUT_GENOME096508_9', '3056393', 'GUT_GENOME096544_12', '2833'] + ['GUT_GENOME096533_10', '587', 'GUT_GENOME096508_9', '3613757']
         if readobj.ref1 in test and readobj.ref2 in test:
 
             print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
-                readobj.mapped_len, readobj.clipped_direction, readobj.end_point)
+                readobj.mapped_len, readobj.clipped_direction)
 
         read_seq = readobj.seq1
         read_seq_len = len(read_seq)

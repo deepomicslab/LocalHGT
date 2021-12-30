@@ -358,12 +358,12 @@ def UHGG_depth(uniq_segs_loci):
     pa.add_segs(uniq_segs_loci)
     pa.get_uniq_len()
 
-    # for snp_rate in pa.snp_level:
-    # # for snp_rate in [0.06, 0.07, 0.08, 0.09]:
-    #     pa.change_snp_rate(snp_rate)
-    for depth in [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]:
+    # for depth in [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]:
+    #     pa.change_depth(depth)
+    #     for index in range(10):
+    for depth in [10]:
         pa.change_depth(depth)
-        for index in range(10):
+        for index in range(9, 10):
             pa.get_ID(index)
             if_success = 0
             while if_success == 0:

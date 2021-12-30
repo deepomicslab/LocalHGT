@@ -19,6 +19,9 @@ class Batch(Parameters):
         self.LEMON = "/mnt/d/breakpoints/lemon/pipeline.sh"
         self.lemon_outdir = "/mnt/e/HGT/lemon_snp/"
 
+    def change_lemon_dir(self, my_dir):
+        self.lemon_outdir = my_dir
+
     def get_fq_dir(self, fq_dir):
         self.fq_dir = fq_dir
 
@@ -49,6 +52,8 @@ class Batch(Parameters):
     def change_ID(self, new_id):
         self.sample = new_id
 
+    def change_ref(self):
+        self.origin_ref = self.fq_dir + f"{self.sample}.fa"
 
 def batch_snp():
     ba = Batch()
@@ -80,7 +85,7 @@ def batch_cami():
     ba.get_fq_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
     ba.get_result_dir("/mnt/d/breakpoints/HGT/uhgg_snp_results/")
 
-    f = open("/mnt/d/breakpoints/HGT/run_lemon_cami.sh", 'w')
+    f = open("/mnt/d/breakpoints/lemon/run_lemon_cami.sh", 'w')
     h = open("/mnt/d/breakpoints/HGT/run_localHGT_cami.sh", 'w')
 
     i = 1
@@ -104,6 +109,35 @@ def batch_cami():
     h.close()
 
 
+def batch_depth():
+    ba = Batch()
+    ba.get_fq_dir("/mnt/d/breakpoints/HGT/uhgg_depth/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/uhgg_depth_results/")
+    ba.change_lemon_dir("/mnt/e/HGT/lemon_depth/")
+
+    f = open("/mnt/d/breakpoints/lemon/run_lemon_depth.sh", 'w')
+    h = open("/mnt/d/breakpoints/HGT/run_localHGT_depth.sh", 'w')
+
+    i = 1
+    index = 0
+
+    for depth in [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]:
+        ba.change_depth(depth)
+        for index in range(10):
+            ba.get_ID(index)
+            ba.get_fq()
+            ba.change_ref()
+            order = ba.get_lemon_order()
+            print (order, file = f)
+            order = ba.get_normal_order()
+            print (order, file = h)
+            ba.get_ID(index) # refresh ID
+
+    f.close()
+    h.close()
+
+
 if __name__ == "__main__":
     # batch_snp()
-    batch_cami()
+    # batch_cami()
+    batch_depth()

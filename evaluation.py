@@ -140,7 +140,7 @@ def compare(true_bkp, our_bkp):
                     break
         if not identified:
             false_positive_locus.append(true)
-            # print ("False bkp:", true)
+            print ("False bkp:", true)
     if len(our_bkp) > 0:
         FDR = len(false_positive_locus)/len(our_bkp)
     else:
@@ -301,13 +301,40 @@ def snp():
     # fi.plot()
 """
 
+
+def depth():
+    fi = Figure()
+    ba = Parameters()
+    true_dir = "/mnt/d/breakpoints/HGT/uhgg_depth/"
+    lemon_dir = "/mnt/d/breakpoints/HGT/lemon_depth/"
+    local_dir = "/mnt/d/breakpoints/HGT/uhgg_depth_results/"
+
+    for depth in [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]:
+        ba.change_depth(depth)
+        for index in range(10):
+            ba.get_ID(index)    
+            sa = Sample(ba.sample, true_dir)
+            ref_accuracy, ref_len = sa.eva_ref(local_dir)
+            
+            # print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb")
+            local_pe = sa.eva_tool(local_dir)
+            local_pe.add_ref(ref_accuracy, ref_len)
+            print ("--------next lemon-------")
+            lemon_pe = sa.eva_tool(lemon_dir)
+            print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.FDR, lemon_pe.accuracy, lemon_pe.FDR)
+            fi.add_local_sample(local_pe, depth)
+            fi.add_lemon_sample(lemon_pe, depth)
+    fi.plot()
+
 if __name__ == "__main__":
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results/"
     print ("evaluation")
-    cami()
+    # cami()
     # snp()
+
+    depth()
 
 
 
