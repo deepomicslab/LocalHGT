@@ -272,9 +272,10 @@ def cami():
             cami_ID = ba.sample + '_' + level
             sa.change_ID(cami_ID)
             ref_accuracy, ref_len = sa.eva_ref(local_dir)
-            print ("############ref" ,cami_ID, ref_accuracy, ref_len, "Mb")
+            local_pe = sa.eva_tool(local_dir) 
+            print ("############ref" ,cami_ID, ref_accuracy, ref_len, "Mb", local_pe.accuracy)
 # """
-            # local_pe = sa.eva_tool(local_dir)           
+            #           
             # # local_pe.add_ref(ref_accuracy, ref_len)
             # print (cami_ID, local_pe.user_time, local_pe.accuracy, local_pe.max_mem)
             # print ("ref", local_pe.ref_accuracy, local_pe.ref_len, "Mb")
@@ -293,8 +294,9 @@ def snp():
             ba.get_ID(index)    
             sa = Sample(ba.sample, true_dir)
             ref_accuracy, ref_len = sa.eva_ref(local_dir)
-            print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb")
-            # local_pe = sa.eva_tool(local_dir)
+            
+            local_pe = sa.eva_tool(local_dir)
+            print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.FDR)
             # print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy)
 """
             lemon_pe = sa.eva_tool(lemon_dir)

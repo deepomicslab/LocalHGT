@@ -68,7 +68,7 @@ def batch_snp():
 
     i = 1
     index = 0
-    for snp_rate in ba.snp_level[1:-1]:
+    for snp_rate in ba.snp_level:
     # for snp_rate in [0.08, 0.09]:
         ba.change_snp_rate(snp_rate)
         for index in range(ba.iteration_times):
@@ -138,6 +138,6 @@ def batch_depth():
 
 
 if __name__ == "__main__":
-    # batch_snp()
+    batch_snp()
     # batch_cami()
-    batch_depth()
+    # batch_depth()

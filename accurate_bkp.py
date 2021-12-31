@@ -10,11 +10,12 @@ from skbio.alignment import StripedSmithWaterman
 import numpy as np
 import argparse
 import sys
+import re
 
 
 from get_raw_bkp import getInsertSize, readFilter
 
-min_match_score = 1.6  #0.8
+min_match_score = 0.8 #1.6  #0.8
 min_seq_len = 15
 cigar_dict = {0:'M',1:'M',2:'M',3:'M',4:'N',5:'N'}
 tolerate_read_mismatch_num = 20
@@ -130,6 +131,9 @@ class Each_Split_Read(object):
         
         self.ref1 = read.reference_name
         self.ref2 = read.get_tag('SA').split(',')[0]
+        self.raw_ref1 = self.ref1
+        self.raw_ref2 = self.ref2
+        self.ref2_cigar = read.get_tag('SA').split(',')[3]
         self.pos1 = read.reference_start
         self.pos2 = int(read.get_tag('SA').split(',')[1])
         self.qname = read.qname
@@ -139,9 +143,11 @@ class Each_Split_Read(object):
         if self.qname not in reads_mapped_len:
             reads_mapped_len[self.qname] = 0
 
-        if args['n'] == 1:
-            self.update_pos()
-        self.real_ref = self.ref1
+
+        self.ref2_clipped_direction = ''  #covert ref2 pos
+        self.direction_confict = False
+        self.get_ref2_clipped_direction()
+
         m = self.map_length(read)
         if self.clipped_direction == 'right':
             self.pos1 += m
@@ -149,6 +155,10 @@ class Each_Split_Read(object):
             self.mapped_len = rlen - m
         else:
             self.mapped_len = m
+
+        if args['n'] == 1:
+            self.update_pos()
+        self.real_ref = self.ref1
         
         self.clipped = 2 #indicate this reads is clipped in ref2, so only use it to find acc in ref2.
         if len(read.query_sequence) < rlen:
@@ -164,6 +174,26 @@ class Each_Split_Read(object):
         # if self.qname == "GUT_GENOME000330_7-26442_1":
         #     print (self.qname, self.clipped_direction, len(self.seq1), len(self.seq2))
 
+    def get_ref2_clipped_direction(self):
+        left_re = re.search('^(\d+)([SH])', self.ref2_cigar)
+        right_re = re.search('(\d+)([SH])$', self.ref2_cigar)
+        left, right = 0, 0
+        if left_re:
+            
+            left = int(left_re.group(0)[:-1])
+            
+        if right_re:
+            # print ("right", self.ref2_cigar)
+            right = int(right_re.group(0)[:-1])
+            
+        if left > right:
+            self.ref2_clipped_direction = "left"
+        else:
+            self.ref2_clipped_direction = "right"
+            self.pos2 += (rlen-right)
+            
+        if self.ref2_clipped_direction == self.clipped_direction:
+            self.direction_confict = True
 
     def update_pos(self):
         seg1_len = int(self.ref1.split(':')[1].split('-')[1]) - int(self.ref1.split(':')[1].split('-')[0])
@@ -259,6 +289,8 @@ def add_support_split_reads(cluster, read_obj):
             break
     
 def extract_ref_seq(scaffold_name, start, end):
+    if start < 1:
+        start = 1
     return ref_fasta[scaffold_name][start:end].seq
 
 def find_accurate_bkp():
@@ -303,11 +335,12 @@ def choose_acc_from_cluster(cluster):
             extract_ref_direction = 'left'
         #for right clipped seq, if the seg is reverse-complement, extract seq from left to the breakpoint.
         #else, we extract seq from the breakpoint to right
-        # test = ['GUT_GENOME096057_1', '1846830', 'GUT_GENOME000623_3', '251697']
+        # test = ['GUT_GENOME001854_2', '51530', 'GUT_GENOME096530_9', '291677']
         # if readobj.ref1 in test and readobj.ref2 in test:
 
         #     print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
-        #         readobj.mapped_len, readobj.clipped_direction, readobj.end_point)
+        #         readobj.mapped_len, readobj.clipped_direction, readobj.end_point, readobj.clipped,\
+        #          readobj.direction_confict, readobj.ref2_clipped_direction)
 
         read_seq = readobj.seq1
         read_seq_len = len(read_seq)
@@ -363,8 +396,6 @@ def choose_acc_from_cluster(cluster):
                         to_side = 'left'
 
                 matches = compute_scores(read_seq, ref_seq)/read_seq_len
-                # if readobj.ref1 in ["GUT_GENOME096290_3", "GUT_GENOME000330_7"] and readobj.ref2 in ["GUT_GENOME096290_3", "GUT_GENOME000330_7"]:
-                #     print (readobj.qname, matches, len(read_seq), len(ref_seq))
                 if matches > score2 and matches > min_match_score: #ssw alignment
                     score2 = matches
                     cluster.pos2 = possible_bkp
@@ -373,17 +404,16 @@ def choose_acc_from_cluster(cluster):
                     acc2 = Acc_Bkp(cluster, from_side, to_side, read_seq, ref_seq, score2)
 
         if cluster.pos1 > 0 and cluster.pos2 > 0:
-            if score1 > min_match_score:
+            if score1 > min_match_score and acc1.recheck():
                 acc_bkp_list.append(acc1)
-            elif score2 > min_match_score:
+            elif score2 > min_match_score and acc2.recheck():
                 acc_bkp_list.append(acc2)
             # if readobj.ref1 in test and readobj.ref2 in test:
-
             #     print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
             #         readobj.mapped_len, readobj.clipped_direction, score1, score2, read_seq,\
             #          ref_seq, read_seq_len, reads_mapped_len[readobj.qname])
             break #keep searching accurate bkp until the acc pos is found.
-        
+
 class Acc_Bkp(object):
     def __init__(self, cluster, from_side, to_side, read_seq, ref_seq, score):
         self.from_ref = cluster.ref1
@@ -395,7 +425,9 @@ class Acc_Bkp(object):
         self.to_side = to_side
         self.read_str = read_seq
         self.ref_str = ref_seq
-        self.similarity = score
+        self.similarity = round(score, 3)
+        self.refs_sim = 0
+        self.max_refs_sim = 0.4
 
     def print_out(self):
         print (self.from_ref, self.from_bkp, self.to_ref, self.to_bkp, self.from_side,\
@@ -405,6 +437,26 @@ class Acc_Bkp(object):
         writer.writerow ([self.from_ref, self.from_bkp, self.to_ref, self.to_bkp, \
         self.from_side, self.to_side, self.if_reverse, self.read_str, self.ref_str, self.similarity])
 
+    def compare_two_refs(self):
+        check_len = 50
+        from_ref_seq = extract_ref_seq(self.from_ref, self.from_bkp-check_len, self.from_bkp + check_len)         
+        to_ref_seq = extract_ref_seq(self.to_ref, self.to_bkp-check_len, self.to_bkp + check_len)   
+
+        matches1 = compute_scores(from_ref_seq, to_ref_seq)/len(from_ref_seq)
+        from_ref_seq = get_reverse_complement_seq(from_ref_seq)
+        matches2 = compute_scores(from_ref_seq, to_ref_seq)/len(from_ref_seq)
+        if matches1 > matches2:
+            score = matches1
+        else:
+            score = matches2
+        self.refs_sim = round(score, 3)
+
+    def recheck(self):
+        self.compare_two_refs()
+        if self.refs_sim > self.max_refs_sim:
+            return False
+        else:
+            return True
 
 
 if __name__ == "__main__":
