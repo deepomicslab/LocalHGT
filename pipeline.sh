@@ -5,7 +5,7 @@ fq1=$2
 fq2=$3
 ID=$4
 outdir=$5
-thread=10
+thread=1
 
 interval_file=$outdir/$ID.interval.txt
 sample=$outdir/$ID

@@ -320,7 +320,7 @@ def find_accurate_bkp():
         raw_bkp_clusters = rrm.raw_bkps_cluster[species_pair]
         # print (len(raw_bkp_clusters))
         for cluster in raw_bkp_clusters:
-            # if cluster.ref1 in ['GUT_GENOME014555_10', '84429', 'GUT_GENOME000272_1', '205239']:
+            # if cluster.ref1 in ['GUT_GENOME000634_11', '25913', 'GUT_GENOME001340_8', '45847']:
             #     print (cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions, len(cluster.support_reads))
             if len(cluster.support_reads) == 0: # ignore the bkp not supported by split reads
                 # print ("no reads", cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
@@ -341,8 +341,8 @@ def choose_acc_from_cluster(cluster):
     for readobj in cluster.support_reads:
         # if readobj.qname == "GUT_GENOME036853_4-1172_2":
         #     print ("*******",readobj.qname, reads_mapped_len[readobj.qname], readobj.end_point)
-        if reads_mapped_len[readobj.qname] < rlen - tolerate_read_mismatch_num:
-            continue
+        # if reads_mapped_len[readobj.qname] < rlen - tolerate_read_mismatch_num:
+        #     continue
         if readobj.end_point == True: #the pos is near the segment end, so may be false positive
             continue
         score1 = 0
@@ -358,7 +358,7 @@ def choose_acc_from_cluster(cluster):
             extract_ref_direction = 'left'
         #for right clipped seq, if the seg is reverse-complement, extract seq from left to the breakpoint.
         #else, we extract seq from the breakpoint to right
-        # test = ['GUT_GENOME014555_10', '84429', 'GUT_GENOME000272_1', '205239']
+        # test = ['GUT_GENOME000634_11', '25913', 'GUT_GENOME001340_8', '45847']
         # if readobj.ref1 in test and readobj.ref2 in test:
 
         #     print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
