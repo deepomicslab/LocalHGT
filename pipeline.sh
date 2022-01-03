@@ -39,9 +39,9 @@ python $dir/extractSplitReads_BwaMem.py -i $sample.unique.sam >$sample.splitters
 end=$(date +%s)
 take=$(( end - start ))
 echo Time taken to map reads is ${take} seconds. >> ${sample}.log
-
-python $dir/get_raw_bkp.py -t $thread -u $sample.unique.sam -o $sample.raw.csv
 !
+python $dir/get_raw_bkp.py -t $thread -u $sample.unique.sam -o $sample.raw.csv
+
 python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.sam \
 -s $sample.splitters.sam -a $sample.raw.csv -o $sample.acc.csv
 

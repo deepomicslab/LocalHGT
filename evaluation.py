@@ -242,12 +242,12 @@ class Figure():
 
     def plot(self):
         self.convert_df()
-        fig, axes = plt.subplots(1, 2, figsize=(15, 5))
-        sns.boxplot(ax = axes[0], x=self.variation,y='Sensitivity',hue= 'Methods',data=self.df)
-        sns.barplot(ax = axes[1], x=self.variation,y='FDR', hue= 'Methods',data=self.df) 
-        axes[1].set_ylim(0,0.05)   
-        # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
-        #     plt.xticks(rotation=0)
+        # fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+        # sns.boxplot(ax = axes[0], x=self.variation,y='Sensitivity',hue= 'Methods',data=self.df)
+        # sns.barplot(ax = axes[1], x=self.variation,y='FDR', hue= 'Methods',data=self.df) 
+        # axes[1].set_ylim(0,0.05)   
+        ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
+            # plt.xticks(rotation=0)
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
         plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))
 

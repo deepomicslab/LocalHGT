@@ -75,7 +75,7 @@ def indexReadBasedOnRef(dict_Interact_Big):
     return ref_dict_Interact_Big
 
 def indexReadBasedOnPos(ref_dict_Interact_Big):          
-    ref_list_Interact_Big = []   
+    ref_list_Interact_Big = []  
     for key in ref_dict_Interact_Big:
         tmp_dict = {}
         for i in range(0,len(ref_dict_Interact_Big.get(key))):
@@ -95,7 +95,8 @@ def indexReadBasedOnPos(ref_dict_Interact_Big):
 def htgMATRIX(dict_Interact_Big, ref_list_Interact_Big):
     htg_dict={}
     for i in range(0,len(ref_list_Interact_Big)):
-        if len(ref_list_Interact_Big[i])<5:
+        # print (ref_list_Interact_Big[i][0][1][0].reference_name.split(':')[0], len(ref_list_Interact_Big[i]))
+        if len(ref_list_Interact_Big[i]) < 1:  #lemon = 5
             continue
         ref_name = ref_list_Interact_Big[i][0][1][0].reference_name.split(':')[0]
         sub_dict = {}        
@@ -714,7 +715,8 @@ def main():
         procs = []
         for j in range(start_pos, end_pos):
             p = multiprocessing.Process(target = worker, args = (preClusterData, ref_name_list[j], output_filename, ref_dict_Interact_Big))
-            # print('ref %s is processing, NO.%s of %s.'%(ref_name_list[j], j, len(ref_name_list)), len(preClusterData.get(ref_name_list[j])))
+            # if ref_name_list[j] == 'GUT_GENOME014555_10':
+            #     print('ref %s is processing, NO.%s of %s.'%(ref_name_list[j], j, len(ref_name_list)), len(preClusterData.get(ref_name_list[j])))
             procs.append(p)
             p.start()
         for proc in procs:
