@@ -411,7 +411,6 @@ def calCandidateSolution(w,h,unique_sim_cross_index,cluster_cross_region,cluster
         del distribution_reads
     return candidate_solution
 
-
 def calImprovedCrossCluster(candidate_solution):
     improved_cross_cluster  =   []
     for i in range(0, len(candidate_solution)):
@@ -427,7 +426,6 @@ def calImprovedCrossCluster(candidate_solution):
         tmp.append(cross_y)
         improved_cross_cluster.append(tmp)
     return improved_cross_cluster
-
 
 def addSub(htgCluster,key,sub_key):
     add_sub_dict={}
@@ -464,8 +462,6 @@ def modifySS(s1,s2):
             tmp=[s2[i][1],s2[i][0]]
             ls.append(tmp)
         return ls,s2
-
-
 
 def addSS(htgCluster,key,sub_key,sub_sub_key):
     ls=[]

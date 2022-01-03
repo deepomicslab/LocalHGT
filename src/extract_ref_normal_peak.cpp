@@ -275,9 +275,11 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
     fq_file.seekg(pos, ios::beg);
     fq_file_2.seekg(pos, ios::beg);
     long add_size = start;
-    while (fq_file >> reads_seq)
+    // while (fq_file >> reads_seq)
+    while (getline(fq_file,reads_seq))
     {
-        fq_file_2>>reads_seq_2;
+        // fq_file_2>>reads_seq_2;
+        getline(fq_file_2, reads_seq_2);
         if (lines % 1000000 == 1000000-1){
             cout <<start<< " recheck reads\t"<<lines<<endl;
         }
@@ -668,7 +670,8 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
     }
     cout <<"Start index ref..."<<endl;
 
-    while (fa_file >> line_seq){ //remember the last chr
+    // while (fa_file >> line_seq){ //remember the last chr
+    while (getline(fa_file,line_seq)){
         if (line_seq[0] == '>'){
             chr_name = pre_name;
             pre_name = line_seq.substr(1);
@@ -920,7 +923,8 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
     int r ;
     short read_len = 0;
 
-    while (fq_file >> reads_seq)
+    // while (fq_file >> reads_seq)
+    while (getline(fq_file,reads_seq))
     {
         if (add_size>=end){
             break;
@@ -1109,7 +1113,8 @@ int cal_sam_ratio(string fq1, long down_sampling_size){
 
     ifstream fq_file; 
     fq_file.open(fq1);
-    while (fq_file >> reads_seq){
+    // while (fq_file >> reads_seq){
+    while (getline(fq_file, reads_seq)){
         if (i % 4 == 1 & read_len == 0){
             read_len = reads_seq.length();
             cout <<"read length is "<<read_len<<endl;

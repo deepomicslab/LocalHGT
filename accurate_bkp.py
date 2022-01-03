@@ -320,8 +320,8 @@ def find_accurate_bkp():
         raw_bkp_clusters = rrm.raw_bkps_cluster[species_pair]
         # print (len(raw_bkp_clusters))
         for cluster in raw_bkp_clusters:
-            if cluster.ref1 in ['GUT_GENOME014555_10', '84429', 'GUT_GENOME000272_1', '205239']:
-                print (cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions, len(cluster.support_reads))
+            # if cluster.ref1 in ['GUT_GENOME014555_10', '84429', 'GUT_GENOME000272_1', '205239']:
+            #     print (cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions, len(cluster.support_reads))
             if len(cluster.support_reads) == 0: # ignore the bkp not supported by split reads
                 # print ("no reads", cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
                 continue
@@ -358,12 +358,12 @@ def choose_acc_from_cluster(cluster):
             extract_ref_direction = 'left'
         #for right clipped seq, if the seg is reverse-complement, extract seq from left to the breakpoint.
         #else, we extract seq from the breakpoint to right
-        test = ['GUT_GENOME014555_10', '84429', 'GUT_GENOME000272_1', '205239']
-        if readobj.ref1 in test and readobj.ref2 in test:
+        # test = ['GUT_GENOME014555_10', '84429', 'GUT_GENOME000272_1', '205239']
+        # if readobj.ref1 in test and readobj.ref2 in test:
 
-            print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
-                readobj.mapped_len, readobj.clipped_direction, readobj.end_point, readobj.clipped,\
-                 readobj.direction_confict, readobj.ref2_clipped_direction)
+        #     print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
+        #         readobj.mapped_len, readobj.clipped_direction, readobj.end_point, readobj.clipped,\
+        #          readobj.direction_confict, readobj.ref2_clipped_direction)
 
         read_seq = readobj.seq1
         read_seq_len = len(read_seq)
@@ -431,10 +431,10 @@ def choose_acc_from_cluster(cluster):
                 acc_bkp_list.append(acc1)
             elif score2 > min_match_score and acc2.recheck():
                 acc_bkp_list.append(acc2)
-            if readobj.ref1 in test and readobj.ref2 in test:
-                print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
-                    readobj.mapped_len, readobj.clipped_direction, score1, score2, read_seq,\
-                     ref_seq, read_seq_len, reads_mapped_len[readobj.qname])
+            # if readobj.ref1 in test and readobj.ref2 in test:
+            #     print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
+            #         readobj.mapped_len, readobj.clipped_direction, score1, score2, read_seq,\
+            #          ref_seq, read_seq_len, reads_mapped_len[readobj.qname])
             break #keep searching accurate bkp until the acc pos is found.
 
 class Acc_Bkp(object):

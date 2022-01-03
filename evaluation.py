@@ -292,12 +292,12 @@ def cami():
             ref_accuracy, ref_len = sa.eva_ref(local_dir)
             local_pe = sa.eva_tool(local_dir) 
             local_pe.add_ref(ref_accuracy, ref_len)
-            lemon_pe = sa.eva_tool(lemon_dir)
+            # lemon_pe = sa.eva_tool(lemon_dir)
             fi.add_local_sample(local_pe, snp_rate)
-            fi.add_lemon_sample(lemon_pe, depth)
+            # fi.add_lemon_sample(lemon_pe, depth)
             print ("#",cami_ID, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.F1_score, local_pe.complexity)
-            print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy,\
-             local_pe.FDR ,lemon_pe.accuracy, lemon_pe.FDR)
+            # print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy,\
+            #  local_pe.FDR ,lemon_pe.accuracy, lemon_pe.FDR)
     fi.plot_cami()
             
 
@@ -367,10 +367,10 @@ if __name__ == "__main__":
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results/"
     print ("evaluation")
-    # cami()
+    cami()
     # snp()
 
-    depth()
+    # depth()
 
 
 
