@@ -119,9 +119,9 @@ def compare(true_bkp, our_bkp):
                 identified = True
                 break
         if identified == False:
-            print ("Missed bkp:", true)
-    print ("-----------")  
+            print ("Missed bkp:", true) 
     accuracy = right/len(true_bkp)
+    recall = accuracy
 
     #find false positive locus
     false_positive_locus = []
@@ -140,21 +140,25 @@ def compare(true_bkp, our_bkp):
                     break
         if not identified:
             false_positive_locus.append(true)
-            print ("False bkp:", true)
+            # print ("False bkp:", true)
     if len(our_bkp) > 0:
         FDR = len(false_positive_locus)/len(our_bkp)
     else:
         FDR = 0
-    return round(accuracy,2), round(FDR,2)#, false_positive_locus
+    precision = 1-FDR
+    F1_score = 2/((1/precision) + (1/recall)) 
+    return round(accuracy,2), round(FDR,2), round(F1_score,2)#, false_positive_locus
 
 class Performance():
-    def __init__(self, accuracy, FDR, tool_time, tool_mem):
+    def __init__(self, accuracy, FDR, tool_time, tool_mem, F1_score, complexity):
         self.accuracy = accuracy
         self.FDR = FDR
         self.user_time = tool_time
         self.max_mem = tool_mem
         self.ref_accuracy = 0
         self.ref_len = 0
+        self.F1_score = F1_score
+        self.complexity = complexity
 
     def add_ref(self, ref_accuracy, ref_len):
         self.ref_accuracy = ref_accuracy
@@ -166,6 +170,7 @@ class Sample():
         true_ID = self.get_true(ID)
         self.true_file = true_dir + '/' + true_ID + '.true.sv.txt'
         self.true_bkp = read_true(self.true_file)
+        self.complexity = ''
 
     def get_true(self, ID):
         array = ID.split('_')
@@ -177,11 +182,11 @@ class Sample():
     def eva_tool(self, tool_dir):
         acc_file = tool_dir + '/' + self.ID + '.acc.csv'
         bkp = read_lemon(acc_file)
-        accuracy, FDR = compare(self.true_bkp, bkp)
+        accuracy, FDR, F1_score = compare(self.true_bkp, bkp)
         time_file = tool_dir + '/' + self.ID + '.time'
         tool_time = self.extract_time(time_file)
         tool_mem = self.extract_mem(time_file)
-        pe = Performance(accuracy, FDR, tool_time, tool_mem)
+        pe = Performance(accuracy, FDR, tool_time, tool_mem, F1_score, self.complexity)
         return pe
 
     def extract_time(self, time_file): #log file obtained by /usr/bin/time -v
@@ -225,22 +230,23 @@ class Figure():
     
     def add_local_sample(self, pe, va): # any performance Object
         self.data.append([pe.user_time, pe.accuracy, pe.FDR, \
-        pe.max_mem, pe.ref_accuracy, pe.ref_len, "LocalHGT", va])
+        pe.max_mem, pe.ref_accuracy, pe.ref_len, "LocalHGT", va, pe.F1_score, pe.complexity])
 
     def add_lemon_sample(self, pe, va): # any performance Object
         self.data.append([pe.user_time, pe.accuracy, pe.FDR, \
-        pe.max_mem, pe.ref_accuracy, pe.ref_len, "LEMON", va])
+        pe.max_mem, pe.ref_accuracy, pe.ref_len, "LEMON", va, pe.F1_score, pe.complexity])
 
     def convert_df(self):
         self.df=pd.DataFrame(self.data,columns=['CPU time', 'Sensitivity','FDR', 'Max Memory (G)', \
-        'Ref Accuracy',  'Extracted Ref (M)', 'Methods', self.variation])
+        'Ref Accuracy',  'Extracted Ref (M)', 'Methods', self.variation, "F1 score", "Complexity"])
 
     def plot(self):
         self.convert_df()
         fig, axes = plt.subplots(1, 2, figsize=(15, 5))
-        sns.barplot(ax = axes[0], x=self.variation,y='Sensitivity',hue= 'Methods',data=self.df)
+        sns.boxplot(ax = axes[0], x=self.variation,y='Sensitivity',hue= 'Methods',data=self.df)
         sns.barplot(ax = axes[1], x=self.variation,y='FDR', hue= 'Methods',data=self.df) 
-        axes[1].set_ylim(0,0.05)    
+        axes[1].set_ylim(0,0.05)   
+        # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
         #     plt.xticks(rotation=0)
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
         plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))
@@ -258,12 +264,23 @@ class Figure():
         #     plt.xticks(rotation=0)
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
         plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))
+    
+
+    def plot_cami(self):
+        self.convert_df()
+        ax = sns.lineplot(x=self.variation, y='Sensitivity', style="Complexity", \
+        hue= 'Methods',data=self.df, markers=True, dashes=False)   
+        #     plt.xticks(rotation=0)
+        print (self.df)
+        give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+        plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))
 
 def cami():
+    fi = Figure()
     ba = Parameters()
     ba.get_dir(true_dir)
-
-    for snp_rate in [0.01, 0.02, 0.03, 0.04, 0.05]:
+    fi.variation = "Mutation Rate"
+    for snp_rate in [0.01, 0.02, 0.03, 0.04]:
         ba.change_snp_rate(snp_rate)
         index = 0
         ba.get_ID(index)
@@ -271,15 +288,19 @@ def cami():
         for level in ba.complexity_level:
             cami_ID = ba.sample + '_' + level
             sa.change_ID(cami_ID)
+            sa.complexity = level
             ref_accuracy, ref_len = sa.eva_ref(local_dir)
             local_pe = sa.eva_tool(local_dir) 
-            print ("############ref" ,cami_ID, ref_accuracy, ref_len, "Mb", local_pe.accuracy)
-# """
-            #           
-            # # local_pe.add_ref(ref_accuracy, ref_len)
-            # print (cami_ID, local_pe.user_time, local_pe.accuracy, local_pe.max_mem)
-            # print ("ref", local_pe.ref_accuracy, local_pe.ref_len, "Mb")
-# """
+            local_pe.add_ref(ref_accuracy, ref_len)
+            lemon_pe = sa.eva_tool(lemon_dir)
+            fi.add_local_sample(local_pe, snp_rate)
+            fi.add_lemon_sample(lemon_pe, depth)
+            print ("#",cami_ID, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.F1_score, local_pe.complexity)
+            print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy,\
+             local_pe.FDR ,lemon_pe.accuracy, lemon_pe.FDR)
+    fi.plot_cami()
+            
+
 
 def snp():
     fi = Figure()
@@ -335,7 +356,8 @@ def depth():
             local_pe.add_ref(ref_accuracy, ref_len)
             print ("--------next lemon-------")
             lemon_pe = sa.eva_tool(lemon_dir)
-            print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.FDR, lemon_pe.accuracy, lemon_pe.FDR)
+            print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy,\
+             local_pe.FDR, local_pe.F1_score ,lemon_pe.accuracy, lemon_pe.FDR, lemon_pe.F1_score)
             fi.add_local_sample(local_pe, depth)
             fi.add_lemon_sample(lemon_pe, depth)
     fi.plot()

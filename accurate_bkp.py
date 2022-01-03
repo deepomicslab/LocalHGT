@@ -53,6 +53,25 @@ class Each_Bkp(object):
     def add_support_reads(self, read_obj):
         self.support_reads.append(read_obj)
 
+    def sort_support_reads(self):
+        mean_pos1 = np.median(self.ref1_positions)
+        mean_pos2 = np.median(self.ref2_positions)
+        dist = {}
+        record = {}
+        # print (self.support_reads)
+        for read_obj in self.support_reads:
+            record[read_obj.qname] = read_obj
+        for read_obj in self.support_reads:
+            dist[read_obj.qname] = abs(read_obj.pos1 - mean_pos1) + abs(read_obj.pos2 - mean_pos2)
+        new_dist = dict(sorted(dist.items(), key=lambda item: item[1]))
+        self.support_reads = list(new_dist.keys())
+        # print (new_dist)
+        new_reads = []
+        for qname in list(new_dist.keys()):
+            new_reads.append(record[qname])
+        self.support_reads = new_reads
+
+
     def reverse_bkp(self):
         a = self.ref1
         b = self.ref1_positions
@@ -171,8 +190,8 @@ class Each_Split_Read(object):
             else:
                 self.seq1 = read.query_sequence[m:]  
                 self.seq2 = read.query_sequence[:m]
-        # if self.qname == "GUT_GENOME000330_7-26442_1":
-        #     print (self.qname, self.clipped_direction, len(self.seq1), len(self.seq2))
+        # if self.qname == "GUT_GENOME036853_4-1172_2":
+        #     print (self.qname, self.ref1, self.pos1, self.ref2, self.pos2, self.clipped_direction, len(self.seq1), len(self.seq2))
 
     def get_ref2_clipped_direction(self):
         left_re = re.search('^(\d+)([SH])', self.ref2_cigar)
@@ -260,7 +279,6 @@ def read_split_bam(split_bam_name):
             continue
         if len(read_obj.seq1) == 0 and len(read_obj.seq2) == 0:
             continue
-
         xy_name = key_name(read_obj.ref1, read_obj.ref2)
         if xy_name in rrm.raw_bkps_cluster.keys():
             for cluster in rrm.raw_bkps_cluster[xy_name]: #for a R1 and R2
@@ -276,13 +294,15 @@ def read_split_bam(split_bam_name):
         # print (read.reference_name, read.cigar, read.get_tag('SA'))
 
 def add_support_split_reads(cluster, read_obj):
-    max_dist_support_read = insert_size #rlen
+    max_dist_support_read = insert_size #rlen #
     flag = False
     for i in range(len(cluster.ref1_positions)):
         for j in range(len(cluster.ref2_positions)):
             if abs(read_obj.pos1 - cluster.ref1_positions[i]) < max_dist_support_read and \
             abs(read_obj.pos2 - cluster.ref2_positions[j]) < max_dist_support_read:   
                 cluster.add_support_reads(read_obj)
+                # if read_obj.qname == "GUT_GENOME036853_4-1172_2":
+                #     print (read_obj.qname, cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
                 flag = True
                 break
         if flag:
@@ -297,11 +317,11 @@ def find_accurate_bkp():
     bkp_num_support = 0
     bkp_num = 0
     for species_pair in rrm.raw_bkps_cluster:
-        # if species_pair != "NC_014414.1=NZ_MTLG01000053.1":
-        #     continue
         raw_bkp_clusters = rrm.raw_bkps_cluster[species_pair]
         # print (len(raw_bkp_clusters))
         for cluster in raw_bkp_clusters:
+            if cluster.ref1 in ['GUT_GENOME014555_10', '84429', 'GUT_GENOME000272_1', '205239']:
+                print (cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions, len(cluster.support_reads))
             if len(cluster.support_reads) == 0: # ignore the bkp not supported by split reads
                 # print ("no reads", cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
                 continue
@@ -317,7 +337,10 @@ def choose_acc_from_cluster(cluster):
     score1 = 0
     score2 = 0
     inte = 2 * rlen # search with a larger interval
+    cluster.sort_support_reads()
     for readobj in cluster.support_reads:
+        # if readobj.qname == "GUT_GENOME036853_4-1172_2":
+        #     print ("*******",readobj.qname, reads_mapped_len[readobj.qname], readobj.end_point)
         if reads_mapped_len[readobj.qname] < rlen - tolerate_read_mismatch_num:
             continue
         if readobj.end_point == True: #the pos is near the segment end, so may be false positive
@@ -335,12 +358,12 @@ def choose_acc_from_cluster(cluster):
             extract_ref_direction = 'left'
         #for right clipped seq, if the seg is reverse-complement, extract seq from left to the breakpoint.
         #else, we extract seq from the breakpoint to right
-        # test = ['GUT_GENOME001854_2', '51530', 'GUT_GENOME096530_9', '291677']
-        # if readobj.ref1 in test and readobj.ref2 in test:
+        test = ['GUT_GENOME014555_10', '84429', 'GUT_GENOME000272_1', '205239']
+        if readobj.ref1 in test and readobj.ref2 in test:
 
-        #     print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
-        #         readobj.mapped_len, readobj.clipped_direction, readobj.end_point, readobj.clipped,\
-        #          readobj.direction_confict, readobj.ref2_clipped_direction)
+            print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
+                readobj.mapped_len, readobj.clipped_direction, readobj.end_point, readobj.clipped,\
+                 readobj.direction_confict, readobj.ref2_clipped_direction)
 
         read_seq = readobj.seq1
         read_seq_len = len(read_seq)
@@ -408,10 +431,10 @@ def choose_acc_from_cluster(cluster):
                 acc_bkp_list.append(acc1)
             elif score2 > min_match_score and acc2.recheck():
                 acc_bkp_list.append(acc2)
-            # if readobj.ref1 in test and readobj.ref2 in test:
-            #     print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
-            #         readobj.mapped_len, readobj.clipped_direction, score1, score2, read_seq,\
-            #          ref_seq, read_seq_len, reads_mapped_len[readobj.qname])
+            if readobj.ref1 in test and readobj.ref2 in test:
+                print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
+                    readobj.mapped_len, readobj.clipped_direction, score1, score2, read_seq,\
+                     ref_seq, read_seq_len, reads_mapped_len[readobj.qname])
             break #keep searching accurate bkp until the acc pos is found.
 
 class Acc_Bkp(object):

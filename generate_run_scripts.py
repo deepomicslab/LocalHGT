@@ -138,6 +138,6 @@ def batch_depth():
 
 
 if __name__ == "__main__":
-    batch_snp()
-    # batch_cami()
+    # batch_snp()
+    batch_cami()
     # batch_depth()
