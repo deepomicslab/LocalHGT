@@ -43,7 +43,9 @@ echo Time taken to map reads is ${take} seconds. >> ${sample}.log
 python $dir/get_raw_bkp.py -t $thread -u $sample.unique.sam -o $sample.raw.csv
 
 python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.sam \
--s $sample.splitters.sam -a $sample.raw.csv -o $sample.acc.csv
+-s $sample.splitters.sam -a $sample.raw.csv -o $sample.repeat.acc.csv
+
+python $dir/remove_repeat.py $sample.repeat.acc.csv $sample.acc.csv
 
 end=$(date +%s)
 take=$(( end - start ))
