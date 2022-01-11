@@ -5,7 +5,7 @@ fq1=$2
 fq2=$3
 ID=$4
 outdir=$5
-thread=1
+thread=10
 
 interval_file=$outdir/$ID.interval.txt
 sample=$outdir/$ID
@@ -17,7 +17,7 @@ if [ -f $interval_file ];then
   rm $interval_file
 fi
 
-:<<!
+# :<<!
 $dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7
 python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
 

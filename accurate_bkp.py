@@ -61,13 +61,12 @@ class Each_Bkp(object):
         # print (self.support_reads)
         for read_obj in self.support_reads:
             record[read_obj.qname] = read_obj
-        for read_obj in self.support_reads:
             dist[read_obj.qname] = abs(read_obj.pos1 - mean_pos1) + abs(read_obj.pos2 - mean_pos2)
-        new_dist = dict(sorted(dist.items(), key=lambda item: item[1]))
-        self.support_reads = list(new_dist.keys())
+        new_dist = sorted(dist.items(), key=lambda item: item[1])
         # print (new_dist)
         new_reads = []
-        for qname in list(new_dist.keys()):
+        for new_d in new_dist:
+            qname = new_d[0]
             new_reads.append(record[qname])
         self.support_reads = new_reads
 

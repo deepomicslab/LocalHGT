@@ -168,7 +168,7 @@ class Peaks{
         void add_peak(int ref_index, int pos, unsigned int* record_ref_index,int ref_len, 
                     long & total_peak_num, unsigned char* record_ref_hit, int thread_index);
         void delete_array(void);
-        void slide_reads(string fastq_file, string fastq_file_2, bool* coder, int* base, 
+        void slide_reads(string fastq_file, string fastq_file_2, char* coder, int* base, 
                         char* comple, short *choose_coder, int down_sam_ratio, long start, long end);
         void count_filtered_peak(string interval_name);
         bool merge_peak(int ref_index, int pos, int my_peak_index);
@@ -215,9 +215,9 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
                 }  
             }
         }  
-        // cout << "-----------"<<endl;
+        // if (peak_index_array[thread_index] - each_thread_peak_num * thread_index >= each_thread_peak_num){
         if (my_peak_index >= max_peak_num){
-            cout <<"Too many peaks! We recommand reduce the sampling size, or you can indicate larger max_peak_num."<<endl;
+            cout <<"Too many peaks! We recommand reduce the sampling size, or you can appoint larger max_peak_num."<<endl;
         }
         my_peak_index += 1; 
         total_peak_num += 1;
@@ -241,7 +241,15 @@ bool Peaks::merge_peak(int ref_index, int pos, int my_peak_index){
     return exist_peak;
 }
 
-void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int* base, 
+string get_read_ID(string reads_seq){
+    string delimiter = "/";
+    string read_name_forward = reads_seq.substr(0, reads_seq.find(delimiter));
+    delimiter = " ";
+    read_name_forward = read_name_forward.substr(0, read_name_forward.find(delimiter));
+    return read_name_forward;
+}
+
+void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int* base, 
                         char* comple, short *choose_coder, int down_sam_ratio, long start, long end){
 
     time_t t0 = time(0);
@@ -250,11 +258,11 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
     fq_file.open(fastq_file);
     fq_file_2.open(fastq_file_2);
     string reads_seq, reads_seq_2;
-    int reads_int [150];
-    int reads_comple_int [150];
+    int reads_int [300];
+    int reads_comple_int [300];
     unsigned int lines = 0;
-    int converted_reads [450];
-    int complemented_reads [450];
+    int converted_reads [900];
+    int complemented_reads [900];
     int m;
     int n;
     unsigned int kmer_index, comple_kmer_index, real_index, b;   
@@ -262,6 +270,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
     short read_len = 0;
     int chr_index, peak_locus,peak_index;
     long pos = 0;
+    long second_pos;
 
     for (long i = start; i>0; i--){
         fq_file.seekg(i, ios::beg);
@@ -280,7 +289,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
     {
         // fq_file_2>>reads_seq_2;
         getline(fq_file_2, reads_seq_2);
-        if (lines % 1000000 == 1000000-1){
+        if (start == 0 & lines % 1000000 == 1000000-1){
             cout <<start<< " recheck reads\t"<<lines<<endl;
         }
         if (add_size>=end){
@@ -288,21 +297,50 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, bool* coder, int
         }
         add_size += reads_seq.length();
         if (lines == 0){
-            string delimiter = "/";
-            string read_name_forward = reads_seq.substr(0, reads_seq.find(delimiter));
-            string read_name_reverse = reads_seq_2.substr(0, reads_seq_2.find(delimiter));
+            string read_name_forward = get_read_ID(reads_seq);
+            string read_name_reverse = get_read_ID(reads_seq_2);
+            // cout << read_name_forward << "\t" << read_name_reverse << endl;
+
             if (read_name_forward != read_name_reverse){
-                cout << read_name_forward<<"\tshould be the same with\t"<< read_name_reverse<< endl;
+                // throw "Paired-end reads not consistent!";
+                second_pos = pos - 100000000;
+                if (second_pos < 1){
+                    second_pos = 1;
+                }
+                fq_file_2.seekg(second_pos, ios::beg);
+                // cout << read_name_forward<<"\tshould be the same with\t"<< read_name_reverse<< endl;
             }
             // else{
             //     cout << read_name_forward<<"\tis same with\t"<< read_name_reverse<< endl;
-            // }            
+            // }  
+            int while_times = 0;
+            while (read_name_forward != read_name_reverse){
+
+                getline(fq_file_2, reads_seq_2);
+                read_name_reverse = get_read_ID(reads_seq_2);
+                while_times += 1;
+                if (while_times > 1000000){
+                    cout << "Too many iterations to make paired-end reads be consistent!\
+                     Please use single thread for this sample to avoid the problem." << endl;
+                    break;
+                }
+            }
+
+            cout << read_name_forward<<"\t<=>\t"<< read_name_reverse<< endl;
+
+          
         }
         if (lines % 4 == 1){
             time_t t1 = time(0);
-            if (lines == 1){
+            // if (lines == 1){
+            if (reads_seq.length() <= reads_seq_2.length()){
                 read_len = reads_seq.length();//cal read length
             }
+            else{
+                read_len = reads_seq_2.length();//cal read length
+            }
+            
+            // }
             r = rand() % 100;
             if (r < down_sam_ratio){
                 Split_reads each_read;
@@ -637,7 +675,7 @@ float cal_tab_empty_rate(){
     return empty_rate;
 }
 
-void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
+void read_ref(string fasta_file, char* coder, int* base, int k, char* comple,
              string index_name, short *choose_coder)
 {
     ifstream fa_file;
@@ -660,8 +698,8 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
     string pre_name = "start";
     time_t t0 = time(0);
     int covert_num, comple_num;
-    short convert_ref[150];
-    short complemented_ref[150];
+    short convert_ref[300];
+    short complemented_ref[300];
     char support_coder;
 
     // save random coder
@@ -797,7 +835,7 @@ void read_ref(string fasta_file, bool* coder, int* base, int k, char* comple,
     len_file.close();
 }
 
-void read_index(bool* coder, int* base, int k, char* comple, string index_name, string interval_name,
+void read_index(char* coder, int* base, int k, char* comple, string index_name, string interval_name,
                 short *choose_coder, float hit_ratio, float perfect_hit_ratio, Peaks & MyPeak, long start, 
                 long end, int start_ref_index, long&  extract_ref_len, long & slide_ref_len, long & total_peak_num, int thread_index){
 
@@ -889,7 +927,7 @@ void read_index(bool* coder, int* base, int k, char* comple, string index_name, 
     // cout << "##########end" << end << "\t"<< start_point<<endl;
 }
 
-void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple, 
+void read_fastq(string fastq_file, int k, char* coder, int* base, char* comple, 
     short *choose_coder, int down_sam_ratio, long start, long end)
 {
     time_t t0 = time(0);
@@ -911,12 +949,12 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
 
 
     string reads_seq;
-    int reads_int [150];
-    int reads_comple_int [150];
+    int reads_int [300];
+    int reads_comple_int [300];
 
     unsigned int lines = 0;
-    int converted_reads [450];
-    int complemented_reads [450];
+    int converted_reads [900];
+    int complemented_reads [900];
     int m;
     int n;
     unsigned int kmer_index, comple_kmer_index, real_index, b;   
@@ -936,9 +974,9 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
             if (lines % 10000000 == 10000000-1){
                 cout <<lines<<"reads\t" << t1-t0 <<endl;
             }
-            if (lines == 1){
-                read_len = reads_seq.length();//cal read length
-            }
+            // if (lines == 1){
+            read_len = reads_seq.length();//cal read length
+            // }
             r = rand() % 100 ;
             // if (lines < 100){
             //     cout <<r << "r"<<endl;
@@ -959,8 +997,12 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
                             m = coder[c*choose_coder[z*3+i]+reads_int[j+z]]; // choose_coder[z*3+i] indicate which coder
                             n = coder[c*choose_coder[(k-1-z)*3+i]+reads_comple_int[j+z]];
                             // cout <<m<<" ";
+                            // if (reads_int[j+z]==78 || reads_int[j+z]==110 ){
+                            //     cout << "N\t="<< (int)m <<endl;
+                            // }
                             if (m == 5){
                                 all_valid = false;
+                                // cout << "N !" << endl;
                                 break;
                             }
                             kmer_index += m*base[z]; 
@@ -990,10 +1032,10 @@ void read_fastq(string fastq_file, int k, bool* coder, int* base, char* comple,
 
 }
 
-bool * generate_coder(bool coder_num)
+char * generate_coder(bool coder_num)
 {
     // A:65 97 T:116 84 C:99 67 G: 103 71
-    static bool coder [1000];
+    static char coder [1000];
     for (int j = 0; j < 1000; j++){
         coder[j] = 5;
     }
@@ -1108,6 +1150,8 @@ int cal_sam_ratio(string fq1, long down_sampling_size){
     int down_sam_ratio = 0;
     int read_len = 0;
     long i = 0;
+    int j = 0;
+    float total_len = 0;
     long sample_size = 0;
     string reads_seq;
 
@@ -1115,8 +1159,12 @@ int cal_sam_ratio(string fq1, long down_sampling_size){
     fq_file.open(fq1);
     // while (fq_file >> reads_seq){
     while (getline(fq_file, reads_seq)){
-        if (i % 4 == 1 & read_len == 0){
-            read_len = reads_seq.length();
+        if (i % 4 == 1 & j < 100){
+            total_len += reads_seq.length();
+            j += 1;
+        }
+        if (j == 100 & read_len == 0){
+            read_len = round(total_len/100);
             cout <<"read length is "<<read_len<<endl;
         }
         i += 1;
@@ -1190,7 +1238,7 @@ long * split_ref(string index_name, string fasta_file, int thread_num){
 
 int main( int argc, char *argv[])
 {
-    bool *coder;
+    char *coder;
     int *base;
     char *comple;
     short *choose_coder;
@@ -1219,7 +1267,7 @@ int main( int argc, char *argv[])
     srand(seed);
 
     int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    // int down_sam_ratio = 13;
+    // int down_sam_ratio = 100;
     //index
     string index_name = fasta_file + ".k" + to_string(k) + ".index.dat";
     ifstream findex(index_name);

@@ -237,13 +237,13 @@ class Figure():
         pe.max_mem, pe.ref_accuracy, pe.ref_len, "LEMON", va, pe.F1_score, pe.complexity])
 
     def convert_df(self):
-        self.df=pd.DataFrame(self.data,columns=['CPU time', 'Sensitivity','FDR', 'Max Memory (G)', \
+        self.df=pd.DataFrame(self.data,columns=['CPU time', 'Recall','FDR', 'Peak RAM', \
         'Ref Accuracy',  'Extracted Ref (M)', 'Methods', self.variation, "F1 score", "Complexity"])
 
     def plot(self):
         self.convert_df()
         # fig, axes = plt.subplots(1, 2, figsize=(15, 5))
-        # sns.boxplot(ax = axes[0], x=self.variation,y='Sensitivity',hue= 'Methods',data=self.df)
+        # sns.boxplot(ax = axes[0], x=self.variation,y='Recall',hue= 'Methods',data=self.df)
         # sns.barplot(ax = axes[1], x=self.variation,y='FDR', hue= 'Methods',data=self.df) 
         # axes[1].set_ylim(0,0.05)   
         ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
@@ -254,10 +254,10 @@ class Figure():
     def plot_all(self):
         self.convert_df()
         fig, axes = plt.subplots(3, 2, figsize=(15,10))
-        sns.barplot(ax = axes[0][0], x=self.variation,y='Sensitivity',hue= 'Methods',data=self.df)
+        sns.barplot(ax = axes[0][0], x=self.variation,y='Recall',hue= 'Methods',data=self.df)
         sns.barplot(ax = axes[0][1], x=self.variation,y='FDR', hue= 'Methods',data=self.df) 
         axes[0,1].set_ylim(0,0.05)
-        sns.barplot(ax = axes[1][0], x=self.variation,y='Max Memory (G)',hue= 'Methods',data=self.df)
+        sns.barplot(ax = axes[1][0], x=self.variation,y='Peak RAM',hue= 'Methods',data=self.df)
         sns.barplot(ax = axes[1][1], x=self.variation,y='CPU time', hue= 'Methods',data=self.df) 
         sns.barplot(ax = axes[2][0], x=self.variation,y='Extracted Ref (M)',hue= 'Methods',data=self.df)
         sns.barplot(ax = axes[2][1], x=self.variation,y='Ref Accuracy', hue= 'Methods',data=self.df)        
@@ -268,10 +268,26 @@ class Figure():
 
     def plot_cami(self):
         self.convert_df()
-        ax = sns.lineplot(x=self.variation, y='Sensitivity', style="Complexity", \
-        hue= 'Methods',data=self.df, markers=True, dashes=False)   
-        #     plt.xticks(rotation=0)
         print (self.df)
+        fig, axes = plt.subplots(3, 3, figsize=(15,10))
+        sns.barplot(ax = axes[0][0], x=self.variation, y='CPU time', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'low']).set_title('Low')  
+        sns.barplot(ax = axes[0][1], x=self.variation, y='CPU time', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'medium']).set_title('Medium') 
+        sns.barplot(ax = axes[0][2], x=self.variation, y='CPU time', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'high']).set_title('High')
+
+        sns.barplot(ax = axes[1][0], x=self.variation, y='Peak RAM', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'low'])  
+        sns.barplot(ax = axes[1][1], x=self.variation, y='Peak RAM', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'medium']) 
+        sns.barplot(ax = axes[1][2], x=self.variation, y='Peak RAM', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'high']) 
+
+        sns.barplot(ax = axes[2][0], x=self.variation, y='Recall', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'low'])  
+        sns.barplot(ax = axes[2][1], x=self.variation, y='Recall', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'medium']) 
+        sns.barplot(ax = axes[2][2], x=self.variation, y='Recall', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'high']) 
+
+  
+        # sns.lineplot(ax = axes[1], x=self.variation, y='CPU time', style="Complexity", \
+        # hue= 'Methods',data=self.df, markers=True, dashes=False) 
+        # sns.lineplot(ax = axes[2], x=self.variation, y='Peak RAM', style="Complexity", \
+        # hue= 'Methods',data=self.df, markers=True, dashes=False) 
+        
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
         plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))
 
@@ -295,7 +311,7 @@ def cami():
             
             fi.add_local_sample(local_pe, snp_rate)
             lemon_pe = sa.eva_tool(lemon_dir)
-            fi.add_lemon_sample(lemon_pe, depth)
+            fi.add_lemon_sample(lemon_pe, snp_rate)
             print ("#",cami_ID, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.F1_score, local_pe.complexity)
             print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy ,lemon_pe.accuracy)
     fi.plot_cami()
@@ -325,7 +341,7 @@ def snp():
             
             local_pe.add_ref(ref_accuracy, ref_len)
             print ("time:", lemon_pe.user_time, local_pe.user_time)
-            print ("sensitivity", lemon_pe.accuracy, local_pe.accuracy)
+            print ("Recall", lemon_pe.accuracy, local_pe.accuracy)
             print ("mem",lemon_pe.max_mem, local_pe.max_mem)
             print ("ref", local_pe.ref_accuracy, local_pe.ref_len, "Mb")
             
