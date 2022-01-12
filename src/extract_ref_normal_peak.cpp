@@ -95,7 +95,7 @@ void Split_reads::judge_base(void){
 
         }
     }
-    // cout << select_index << "---" << select_chr << "\t" <<coder_index <<endl;
+    cout << select_chr <<endl;
 
     if (flag){
         if (chr_kmer_count.find(select_chr) == chr_kmer_count.end()){
@@ -384,7 +384,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
                         // cout << j << "\t" << i << "\t" << peak_kmer[real_index] << "\t" << peak_loci[2*peak_kmer[real_index]]<<endl;
                         if (all_valid & peak_kmer[real_index] != 0){
                             each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], 
-                                                peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index], i);
+                                peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index], i);
                         }  
                         
                     }
@@ -420,7 +420,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
                         // cout << j << "\t" << i << "\t" << peak_kmer[real_index] << "\t" << peak_loci[2*peak_kmer[real_index]]<<endl;
                         if (all_valid & peak_kmer[real_index] != 0){
                             each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], 
-                                        peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index], i);
+                                peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index], i);
                         }  
                     }
                     each_read.judge_base();
