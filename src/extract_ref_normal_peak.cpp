@@ -43,7 +43,7 @@ class Split_reads{
         map<int, int> chr_kmer_count;
         map<int, int> filter_kmer_count;
         map<int, int> chr_peak_index;
-        
+        string read_name;
         int min_base_num = MIN_BASE_NUM;
         int base_hits = 0;
         int base_kmer[3];
@@ -113,40 +113,43 @@ void Split_reads::check_split(unsigned char* peak_filter){
     map<int, int>::iterator iter;
     int chr, peak_index;
 
-    // iter = chr_kmer_count.begin();
-    // while(iter != chr_kmer_count.end()){
-    //     cout << iter->first << ":"<< iter->second <<endl;
-    //     iter ++ ;
-    // }
-    // cout <<"********************"<<endl;
+    int largest = 0; // top2
+    int second = 0;
 
     iter = chr_kmer_count.begin();
     while(iter != chr_kmer_count.end()){
         // cout << iter->first << ":"<< iter->second <<endl;
         if (iter->second >= min_base_num){
             filter_kmer_count[iter->first] = iter->second;
+            if (iter->second >= largest){
+                second = largest;
+                largest = iter->second;
+            }
+            else{
+                if (iter->second >= second){
+                    second = iter->second;
+                }
+            }
         }
         iter ++ ;
     }
-    // cout << "*******************"<<endl;
     
-    if (filter_kmer_count.size() > 1){
+    if (filter_kmer_count.size() == 2){
         // map<int, int>::iterator iter;
         iter = filter_kmer_count.begin();
         while(iter != filter_kmer_count.end()){
             // cout << iter->first << ":"<< iter->second <<endl;
-            chr = iter->first;
-            peak_index = chr_peak_index[chr];
-            if ((int) peak_filter[peak_index] < 254){
-                peak_filter[peak_index] += 1;
+            if (iter->second == largest || iter->second == second){
+                chr = iter->first;
+                peak_index = chr_peak_index[chr];
+                if ((int) peak_filter[peak_index] < 254){
+                    peak_filter[peak_index] += 1;
+                }
             }
-            
             iter ++ ;
         }
-        // cout << "------------------"<<endl;
-        
-    }
-    
+        // cout << read_name << "------------------"<<endl;   
+    }   
 }
 
 class Peaks{
@@ -272,6 +275,9 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
     long pos = 0;
     long second_pos;
 
+
+    string read_name;
+
     for (long i = start; i>0; i--){
         fq_file.seekg(i, ios::beg);
         char j;
@@ -303,7 +309,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
 
             if (read_name_forward != read_name_reverse){
                 // throw "Paired-end reads not consistent!";
-                second_pos = pos - 100000000;
+                second_pos = pos - 1000000000;
                 if (second_pos < 1){
                     second_pos = 1;
                 }
@@ -319,7 +325,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
                 getline(fq_file_2, reads_seq_2);
                 read_name_reverse = get_read_ID(reads_seq_2);
                 while_times += 1;
-                if (while_times > 1000000){
+                if (while_times > 1000000000){
                     cout << "Too many iterations to make paired-end reads be consistent!\
                      Please use single thread for this sample to avoid the problem." << endl;
                     break;
@@ -329,6 +335,9 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
             cout << read_name_forward<<"\t<=>\t"<< read_name_reverse<< endl;
 
           
+        }
+        if (lines % 4 == 0){
+            read_name = get_read_ID(reads_seq);
         }
         if (lines % 4 == 1){
             time_t t1 = time(0);
@@ -344,6 +353,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
             r = rand() % 100;
             if (r < down_sam_ratio){
                 Split_reads each_read;
+                each_read.read_name = read_name;
                 for (int j = 0; j < read_len; j++){
                     reads_int[j] = (int)reads_seq[j];
                     reads_comple_int[j] = comple[reads_int[j]];
@@ -372,7 +382,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
                             real_index = kmer_index;
                         }
                         // cout << j << "\t" << i << "\t" << peak_kmer[real_index] << "\t" << peak_loci[2*peak_kmer[real_index]]<<endl;
-                        if (peak_kmer[real_index] != 0 & all_valid){
+                        if (all_valid & peak_kmer[real_index] != 0){
                             each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], 
                                                 peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index], i);
                         }  
@@ -408,7 +418,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
                             real_index = kmer_index;
                         }
                         // cout << j << "\t" << i << "\t" << peak_kmer[real_index] << "\t" << peak_loci[2*peak_kmer[real_index]]<<endl;
-                        if (peak_kmer[real_index] != 0 & all_valid){
+                        if (all_valid & peak_kmer[real_index] != 0){
                             each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], 
                                         peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index], i);
                         }  
@@ -712,7 +722,8 @@ void read_ref(string fasta_file, char* coder, int* base, int k, char* comple,
     while (getline(fa_file,line_seq)){
         if (line_seq[0] == '>'){
             chr_name = pre_name;
-            pre_name = line_seq.substr(1);
+            pre_name = get_read_ID(line_seq).substr(1);
+            // pre_name = line_seq.substr(1);
             // if (ref_index > 10){
             //     break;
             // }
@@ -1267,7 +1278,7 @@ int main( int argc, char *argv[])
     srand(seed);
 
     int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    // int down_sam_ratio = 100;
+    // int down_sam_ratio = 13;
     //index
     string index_name = fasta_file + ".k" + to_string(k) + ".index.dat";
     ifstream findex(index_name);

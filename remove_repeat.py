@@ -1,8 +1,13 @@
+"""
+some breakpoint pairs are too close, we only keep a 
+representive one from the nearby bkps. 
+"""
+
 import sys
 
 infile = sys.argv[1]
 outfile = sys.argv[2]
-cutoff = 10
+cutoff = 50
 
 def main():
     inf = open(infile)
