@@ -30,7 +30,7 @@ int REF_NEAR = 500; // 500
 int DIFF = 2; // 2
 int PEAK_W = 5; // 5
 int NEAR = 0; // 0
-int SKIP_N = 2*k; // 60
+int SKIP_N = 2*k; // 2*k
 int SKIP_S = k; //k
 int SKIP_A = 1;
 int MIN_READS = 1; // 1
@@ -71,31 +71,44 @@ void Split_reads::judge_base(void){
     int select_index = 0;
     int select_num = 0;
     bool flag = false;
+
+    // for (int i = 0; i < 3; i++){
+    //     // cout << base_kmer[i] << "\t" << base_chr[i] << endl;
+    //     if (base_kmer[i] != 0){
+    //         flag = true;
+    //         chr_iter = chr_kmer_count.find(base_chr[i]);
+    //         if (chr_iter != chr_kmer_count.end()){
+    //             if (chr_iter->second >= select_num){
+    //                 select_index = base_kmer[i];
+    //                 select_chr = base_chr[i];
+    //                 select_num = chr_iter->second;
+    //                 // cout << i << "##\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << chr_iter->second << endl; 
+    //             }
+    //         }
+    //         else{
+    //             // cout << i << "##\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << endl; 
+    //             if (select_index == 0){
+    //                 select_index = base_kmer[i];
+    //                 select_chr = base_chr[i];
+    //                 select_num = 0;     
+    //             }
+    //         }
+    //     }
+    // }
     for (int i = 0; i < 3; i++){
         // cout << base_kmer[i] << "\t" << base_chr[i] << endl;
-        if (base_kmer[i] != 0){
-            flag = true;
-            chr_iter = chr_kmer_count.find(base_chr[i]);
-            if (chr_iter != chr_kmer_count.end()){
-                if (chr_iter->second >= select_num){
-                    select_index = base_kmer[i];
-                    select_chr = base_chr[i];
-                    select_num = chr_iter->second;
-                    // cout << i << "##\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << chr_iter->second << endl; 
-                }
+        if (base_kmer[i] != 0 ){
+            if (select_chr == 0){
+                flag = true;
+                select_index = base_kmer[i];
+                select_chr = base_chr[i];
             }
             else{
-                // cout << i << "##\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << endl; 
-                if (select_index == 0){
-                    select_index = base_kmer[i];
-                    select_chr = base_chr[i];
-                    select_num = 0;     
-                }
+                flag = false;
             }
-
         }
     }
-    cout << select_chr <<endl;
+    // cout << select_chr <<endl;
 
     if (flag){
         if (chr_kmer_count.find(select_chr) == chr_kmer_count.end()){
@@ -354,6 +367,8 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
             if (r < down_sam_ratio){
                 Split_reads each_read;
                 each_read.read_name = read_name;
+
+                //forward reads
                 for (int j = 0; j < read_len; j++){
                     reads_int[j] = (int)reads_seq[j];
                     reads_comple_int[j] = comple[reads_int[j]];
@@ -385,8 +400,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
                         if (all_valid & peak_kmer[real_index] != 0){
                             each_read.count_peak_kmer(peak_loci[2*peak_kmer[real_index]], 
                                 peak_loci[2*peak_kmer[real_index]+1], peak_kmer[real_index], i);
-                        }  
-                        
+                        }    
                     }
                     each_read.judge_base();
                 }
