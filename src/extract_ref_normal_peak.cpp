@@ -72,42 +72,43 @@ void Split_reads::judge_base(void){
     int select_num = 0;
     bool flag = false;
 
-    // for (int i = 0; i < 3; i++){
-    //     // cout << base_kmer[i] << "\t" << base_chr[i] << endl;
-    //     if (base_kmer[i] != 0){
-    //         flag = true;
-    //         chr_iter = chr_kmer_count.find(base_chr[i]);
-    //         if (chr_iter != chr_kmer_count.end()){
-    //             if (chr_iter->second >= select_num){
-    //                 select_index = base_kmer[i];
-    //                 select_chr = base_chr[i];
-    //                 select_num = chr_iter->second;
-    //                 // cout << i << "##\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << chr_iter->second << endl; 
-    //             }
-    //         }
-    //         else{
-    //             // cout << i << "##\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << endl; 
-    //             if (select_index == 0){
-    //                 select_index = base_kmer[i];
-    //                 select_chr = base_chr[i];
-    //                 select_num = 0;     
-    //             }
-    //         }
-    //     }
-    // }
     for (int i = 0; i < 3; i++){
         // cout << base_kmer[i] << "\t" << base_chr[i] << endl;
-        if (base_kmer[i] != 0 ){
-            if (select_chr == 0){
-                flag = true;
-                select_index = base_kmer[i];
-                select_chr = base_chr[i];
+        if (base_kmer[i] != 0){
+            flag = true;
+            chr_iter = chr_kmer_count.find(base_chr[i]);
+            if (chr_iter != chr_kmer_count.end()){
+                if (chr_iter->second >= select_num){
+                    select_index = base_kmer[i];
+                    select_chr = base_chr[i];
+                    select_num = chr_iter->second;
+                    // cout << i << "##\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << chr_iter->second << endl; 
+                }
             }
             else{
-                flag = false;
+                // cout << i << "##\t" << base_kmer[i]<<"\t" << base_chr[i] << "\t" << endl; 
+                if (select_index == 0){
+                    select_index = base_kmer[i];
+                    select_chr = base_chr[i];
+                    select_num = 0;     
+                }
             }
         }
     }
+    // for (int i = 0; i < 3; i++){
+    //     // cout << base_kmer[i] << "\t" << base_chr[i] << endl;
+    //     if (base_kmer[i] != 0 ){
+    //         if (select_chr == 0){
+    //             flag = true;
+    //             select_index = base_kmer[i];
+    //             select_chr = base_chr[i];
+    //         }
+    //         else{
+    //             //discard the kmer cause it support more than one species
+    //             flag = false;
+    //         }
+    //     }
+    // }
     // cout << select_chr <<endl;
 
     if (flag){
