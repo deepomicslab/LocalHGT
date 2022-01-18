@@ -34,8 +34,8 @@ int SKIP_N = 2*k; // 2*k
 int SKIP_S = k; //k
 int SKIP_A = 1;
 int MIN_READS = 1; // 1
-int MAX_PEAK_NUM = 200000000;
-int thread_num = 10;
+int MAX_PEAK_NUM = 300000000;
+int thread_num;
 std::mutex mtx;  
 
 class Split_reads{
@@ -95,21 +95,6 @@ void Split_reads::judge_base(void){
             }
         }
     }
-    // for (int i = 0; i < 3; i++){
-    //     // cout << base_kmer[i] << "\t" << base_chr[i] << endl;
-    //     if (base_kmer[i] != 0 ){
-    //         if (select_chr == 0){
-    //             flag = true;
-    //             select_index = base_kmer[i];
-    //             select_chr = base_chr[i];
-    //         }
-    //         else{
-    //             //discard the kmer cause it support more than one species
-    //             flag = false;
-    //         }
-    //     }
-    // }
-    // cout << select_chr <<endl;
 
     if (flag){
         if (chr_kmer_count.find(select_chr) == chr_kmer_count.end()){
@@ -148,7 +133,7 @@ void Split_reads::check_split(unsigned char* peak_filter){
         iter ++ ;
     }
     
-    if (filter_kmer_count.size() == 2){
+    if (filter_kmer_count.size() > 1){
         // map<int, int>::iterator iter;
         iter = filter_kmer_count.begin();
         while(iter != filter_kmer_count.end()){
@@ -262,6 +247,8 @@ string get_read_ID(string reads_seq){
     string delimiter = "/";
     string read_name_forward = reads_seq.substr(0, reads_seq.find(delimiter));
     delimiter = " ";
+    read_name_forward = read_name_forward.substr(0, read_name_forward.find(delimiter));
+    delimiter = "\t";
     read_name_forward = read_name_forward.substr(0, read_name_forward.find(delimiter));
     return read_name_forward;
 }
@@ -921,7 +908,7 @@ void read_index(char* coder, int* base, int k, char* comple, string index_name, 
         }
         // mtx.lock();
         slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, 
-                                        perfect_hit_ratio,total_peak_num,MyPeak,record_ref_index,thread_index);
+            perfect_hit_ratio,total_peak_num,MyPeak,record_ref_index,thread_index);
         // mtx.unlock(); 
         slide_ref_len += ref_len;
         start_point += 4;
@@ -933,7 +920,7 @@ void read_index(char* coder, int* base, int k, char* comple, string index_name, 
         if (ref_index % 10000 == 0){
             time_t t1 = time(0);
             cout <<"#\t" <<start<<"\t"<<ref_index << "\t" <<slide_ref_len << " bp\t" <<
-             extract_ref_len <<" bp\t" << total_peak_num << "peaks\t"<<t1-t0<< endl;
+             extract_ref_len <<" bp\t" << total_peak_num << "peaks\t"<<t1-t0<< "\t single ref"<<ref_len << endl;
         } 
         ref_index += 1;
         if (start_point >= end){
@@ -1279,9 +1266,11 @@ int main( int argc, char *argv[])
     string interval_name = argv[4];
     string accept_hit_ratio = argv[5];
     string accept_perfect_hit_ratio = argv[6];
+    string accept_thread_num = argv[7];
     float hit_ratio = stod(accept_hit_ratio);
     float perfect_hit_ratio = stod(accept_perfect_hit_ratio);
     long down_sampling_size = 2000000000; //2G bases
+    thread_num = stod(accept_thread_num);
 
     
     long start = 0;
@@ -1293,7 +1282,7 @@ int main( int argc, char *argv[])
     srand(seed);
 
     int down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
-    // int down_sam_ratio = 13;
+    // int down_sam_ratio = 0;
     //index
     string index_name = fasta_file + ".k" + to_string(k) + ".index.dat";
     ifstream findex(index_name);
@@ -1352,12 +1341,13 @@ int main( int argc, char *argv[])
     memset(MyPeak.peak_kmer, 0, sizeof(unsigned int)*array_size);
 
     int ref_thread_num;
-    if (thread_num > 5){
-        ref_thread_num = 5;
-    }
-    else{
-        ref_thread_num = thread_num;
-    }
+    // if (thread_num > 5){
+    //     ref_thread_num = 5;
+    // }
+    // else{
+    //     ref_thread_num = thread_num;
+    // }
+    ref_thread_num = thread_num;
     long * split_ref_cutoffs = split_ref(index_name, fasta_file, ref_thread_num);
     long extract_ref_len = 0;
     long slide_ref_len = 0;
@@ -1370,7 +1360,7 @@ int main( int argc, char *argv[])
         }
         end = split_ref_cutoffs[3*i+1];
         int start_ref_index = split_ref_cutoffs[3*i+2];
-        cout << "Thread N.O."<<i << "\t"<< start << "\t" <<end<< endl;
+        cout << "Thread N.O."<<i << "\t"<< start << "\t" <<end<< "\t"<< start_ref_index << endl;
         // read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end);
         threads.push_back(thread(read_index, coder, base, k, comple, index_name, interval_name,
          choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end, 

@@ -59,3 +59,6 @@ if __name__ == "__main__":
     extract_len = find_chr_name()
     print ("extracted ref length is:", extract_len)
 
+
+    
+
