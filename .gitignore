@@ -1,2 +1,7 @@
 LEMON
 extract_ref
+analysis/new_result
+*pdf
+*csv
+*pkl
+*xlsx
