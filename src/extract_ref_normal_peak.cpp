@@ -271,7 +271,8 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
     int n;
     unsigned int kmer_index, comple_kmer_index, real_index, b;   
     int r ;
-    short read_len = 0;
+    // short read_len = 0;
+    short read_len_1, read_len_2;
     int chr_index, peak_locus,peak_index;
     long pos = 0;
     long second_pos;
@@ -355,12 +356,14 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
         if (lines % 4 == 1){
             time_t t1 = time(0);
             // if (lines == 1){
-            if (reads_seq.length() <= reads_seq_2.length()){
-                read_len = reads_seq.length();//cal read length
-            }
-            else{
-                read_len = reads_seq_2.length();//cal read length
-            }
+            // if (reads_seq.length() <= reads_seq_2.length()){
+            //     read_len = reads_seq.length();//cal read length
+            // }
+            // else{
+            //     read_len = reads_seq_2.length();//cal read length
+            // }
+            read_len_1 = reads_seq.length();
+            read_len_2 = reads_seq_2.length();
             
             // }
             r = rand() % 100;
@@ -369,11 +372,11 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
                 each_read.read_name = read_name;
 
                 //forward reads
-                for (int j = 0; j < read_len; j++){
+                for (int j = 0; j < read_len_1; j++){
                     reads_int[j] = (int)reads_seq[j];
                     reads_comple_int[j] = comple[reads_int[j]];
                 }
-                for (int j = 0; j < read_len-k+1; j++){
+                for (int j = 0; j < read_len_1-k+1; j++){
                     each_read.init_array();
                     for (int i = 0; i < 3; i++){
                         kmer_index = 0;
@@ -405,11 +408,11 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
                     each_read.judge_base();
                 }
                 //reverse reads
-                for (int j = 0; j < read_len; j++){
+                for (int j = 0; j < read_len_2; j++){
                     reads_int[j] = (int)reads_seq_2[j];
                     reads_comple_int[j] = comple[reads_int[j]];
                 }
-                for (int j = 0; j < read_len-k+1; j++){
+                for (int j = 0; j < read_len_2-k+1; j++){
                     each_read.init_array();
                     for (int i = 0; i < 3; i++){
                         kmer_index = 0;
@@ -1175,27 +1178,23 @@ int cal_sam_ratio(string fq1, long down_sampling_size){
     int down_sam_ratio = 0;
     int read_len = 0;
     long i = 0;
-    int j = 0;
-    float total_len = 0;
     long sample_size = 0;
     string reads_seq;
 
     ifstream fq_file; 
     fq_file.open(fq1);
-    // while (fq_file >> reads_seq){
     while (getline(fq_file, reads_seq)){
-        if (i % 4 == 1 & j < 100){
-            total_len += reads_seq.length();
-            j += 1;
+        if (i == 1){
+            read_len = reads_seq.length();
+            cout <<"The first read length is "<<read_len<<endl;
         }
-        if (j == 100 & read_len == 0){
-            read_len = round(total_len/100);
-            cout <<"read length is "<<read_len<<endl;
+        if (i % 4 == 1){
+            sample_size += reads_seq.length();
         }
         i += 1;
     }
     fq_file.close();
-    sample_size = (i/2)*read_len;
+    sample_size = sample_size * 2; //pair
     down_sam_ratio = 100*down_sampling_size/sample_size;
     cout<<i<<"\t"<<sample_size<<" Down-sampling ratio is "<<down_sam_ratio<< "%." <<endl;
     return down_sam_ratio;
