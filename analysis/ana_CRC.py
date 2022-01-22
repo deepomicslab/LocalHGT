@@ -22,6 +22,12 @@ import seaborn as sns
 from scipy.stats import ranksums
 import networkx as nx
 import math
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import make_classification
+from sklearn.metrics import roc_auc_score
+from random import shuffle
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import ShuffleSplit
 
 class Taxonomy():
     def __init__(self):
@@ -53,8 +59,8 @@ class Acc_Bkp(object):
     def __init__(self, list):
         self.from_ref = list[0]
         self.to_ref = list[2]
-        self.from_bkp = list[1]
-        self.to_bkp = list[3]
+        self.from_bkp = int(list[1])
+        self.to_bkp = int(list[3])
         self.if_reverse = list[6]
         self.from_side = list[4]
         self.to_side = list[5]
@@ -123,7 +129,7 @@ class Sample():
         self.bases = phenotype.ID_bases[ID]    
         self.single = {}
         self.pair = {}
-        self.level = 3
+        self.level = 5
         
 
         self.read_bkp()
@@ -181,25 +187,34 @@ class Sample():
             pair_list = pairs.split("&")
             if pair_list[0] == pair_list[1]:
                 continue
+            if self.check_valid_name(pair_list[0]) == False or self.check_valid_name(pair_list[1]) == False:
+                continue  #remove s__
+            # print (pair_list[0], self.check_valid_name(pair_list[0]))
             a = nodes_index[pair_list[0]]
             b = nodes_index[pair_list[1]]
             self.matrix[a][b] = 1
             self.matrix[b][a] = 1
         self.matrix = np.matrix(self.matrix)
 
+    def check_valid_name(self, name):
+        if name.split("__")[1] != '':
+            return True
+        else:
+            return False
         
 
 class Analyze():
 
-    def __init__(self):
+    def __init__(self, cohort):
         self.data = []
         self.disease = ["CRC", "control", "adenoma"]
         self.disease_index = {"CRC":0, "control":1, "adenoma":2}
         self.disease_sample_num = {"CRC":0, "control":0, "adenoma":0}
 
-        self.all_samples()
+        self.all_samples(cohort)
+        self.window = 100
 
-    def all_samples(self):
+    def all_samples(self, cohort):
         all_acc_file = "acc.list"
         os.system(f"ls new_result/SRR*>{all_acc_file}")
         for line in open(all_acc_file):
@@ -211,7 +226,7 @@ class Analyze():
             
             sample = Sample(acc_file, ID)
             # print (sample.cohort)
-            if sample.cohort != "ThomasAM_2018b":
+            if sample.cohort != cohort:
                 continue
             self.data.append(sample)
             self.disease_sample_num[sample.disease] += 1
@@ -478,15 +493,41 @@ class Analyze():
         return sorted_count
 
     def per_species_HGT_comparison(self):
-        control = []
-        disease = []
+        data = []
+        control_transtivity = []
+        disease_transtivity = []
+
+        control_graph_density = []
+        disease_graph_density = []
+
+        control_nodes = []
+        disease_nodes = []
+
+        control_pair = []
+        disease_pair = []
+
         for sample in self.data: 
+            data.append([sample.disease, sample.transtivity, sample.graph_density, len(sample.nodes), len(sample.pair)])
+
             if sample.disease == "control":
-                control.append(sample.transtivity)
+                control_transtivity.append(sample.transtivity)
+                control_graph_density.append(sample.graph_density)
+                control_nodes.append(len(sample.nodes))
+                control_pair.append(len(sample.pair))
             if sample.disease == "CRC":
-                disease.append(sample.transtivity)
-        p1 = self.compare_diff(disease, control)
-        print (len(disease), len(control), p1)
+                disease_transtivity.append(sample.transtivity)
+                disease_graph_density.append(sample.graph_density)
+                disease_nodes.append( len(sample.nodes))
+                disease_pair.append(len(sample.pair))
+        p1 = self.compare_diff(disease_transtivity, control_transtivity)
+        p2 = self.compare_diff(disease_graph_density, control_graph_density)
+        p3 = self.compare_diff(disease_nodes, control_nodes)
+        p4 = self.compare_diff(disease_pair, control_pair)
+        print (len(control_transtivity), len(disease_transtivity), p1, p2, p3, p4)
+        # print (np.mean(control_graph_density), np.std(control_graph_density))
+        # print (np.mean(disease_graph_density), np.std(disease_graph_density))
+        df = pd.DataFrame(data, columns = ["Condition", "Transtivity", "Density", "Nodes_Number", "Pair_Number"])
+        df.to_csv('for_box.csv', sep='\t')
 
     def cohort_specific_HGT(self):
 
@@ -623,6 +664,300 @@ class Analyze():
         print (df)
         os.system("Rscript circos.R")
 
+    def plot_most_common_pair(self):
+        count_dict = {}
+        record_pos = {}
+
+        condition = ["CRC"]
+        for sample in self.data:
+            sample_dict = {}
+            for bkp in sample.filter_bkps:
+                from_tax = bkp.from_ref
+                to_tax = bkp.to_ref
+                tax = sorted([from_tax, to_tax])
+                tag = "&".join(tax)
+                if tax[0] == bkp.from_ref:
+                    from_b = bkp.from_bkp
+                    to_b = bkp.to_bkp
+                else:
+                    to_b = bkp.from_bkp
+                    from_b = bkp.to_bkp 
+                from_b = int(from_b/self.window)
+                to_b = int(to_b/self.window)
+                if tag not in count_dict:
+                    if tag not in sample_dict:
+                        count_dict[tag] = 1
+                        sample_dict[tag] = 1
+                    record_pos[tag] = [[from_b, to_b, sample.disease, 1]]
+                else:
+                    if tag not in sample_dict:
+                        count_dict[tag] += 1
+                        sample_dict[tag] = 1
+
+
+                    flag = False
+                    for point in record_pos[tag]:
+                        if point[0]==  from_b and point[1] == to_b and sample.disease == point[2]:
+                            point[3] += 1
+                            flag = True
+                            break
+                    if flag == False:
+                        record_pos[tag].append([from_b, to_b, sample.disease, 1])
+
+
+        sorted_count_dict = self.show_sort_dict(count_dict)  
+        # print (record_pos[sorted_count_dict[0][0]])
+        # top_index = 14
+        for i in range(len(sorted_count_dict)):
+            if sorted_count_dict[i][0] == "GUT_GENOME144544_1&GUT_GENOME145378_7":
+                top_index = i
+                print (top_index)
+
+        # for top_index in range(100):
+        df = pd.DataFrame(record_pos[sorted_count_dict[top_index][0]], columns =sorted_count_dict[top_index][0].split("&")+["Condition", "Sample_Num"] )
+        # df = pd.DataFrame(record_pos[sorted_count_dict[top_index][0]], columns =["G1", "G2", "Condition", "Sample_Num"] )
+        # print (df)
+        df.to_csv('for_para.csv', sep='\t')
+        os.system("Rscript parallel.R")
+        os.system("mv para.pdf para_%s.pdf"%(top_index))
+        #     # break
+        return sorted_count_dict, record_pos
+
+    def bkp_pair_count(self):
+        level_dict = {"phylum":1, "genus":5, "species":6}
+        genome_lineag = {}
+        level = 5
+        count_dict = {}
+        window = 500
+        groups_cout_dict = {"CRC":{}, "control":{}, "adenoma":{}}
+        for sample in self.data:
+            # if sample.disease != "control":   #different groups
+            #     continue
+            for bkp in sample.filter_bkps:
+                from_tax = bkp.from_ref
+                to_tax = bkp.to_ref
+                genome_lineag[from_tax] = bkp.from_ref_lineage.split(";")[level]
+                genome_lineag[to_tax] = bkp.to_ref_lineage.split(";")[level]
+                tax = sorted([from_tax, to_tax])
+
+                tag = "&".join(tax)
+                if tax[0] == bkp.from_ref:
+                    from_b = bkp.from_bkp
+                    to_b = bkp.to_bkp
+                else:
+                    to_b = bkp.from_bkp
+                    from_b = bkp.to_bkp 
+
+                from_b = int(from_b/window)     
+                to_b = int(to_b/window)
+
+                tag = "&".join(tax) + "&" +str(from_b) + "&"+ str(to_b)
+                if tag not in count_dict:
+                    count_dict[tag] = 1
+                else:
+                    count_dict[tag] += 1
+                if tag not in groups_cout_dict[sample.disease]:
+                    groups_cout_dict[sample.disease][tag] = 1
+                else:
+                    groups_cout_dict[sample.disease][tag] += 1
+        # for disease in groups_cout_dict.keys():
+        #     print (disease, "Paired Top")
+        #     self.show_sort_dict(groups_cout_dict[disease])
+        # self.show_sort_dict(count_dict)   
+        
+
+        CRC_specific_HGT = {} 
+        for locus in groups_cout_dict["CRC"].keys():
+            if locus not in groups_cout_dict["control"]:
+                CRC_specific_HGT[locus] = groups_cout_dict["CRC"][locus]
+                # print (locus, groups_cout_dict["CRC"][locus])
+        sort_CRC_specific_HGT = self.show_sort_dict(CRC_specific_HGT)  
+
+        # sorted_count_dict, record_pos = self.plot_most_common_pair()
+        for pair in sort_CRC_specific_HGT[:20]:
+            fir = pair[0].split("&")[0]
+            sec = pair[0].split("&")[1]
+            print (genome_lineag[fir], genome_lineag[sec])
+            """
+            tag = "&".join(pair[0].split("&")[:2])
+            for i in range(len(sorted_count_dict)):
+                if sorted_count_dict[i][0] == tag:
+                    top_index = i            
+            df = pd.DataFrame(record_pos[sorted_count_dict[top_index][0]], columns =sorted_count_dict[top_index][0].split("&")+["Condition", "Sample_Num"] )
+            # df = pd.DataFrame(record_pos[sorted_count_dict[top_index][0]], columns =["G1", "G2", "Condition", "Sample_Num"] )
+            # print (df)
+            df.to_csv('for_para.csv', sep='\t')
+            os.system("Rscript parallel.R")
+            os.system("mv para.pdf para_%s.pdf"%(top_index))
+            """
+
+        control_specific_HGT = {} 
+        for locus in groups_cout_dict["control"].keys():
+            if locus not in groups_cout_dict["CRC"]:
+                control_specific_HGT[locus] = groups_cout_dict["control"][locus]
+                # print (locus, groups_cout_dict["CRC"][locus])
+        sort_control_specific_HGT = self.show_sort_dict(control_specific_HGT) 
+        for pair in sort_control_specific_HGT[:20]:
+            fir = pair[0].split("&")[0]
+            sec = pair[0].split("&")[1]
+            print (genome_lineag[fir], genome_lineag[sec]) 
+
+
+
+class RF():
+    def __init__(self):
+        self.fir_cohort = Analyze("ThomasAM_2018a")
+        self.sec_cohort = Analyze("ThomasAM_2018b")
+        self.all_data = self.fir_cohort.data + self.sec_cohort.data
+        # self.all_data = self.fir_cohort.data
+        # self.all_data = self.sec_cohort.data
+        shuffle(self.fir_cohort.data)
+        shuffle(self.sec_cohort.data)
+        shuffle(self.all_data)
+        self.feature_num = 5
+        self.window = 500
+        self.level = 5
+        self.remove_adenoma = True
+
+    def select_tag(self, bkp):
+        # from_tax = bkp.from_ref_lineage.split(";")[self.level] #  bkp.from_ref
+        # to_tax = bkp.to_ref_lineage.split(";")[self.level]  #bkp.to_ref
+        from_tax = bkp.from_ref
+        to_tax = bkp.to_ref
+        tax = sorted([from_tax, to_tax])
+        tag = "&".join(tax)
+        if tax[0] == from_tax:
+            from_b = bkp.from_bkp
+            to_b = bkp.to_bkp
+        else:
+            to_b = bkp.from_bkp
+            from_b = bkp.to_bkp 
+        from_b = int(from_b/self.window)     
+        to_b = int(to_b/self.window)
+        return "&".join(tax) + "&" +str(from_b) + "&"+ str(to_b)
+
+    def prepare_test_data(self, sort_specific_HGT_dict, feature_num, window):
+        test_cohort = "ThomasAM_2018a"
+        another_cohort = Analyze(test_cohort)
+        data = []
+        label = []
+        for sample in another_cohort.data:
+            if sample.disease == "adenoma":   
+                continue
+            sample_array = [0]*feature_num
+            
+            for bkp in sample.filter_bkps:
+                tag = self.select_tag(bkp)
+                if tag in sort_specific_HGT_dict:
+                    sample_array[sort_specific_HGT_dict[tag]] += 1
+            data.append(sample_array)
+            label.append(sample.disease)
+        return np.array(data), np.array(label)
+
+    def select_feature(self):    
+        specific_HGT = {} 
+        train_num = len(self.all_data)
+        i = 0
+        for sample in self.all_data:
+            i += 1
+            if sample.disease == "adenoma" and self.remove_adenoma:   
+                continue
+            for bkp in sample.filter_bkps:
+                tag = self.select_tag(bkp)
+                if tag not in specific_HGT:
+                    specific_HGT[tag] = [[0]*train_num, [0]*train_num]
+                if sample.disease == "CRC":
+                    specific_HGT[tag][0][i-1] += 1
+                if sample.disease == "control":
+                    specific_HGT[tag][1][i-1] += 1
+        for tag in specific_HGT:
+            crc = specific_HGT[tag][0]
+            control = specific_HGT[tag][1]
+            U1, p = mannwhitneyu(crc, control, method="auto")
+            specific_HGT[tag] = p
+        sort_specific_HGT = sorted(specific_HGT.items(), key=lambda item: item[1], reverse = False)[:self.feature_num]
+        sort_specific_HGT_dict = {}
+        for i in range(len(sort_specific_HGT)):
+            print (sort_specific_HGT[i])
+            sort_specific_HGT_dict[sort_specific_HGT[i][0]] = i
+        with open('saved_dictionary.pkl', 'wb') as f:
+            pickle.dump(sort_specific_HGT_dict, f)
+        return sort_specific_HGT_dict
+
+    def load_dict(self):
+        with open('saved_dictionary.pkl', 'rb') as f:
+            loaded_dict = pickle.load(f)
+            return loaded_dict
+
+    def generate_data(self, cohort_data):
+        # sort_specific_HGT_dict = self.select_feature()
+        sort_specific_HGT_dict = self.load_dict()
+        data = []
+        label = []
+        for sample in cohort_data:
+            if sample.disease == "adenoma" and self.remove_adenoma:   
+                continue
+            if sample.disease == "control":
+                continue
+            sample_array = [0]*self.feature_num
+            
+            for bkp in sample.filter_bkps:
+                tag = self.select_tag(bkp)
+                if tag in sort_specific_HGT_dict:
+                    sample_array[sort_specific_HGT_dict[tag]] += 1
+            data.append(sample_array)
+            # print (sample_array, sample.disease)
+            label.append(sample.disease)
+        data = np.array(data)
+        label = np.array(label)
+        return data, label
+
+    def feature_matrix(self):
+        data, label = self.generate_data(self.all_data)
+        ax = sns.heatmap(data)
+        plt.savefig('heatmap.pdf')
+
+        
+    def random_forest(self):
+
+        fir_data, fir_label = self.generate_data(self.fir_cohort.data)
+        sec_data, sec_label = self.generate_data(self.sec_cohort.data)
+
+        clf = RandomForestClassifier() #max_depth=2, random_state=0
+        # cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
+        # scores = cross_val_score(clf, fir_data, fir_data, cv=4, scoring='roc_auc')
+        # print (scores, np.mean(scores))
+
+        clf.fit(fir_data, fir_label)
+        roc_auc = roc_auc_score(sec_label, clf.predict_proba(sec_data)[:,1])
+        print ("AUC", roc_auc)
+
+        clf.fit(sec_data, sec_label)
+        roc_auc = roc_auc_score(fir_label, clf.predict_proba(fir_data)[:,1])
+        print ("AUC", roc_auc)
+
+        # correct = 0
+        # for i in range(len(test_data)):
+        #     predict_label = clf.predict([test_data[i]])[0]
+        #     if predict_label == test_label[i]:
+        #         correct += 1
+        #     print ("Predict label is %s; True label is %s."%(predict_label, test_label[i]))
+        # roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
+        # print ("AUC", roc_auc, correct/len(test_data), len(test_data))
+
+
+"""
+('f__Selenomonadaceae&f__Selenomonadaceae', 0.007381178554880574)
+('f__Acutalibacteraceae&f__CAG-272', 0.010626896095500762)
+
+
+('o__Selenomonadales&o__Selenomonadales', 0.014672024945974043)
+('o__Lachnospirales&o__Victivallales', 0.022404032554737458)
+('o__Victivallales&o__Victivallales', 0.022475737915170338)
+('o__Peptostreptococcales&o__Tissierellales', 0.0428060113882183)
+('o__TANB77&o__TANB77', 0.047048392371124195)
+"""
+
       
 
 level_dict = {"phylum":1, "class":2, "order":3, "family":4, "genus":5, "species":6}
@@ -632,8 +967,8 @@ UHGG_meta = "/mnt/d/breakpoints/HGT/UHGG/genomes-all_metadata.tsv"
 phenotype = Phenotype()
 taxonomy = Taxonomy()
 
-
-analyze = Analyze()
+cohort = "ThomasAM_2018b"
+analyze = Analyze(cohort)
 # analyze.taxonomy_count()
 # analyze.taxonomy_pair_count()
 # analyze.check_CRC_related_species()
@@ -642,9 +977,15 @@ analyze = Analyze()
 # analyze.cohort_HGT()
 # analyze.each_species()
 # analyze.cohort_specific_HGT()
-# analyze.per_species_HGT_comparison()
+analyze.per_species_HGT_comparison()
 # analyze.taxonomy_barplot()
-analyze.taxonomy_circos()
+# analyze.taxonomy_circos()
+# analyze.plot_most_common_pair()
+# analyze.bkp_pair_count()
+
+# rf = RF()
+# # rf.random_forest()
+# rf.feature_matrix()
 
 
 

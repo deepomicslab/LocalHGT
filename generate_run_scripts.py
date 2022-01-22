@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from simulation import Parameters
+import re
 
 class Batch(Parameters):
 
@@ -108,7 +109,6 @@ def batch_cami():
     f.close()
     h.close()
 
-
 def batch_depth():
     ba = Batch()
     ba.get_fq_dir("/mnt/d/breakpoints/HGT/uhgg_depth/")
@@ -137,7 +137,32 @@ def batch_depth():
     h.close()
 
 
+def batch_crc():
+    ba = Batch()
+    ba.get_fq_dir("//mnt/crc/PRJEB6070_crc_france/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/CRC/france/result")
+
+    h = open("/mnt/d/breakpoints/HGT/CRC/france/run_localHGT_crc.sh", 'w')
+
+    i = 1
+    index = 0
+    for line in open("/mnt/d/breakpoints/HGT/CRC/france/france_fq.list"):
+        match = re.search("_crc_france/(.*?).1.fq.gz$", line)
+        if match:
+            ba.sample = match.group(1)
+            ba.fq1 = "/mnt/crc/PRJEB6070_crc_france/%s.1.fq"%(ba.sample)
+            ba.fq2 = "/mnt/crc/PRJEB6070_crc_france/%s.2.fq"%(ba.sample)
+            print ("gzip -d /mnt/crc/PRJEB6070_crc_france/%s.*.fq.gz"%(ba.sample), file = h)
+            order = ba.get_normal_order()
+            print (order, file = h)
+            print ("gzip /mnt/crc/PRJEB6070_crc_france/%s.*.fq"%(ba.sample), file = h)
+
+
+
+    h.close()
+
 if __name__ == "__main__":
     # batch_snp()
-    batch_cami()
+    # batch_cami()
     # batch_depth()
+    batch_crc()

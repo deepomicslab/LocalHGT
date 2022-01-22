@@ -283,9 +283,20 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
         fq_file.seekg(i, ios::beg);
         char j;
         fq_file.get(j);
-        if (j == '@'){ //only read name has this symbol.
-            pos = i;
-            break;
+        if (j == '@'){ //not only read name has this symbol.
+            if (i == 1){
+                pos = i;
+                break;
+            }
+            else{
+                fq_file.seekg(i-1, ios::beg);
+                char j;
+                fq_file.get(j);
+                if (j == '\n'){ //the @ should be the first char in a line
+                    pos = i;
+                    break;                    
+                }
+            }
         }       
     }
     fq_file.seekg(pos, ios::beg);
@@ -329,6 +340,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
                 if (while_times > 1000000000){
                     cout << "Too many iterations to make paired-end reads be consistent!\
                      Please use single thread for this sample to avoid the problem." << endl;
+                    cout << read_name_forward<<"\t<=>\t"<< read_name_reverse<< endl;
                     break;
                 }
             }

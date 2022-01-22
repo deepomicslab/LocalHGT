@@ -264,6 +264,7 @@ class Figure():
         #     plt.xticks(rotation=0)
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
         plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))
+        
     
 
     def plot_cami(self):
@@ -290,14 +291,15 @@ class Figure():
         
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
         plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))
+        self.df.to_csv('analysis/cami_comparison.csv', sep=',')
 
 def cami():
     fi = Figure()
     ba = Parameters()
     ba.get_dir(true_dir)
     fi.variation = "Mutation Rate"
-    # for snp_rate in [0.01, 0.02, 0.03, 0.04, 0.05]:
-    for snp_rate in [0.05]:
+    for snp_rate in [0.01, 0.02, 0.03, 0.04, 0.05]:
+    # for snp_rate in [0.05]:
         ba.change_snp_rate(snp_rate)
         index = 0
         ba.get_ID(index)
