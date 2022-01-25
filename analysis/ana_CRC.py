@@ -86,23 +86,33 @@ class Phenotype():
         self.ID_cohort = {}
         self.ID_bases = {}
         self.read_pheno()
-        self.read_sra_meta()
+        self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/yu_2015.csv")
+        self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/germany.csv")
+        # self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/france/france.csv")
+        self.read_sra_meta("/mnt/d/breakpoints/script/analysis/italy.csv")
         
-
-    def read_sra_meta(self):
-        f = open(sra_meta)
-        all_rows = csv.reader(f)
-        for row in all_rows:
-            if row[0] == "Run":
-                continue   
-            sra_ID = row[0]
-            bases = int(row[3])
-            sample_name = row[-2]
-            # self.sra2name[sra_ID] = sample_name
+        
+    def read_sra_meta(self, sra_meta):
+        # f = open(sra_meta)
+        df = pd.read_csv(sra_meta)
+        
+        for i in range(len(df.index)):
+            sra_ID = df["Run"][i]
+            bases = df["Bases"][i]
+            if "sample_name" in df.columns and df["sample_name"][i] != "Illumina":
+                sample_name = df["sample_name"][i]
+            else:
+                sample_name = df["Sample Name"][i]
+            # for col in df.columns:
+            #     print (col, df[col][i])
+                
+            # print (sra_ID, bases, sample_name) 
+            if sample_name not in self.name_disease:
+                continue
             self.ID_disease[sra_ID] = self.name_disease[sample_name]
             self.ID_cohort[sra_ID] = self.name_cohort[sample_name]
             self.ID_bases[sra_ID] = bases
-        f.close()
+        # print (len(self.ID_bases))
 
     def read_pheno(self):     
         df = pd.read_excel(pheno_file, header=None) 
@@ -202,21 +212,20 @@ class Sample():
         else:
             return False
         
-
 class Analyze():
 
-    def __init__(self, cohort):
+    def __init__(self):
         self.data = []
         self.disease = ["CRC", "control", "adenoma"]
         self.disease_index = {"CRC":0, "control":1, "adenoma":2}
         self.disease_sample_num = {"CRC":0, "control":0, "adenoma":0}
 
-        self.all_samples(cohort)
+        self.all_samples()
         self.window = 100
 
-    def all_samples(self, cohort):
+    def all_samples(self):
         all_acc_file = "acc.list"
-        os.system(f"ls new_result/SRR*>{all_acc_file}")
+        os.system(f"ls new_result/*acc.csv>{all_acc_file}")
         for line in open(all_acc_file):
             acc_file = line.strip()
             ID = acc_file.split("/")[1].split(".")[0]
@@ -226,7 +235,7 @@ class Analyze():
             
             sample = Sample(acc_file, ID)
             # print (sample.cohort)
-            if sample.cohort != cohort:
+            if sample.disease == "adenoma":
                 continue
             self.data.append(sample)
             self.disease_sample_num[sample.disease] += 1
@@ -802,22 +811,26 @@ class Analyze():
             sec = pair[0].split("&")[1]
             print (genome_lineag[fir], genome_lineag[sec]) 
 
-
-
 class RF():
     def __init__(self):
-        self.fir_cohort = Analyze("ThomasAM_2018a")
-        self.sec_cohort = Analyze("ThomasAM_2018b")
-        self.all_data = self.fir_cohort.data + self.sec_cohort.data
-        # self.all_data = self.fir_cohort.data
-        # self.all_data = self.sec_cohort.data
-        shuffle(self.fir_cohort.data)
-        shuffle(self.sec_cohort.data)
+        analyze = Analyze()
+        self.all_data = analyze.data
         shuffle(self.all_data)
-        self.feature_num = 5
+        self.diff_cohorts = self.classify_cohorts()        
+        self.feature_num = 70
         self.window = 500
         self.level = 5
         self.remove_adenoma = True
+
+    def classify_cohorts(self):
+        diff_cohorts = {}
+        for sample in self.all_data:
+            if sample.cohort not in diff_cohorts:
+                diff_cohorts[sample.cohort] = [sample]
+            else:
+                diff_cohorts[sample.cohort].append(sample)
+        print (diff_cohorts.keys())
+        return diff_cohorts
 
     def select_tag(self, bkp):
         # from_tax = bkp.from_ref_lineage.split(";")[self.level] #  bkp.from_ref
@@ -836,32 +849,15 @@ class RF():
         to_b = int(to_b/self.window)
         return "&".join(tax) + "&" +str(from_b) + "&"+ str(to_b)
 
-    def prepare_test_data(self, sort_specific_HGT_dict, feature_num, window):
-        test_cohort = "ThomasAM_2018a"
-        another_cohort = Analyze(test_cohort)
-        data = []
-        label = []
-        for sample in another_cohort.data:
-            if sample.disease == "adenoma":   
-                continue
-            sample_array = [0]*feature_num
-            
-            for bkp in sample.filter_bkps:
-                tag = self.select_tag(bkp)
-                if tag in sort_specific_HGT_dict:
-                    sample_array[sort_specific_HGT_dict[tag]] += 1
-            data.append(sample_array)
-            label.append(sample.disease)
-        return np.array(data), np.array(label)
-
-    def select_feature(self):    
+    def select_feature(self, cohort_data):    
         specific_HGT = {} 
-        train_num = len(self.all_data)
+        train_num = len(cohort_data)
+        print (train_num)
         i = 0
-        for sample in self.all_data:
+        for sample in cohort_data:
             i += 1
-            if sample.disease == "adenoma" and self.remove_adenoma:   
-                continue
+            # if sample.disease == "adenoma" and self.remove_adenoma:   
+            #     continue
             for bkp in sample.filter_bkps:
                 tag = self.select_tag(bkp)
                 if tag not in specific_HGT:
@@ -889,15 +885,17 @@ class RF():
             loaded_dict = pickle.load(f)
             return loaded_dict
 
-    def generate_data(self, cohort_data):
-        # sort_specific_HGT_dict = self.select_feature()
-        sort_specific_HGT_dict = self.load_dict()
+    def generate_data(self, cohort_data, flag):
+        if flag == "train":
+            sort_specific_HGT_dict = self.select_feature(cohort_data)
+        elif flag == "test":
+            sort_specific_HGT_dict = self.load_dict() #use same features
+        else:
+            print ("no data")
         data = []
         label = []
         for sample in cohort_data:
             if sample.disease == "adenoma" and self.remove_adenoma:   
-                continue
-            if sample.disease == "control":
                 continue
             sample_array = [0]*self.feature_num
             
@@ -916,25 +914,30 @@ class RF():
         data, label = self.generate_data(self.all_data)
         ax = sns.heatmap(data)
         plt.savefig('heatmap.pdf')
-
-        
+     
     def random_forest(self):
 
-        fir_data, fir_label = self.generate_data(self.fir_cohort.data)
-        sec_data, sec_label = self.generate_data(self.sec_cohort.data)
-
+        train_data, train_label = self.generate_data(self.diff_cohorts["ThomasAM_2018a"]+self.diff_cohorts["YuJ_2015"]+self.diff_cohorts["WirbelJ_2018"], "train")
         clf = RandomForestClassifier() #max_depth=2, random_state=0
+        clf.fit(train_data, train_label)
+        print ("training is done")
+
+
+        # test_data, test_label = self.generate_data(self.diff_cohorts["WirbelJ_2018"], "test")       
+        # roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
+        # print ("AUC", roc_auc)
+
+        test_data, test_label = self.generate_data(self.diff_cohorts["ThomasAM_2018b"], "test")       
+        roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
+        print ("AUC", roc_auc)
+
         # cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
         # scores = cross_val_score(clf, fir_data, fir_data, cv=4, scoring='roc_auc')
         # print (scores, np.mean(scores))
 
-        clf.fit(fir_data, fir_label)
-        roc_auc = roc_auc_score(sec_label, clf.predict_proba(sec_data)[:,1])
-        print ("AUC", roc_auc)
-
-        clf.fit(sec_data, sec_label)
-        roc_auc = roc_auc_score(fir_label, clf.predict_proba(fir_data)[:,1])
-        print ("AUC", roc_auc)
+        # clf.fit(sec_data, sec_label)
+        # roc_auc = roc_auc_score(fir_label, clf.predict_proba(fir_data)[:,1])
+        # print ("AUC", roc_auc)
 
         # correct = 0
         # for i in range(len(test_data)):
@@ -959,33 +962,33 @@ class RF():
 """
 
       
+if __name__ == "__main__":
+    level_dict = {"phylum":1, "class":2, "order":3, "family":4, "genus":5, "species":6}
+    # sra_meta = "italy.csv"
+    pheno_file = "allmetadata.xlsx"#"CRC.xlsx"
+    UHGG_meta = "/mnt/d/breakpoints/HGT/UHGG/genomes-all_metadata.tsv"
+    phenotype = Phenotype()
+    taxonomy = Taxonomy()
 
-level_dict = {"phylum":1, "class":2, "order":3, "family":4, "genus":5, "species":6}
-sra_meta = "italy.csv"
-pheno_file = "CRC.xlsx"
-UHGG_meta = "/mnt/d/breakpoints/HGT/UHGG/genomes-all_metadata.tsv"
-phenotype = Phenotype()
-taxonomy = Taxonomy()
+    # cohort = "ThomasAM_2018b"
+    # analyze = Analyze()
+    # analyze.taxonomy_count()
+    # analyze.taxonomy_pair_count()
+    # analyze.check_CRC_related_species()
+    # analyze.compare_HGT_complexity()
+    # analyze.taxonomy_pair_samples()
+    # analyze.cohort_HGT()
+    # analyze.each_species()
+    # analyze.cohort_specific_HGT()
+    # analyze.per_species_HGT_comparison()
+    # analyze.taxonomy_barplot()
+    # analyze.taxonomy_circos()
+    # analyze.plot_most_common_pair()
+    # analyze.bkp_pair_count()
 
-cohort = "ThomasAM_2018b"
-analyze = Analyze(cohort)
-# analyze.taxonomy_count()
-# analyze.taxonomy_pair_count()
-# analyze.check_CRC_related_species()
-# analyze.compare_HGT_complexity()
-# analyze.taxonomy_pair_samples()
-# analyze.cohort_HGT()
-# analyze.each_species()
-# analyze.cohort_specific_HGT()
-analyze.per_species_HGT_comparison()
-# analyze.taxonomy_barplot()
-# analyze.taxonomy_circos()
-# analyze.plot_most_common_pair()
-# analyze.bkp_pair_count()
-
-# rf = RF()
-# # rf.random_forest()
-# rf.feature_matrix()
+    rf = RF()
+    rf.random_forest()
+    # rf.feature_matrix()
 
 
 

@@ -137,7 +137,7 @@ def batch_depth():
     h.close()
 
 
-def batch_crc():
+def batch_france():
     ba = Batch()
     ba.get_fq_dir("//mnt/crc/PRJEB6070_crc_france/")
     ba.get_result_dir("/mnt/d/breakpoints/HGT/CRC/france/result")
@@ -156,13 +156,31 @@ def batch_crc():
             order = ba.get_normal_order()
             print (order, file = h)
             print ("gzip /mnt/crc/PRJEB6070_crc_france/%s.*.fq"%(ba.sample), file = h)
+    h.close()
 
+def batch_germany():
+    ba = Batch()
+    ba.get_fq_dir("/mnt/d/breakpoints/HGT/CRC/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/CRC/germany/result")
 
+    h = open("/mnt/d/breakpoints/HGT/CRC/germany/run_localHGT_germany.sh", 'w')
 
+    i = 1
+    index = 0
+    for line in open("/mnt/d/breakpoints/HGT/CRC/germany.csv"):
+        array = line.split(",")
+        if array[0] == "Run":
+            continue
+        else:
+            ba.sample = array[0]
+            ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/%s_1.fastq"%(ba.sample)
+            ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/%s_2.fastq"%(ba.sample)
+            order = ba.get_normal_order()
+            print (order, file = h)
     h.close()
 
 if __name__ == "__main__":
     # batch_snp()
     # batch_cami()
     # batch_depth()
-    batch_crc()
+    batch_germany()

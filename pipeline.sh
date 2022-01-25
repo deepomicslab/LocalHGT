@@ -45,7 +45,7 @@ wc -l $sample.acc.csv
 
 
 rm $extracted_ref*
-# rm $sample*sam
+rm $sample*sam
 
 end=$(date +%s)
 take=$(( end - start ))
