@@ -8,6 +8,7 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 import re
+import lzma
 
 def DNA_complement2(sequence):
     sequence = sequence[::-1]
@@ -65,7 +66,7 @@ def extract_uniq_region(map_ref):
     remove_dict = {}
     all_scaffold = {}
     line_num = 0
-    for line in open(map_ref, 'r'):
+    for line in lzma.open(map_ref, mode='rt', encoding='utf-8'):
         line_num += 1
         if line_num % 1000000 == 0:
             print (line_num)
@@ -537,12 +538,18 @@ if __name__ == "__main__":
 
     t0 = time.time()
     pa = Parameters()
-    uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
-    blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
+    # uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
+    # blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
+
+    uniq_segs_file = "/mnt/d/breakpoints/HGT/proGenomes/uniq_region_proGenomes.npy"
+    blast_file = '/mnt/d/breakpoints/HGT/proGenomes/freeze12.contigs.representatives.fasta.blast.out.xz'
+
+    uniq_segs_loci = extract_uniq_region(blast_file)  
+    np.save(uniq_segs_file, uniq_segs_loci)
 
     # generate_complexity()
 
-
+    """
     if os.path.isfile(uniq_segs_file):
         uniq_segs_loci = np.load(uniq_segs_file, allow_pickle='TRUE').item()
     else:
@@ -553,6 +560,7 @@ if __name__ == "__main__":
     print ("genome num:", len(uniq_segs_loci))
     # UHGG_snp(uniq_segs_loci)
     UHGG_depth(uniq_segs_loci)
+    """
 
 
     # UHGG_cami()

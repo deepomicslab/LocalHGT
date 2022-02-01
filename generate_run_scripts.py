@@ -179,8 +179,34 @@ def batch_germany():
             print (order, file = h)
     h.close()
 
+def batch_japan():
+    ba = Batch()
+    ba.get_fq_dir("/mnt/d/breakpoints/HGT/CRC/japan/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/CRC/japan/result")
+
+    h = open("/mnt/d/breakpoints/HGT/CRC/japan/run_localHGT_japan.sh", 'w')
+
+    i = 0
+    index = 0
+    for line in open("/mnt/d/breakpoints/HGT/CRC/japan.csv"):
+        array = line.split(",")
+        if array[0] == "Run":
+            continue
+        else:
+            if i >= 80:
+                break
+            ba.sample = array[0]
+            ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/japan/%s_1.fastq"%(ba.sample)
+            ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/japan/%s_2.fastq"%(ba.sample)
+            order = ba.get_normal_order()
+            print (order, file = h)
+            i += 1
+    h.close()
+
+
 if __name__ == "__main__":
     # batch_snp()
     # batch_cami()
     # batch_depth()
     batch_germany()
+    batch_japan()

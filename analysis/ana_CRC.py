@@ -146,6 +146,8 @@ class Sample():
         self.bkp_num = len(self.filter_bkps)
         self.average_bkp_per_species = round(self.bkp_num/len(self.single), 2)
         self.matrix = []
+        self.select_feature_matrix = []
+        self.select_feature_graph = []
         self.nodes = list(self.single.keys()) #node num significant 4
         self.build_matrix()
         self.graph = nx.from_numpy_matrix(self.matrix)
@@ -188,6 +190,39 @@ class Sample():
         # print ('bkp num is', len(self.bkps))
         f.close()
 
+    def given_nodes_make_matrix(self, common_nodes_dict, window):
+        nodes = list(common_nodes_dict.keys())
+        self.select_feature_matrix = np.zeros((len(common_nodes_dict), len(common_nodes_dict)))
+        nodes_index = {}
+        for i in range(len(nodes)):
+            nodes_index[nodes[i]] = i
+        for bkp in self.filter_bkps:
+            from_tax = bkp.from_ref
+            to_tax = bkp.to_ref
+            tax = sorted([from_tax, to_tax])
+            tag = "&".join(tax)
+            if tax[0] == from_tax:
+                from_b = bkp.from_bkp
+                to_b = bkp.to_bkp
+            else:
+                to_b = bkp.from_bkp
+                from_b = bkp.to_bkp 
+            from_b = int(from_b/window)     
+            to_b = int(to_b/window)
+            array = tax + [from_b, to_b]
+            node1 = array[0] + "&" + str(array[2])
+            node2 = array[1] + "&" + str(array[3])
+            if node1 in common_nodes_dict and node2 in common_nodes_dict:
+                pass
+            else:
+                continue
+            a = nodes_index[node1]
+            b = nodes_index[node2]
+            self.select_feature_matrix[a][b] = 1
+            self.select_feature_matrix[b][a] = 1
+        self.select_feature_matrix = np.matrix(self.select_feature_matrix)
+        self.select_feature_graph = nx.from_numpy_matrix(self.select_feature_matrix)
+
     def build_matrix(self):
         self.matrix = np.zeros((len(self.nodes), len(self.nodes)))
         nodes_index = {}
@@ -219,6 +254,7 @@ class Analyze():
         self.disease = ["CRC", "control", "adenoma"]
         self.disease_index = {"CRC":0, "control":1, "adenoma":2}
         self.disease_sample_num = {"CRC":0, "control":0, "adenoma":0}
+        self.disease_sample_num_cohort = {}
 
         self.all_samples()
         self.window = 100
@@ -239,10 +275,15 @@ class Analyze():
                 continue
             self.data.append(sample)
             self.disease_sample_num[sample.disease] += 1
+            if sample.cohort not in self.disease_sample_num_cohort:
+                self.disease_sample_num_cohort[sample.cohort] = {"CRC":0, "control":0, "adenoma":0}
+            self.disease_sample_num_cohort[sample.cohort][sample.disease] += 1
             # print (sample.cohort)
             # print (sample.ID, sample.disease, len(sample.filter_bkps))
             # break
-        print ("sample num count", self.disease_sample_num)
+        for key in self.disease_sample_num_cohort:
+            print ("Cohort", key, self.disease_sample_num_cohort[key])
+        print ("Total", self.disease_sample_num)
 
     def taxonomy_count(self):
         
@@ -815,9 +856,9 @@ class RF():
     def __init__(self):
         analyze = Analyze()
         self.all_data = analyze.data
-        shuffle(self.all_data)
+        # shuffle(self.all_data)
         self.diff_cohorts = self.classify_cohorts()        
-        self.feature_num = 70
+        self.feature_num = 50
         self.window = 500
         self.level = 5
         self.remove_adenoma = True
@@ -825,11 +866,12 @@ class RF():
     def classify_cohorts(self):
         diff_cohorts = {}
         for sample in self.all_data:
+            # if sample.cohort == "ThomasAM_2018a":
+            #     continue
             if sample.cohort not in diff_cohorts:
                 diff_cohorts[sample.cohort] = [sample]
             else:
                 diff_cohorts[sample.cohort].append(sample)
-        print (diff_cohorts.keys())
         return diff_cohorts
 
     def select_tag(self, bkp):
@@ -852,29 +894,48 @@ class RF():
     def select_feature(self, cohort_data):    
         specific_HGT = {} 
         train_num = len(cohort_data)
-        print (train_num)
-        i = 0
+
+        crc_num = 0
+        control_num = 0
         for sample in cohort_data:
-            i += 1
-            # if sample.disease == "adenoma" and self.remove_adenoma:   
-            #     continue
+            if sample.disease == "CRC":
+                crc_num += 1
+            if sample.disease == "control":
+                control_num += 1
+        print (train_num, "CRC:",crc_num, "control:",control_num)
+        i, j = 0, 0
+        for sample in cohort_data:
             for bkp in sample.filter_bkps:
                 tag = self.select_tag(bkp)
                 if tag not in specific_HGT:
-                    specific_HGT[tag] = [[0]*train_num, [0]*train_num]
+                    specific_HGT[tag] = [[0]*crc_num, [0]*control_num]
                 if sample.disease == "CRC":
-                    specific_HGT[tag][0][i-1] += 1
+                    specific_HGT[tag][0][i] += 1
                 if sample.disease == "control":
-                    specific_HGT[tag][1][i-1] += 1
+                    specific_HGT[tag][1][j] += 1
+
+            if sample.disease == "CRC":
+                i += 1
+            if sample.disease == "control":
+                j += 1
+        print (len(specific_HGT))
+        p_specific_HGT = {}
         for tag in specific_HGT:
             crc = specific_HGT[tag][0]
             control = specific_HGT[tag][1]
-            U1, p = mannwhitneyu(crc, control, method="auto")
-            specific_HGT[tag] = p
-        sort_specific_HGT = sorted(specific_HGT.items(), key=lambda item: item[1], reverse = False)[:self.feature_num]
+            if float(sum(crc) + sum(control))/train_num > 0.1:
+                U1, p = mannwhitneyu(crc, control, method="auto")
+                p_specific_HGT[tag] = p
+            # else:
+            #     print (crc, control, float(sum(crc) + sum(control))/train_num)
+        print ("t-test done", len(p_specific_HGT))
+        self.feature_num = len(p_specific_HGT) # use all features
+
+        sort_specific_HGT = sorted(p_specific_HGT.items(), key=lambda item: item[1], reverse = False)[:self.feature_num]
+        print ("sort done")
         sort_specific_HGT_dict = {}
         for i in range(len(sort_specific_HGT)):
-            print (sort_specific_HGT[i])
+            # print (sort_specific_HGT[i])
             sort_specific_HGT_dict[sort_specific_HGT[i][0]] = i
         with open('saved_dictionary.pkl', 'wb') as f:
             pickle.dump(sort_specific_HGT_dict, f)
@@ -914,20 +975,28 @@ class RF():
         data, label = self.generate_data(self.all_data)
         ax = sns.heatmap(data)
         plt.savefig('heatmap.pdf')
-     
+
+    def LODO(self):
+        for lack in range(len(self.diff_cohorts)):
+            train_sam, test_sam = self.split_test_train(lack)
+
+            train_data, train_label =  self.generate_data(train_sam, "train")
+            test_data, test_label = self.generate_data(test_sam, "test") 
+            clf = RandomForestClassifier() #max_depth=2, random_state=0
+            clf.fit(train_data, train_label)     
+            roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
+            print (datasets[lack] , "AUC", roc_auc)  
+            print ("*************************")
+                
     def random_forest(self):
 
-        train_data, train_label = self.generate_data(self.diff_cohorts["ThomasAM_2018a"]+self.diff_cohorts["YuJ_2015"]+self.diff_cohorts["WirbelJ_2018"], "train")
+        train_data, train_label = self.generate_data(self.diff_cohorts["WirbelJ_2018"] + self.diff_cohorts["ThomasAM_2018a"]+self.diff_cohorts["ThomasAM_2018b"], "train")
         clf = RandomForestClassifier() #max_depth=2, random_state=0
         clf.fit(train_data, train_label)
         print ("training is done")
 
 
-        # test_data, test_label = self.generate_data(self.diff_cohorts["WirbelJ_2018"], "test")       
-        # roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
-        # print ("AUC", roc_auc)
-
-        test_data, test_label = self.generate_data(self.diff_cohorts["ThomasAM_2018b"], "test")       
+        test_data, test_label = self.generate_data(self.diff_cohorts["YuJ_2015"], "test")       
         roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
         print ("AUC", roc_auc)
 
@@ -948,18 +1017,105 @@ class RF():
         # roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
         # print ("AUC", roc_auc, correct/len(test_data), len(test_data))
 
+    def split_test_train(self, lack):
+        datasets = list(self.diff_cohorts.keys())
+        train_sam = []
+        test_sam = []
+        for i in range(len(datasets)):
+            if lack == i:
+                test_sam = self.diff_cohorts[datasets[i]]
+            else:
+                train_sam += self.diff_cohorts[datasets[i]]  
+        return train_sam, test_sam       
 
-"""
-('f__Selenomonadaceae&f__Selenomonadaceae', 0.007381178554880574)
-('f__Acutalibacteraceae&f__CAG-272', 0.010626896095500762)
+    def select_common_nodes(self, cohort_data):
+        specific_HGT = {} 
+        train_num = len(cohort_data)
+
+        crc_num = 0
+        control_num = 0
+        for sample in cohort_data:
+            if sample.disease == "CRC":
+                crc_num += 1
+            if sample.disease == "control":
+                control_num += 1
+        print (train_num, "CRC:",crc_num, "control:",control_num)
+        i, j = 0, 0
+        for sample in cohort_data:
+            for bkp in sample.filter_bkps:
+                tag = self.select_tag(bkp)
+                if tag not in specific_HGT:
+                    specific_HGT[tag] = [[0]*crc_num, [0]*control_num]
+                if sample.disease == "CRC":
+                    specific_HGT[tag][0][i] += 1
+                if sample.disease == "control":
+                    specific_HGT[tag][1][j] += 1
+
+            if sample.disease == "CRC":
+                i += 1
+            if sample.disease == "control":
+                j += 1
+
+        p_specific_HGT = {}
+        for tag in specific_HGT:
+            crc = specific_HGT[tag][0]
+            control = specific_HGT[tag][1]
+            # if float(sum(crc) + sum(control))/train_num > 0.05:
+            if max([float(sum(crc))/len(crc), float(sum(control))/len(control)]) > 0.2:
+
+                U1, p = mannwhitneyu(crc, control, method="auto")
+                p_specific_HGT[tag] =  p
+        print ("edges num:", len(p_specific_HGT))
+        sort_specific_HGT = sorted(p_specific_HGT.items(), key=lambda item: item[1], reverse = False)[:self.feature_num]
+        # sort_specific_HGT = p_specific_HGT.items()
+
+        sort_specific_HGT_dict = {}
+        select_nodes = {}
+        for i in range(len(sort_specific_HGT)):
+            # print (sort_specific_HGT[i])
+            sort_specific_HGT_dict[sort_specific_HGT[i][0]] = i
+            edge = sort_specific_HGT[i][0]
+            array = edge.split("&")
+            node1 = array[0] + "&" + array[2]
+            node2 = array[1] + "&" + array[3]
+            select_nodes[node1] = 1
+            select_nodes[node2] = 1
+        return select_nodes
+
+    def complex_feature(self):
+        datasets = list(self.diff_cohorts.keys())
+        for lack in range(len(self.diff_cohorts)):
+            train_sam, test_sam = self.split_test_train(lack)
+            features_dict = self.select_common_nodes(train_sam)
+            for sample in self.all_data:
+                sample.given_nodes_make_matrix(features_dict, self.window)
+
+            train_data, train_label =  self.complex_data(train_sam)
+            test_data, test_label = self.complex_data(test_sam) 
+            clf = RandomForestClassifier(n_estimators=1000, criterion="entropy", min_samples_leaf=5, ) #max_depth=2, random_state=0
+            clf.fit(train_data, train_label)     
+            roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
+            print (datasets[lack] , len(self.diff_cohorts[datasets[lack]]), "AUC", roc_auc)  
+            print ("*************************")
+
+    def complex_data(self, cohort_data):
+        data = []
+        label = []
+        for sample in cohort_data:
+            
+            density = nx.density(sample.select_feature_graph)
+            transitivity = nx.transitivity(sample.select_feature_graph)
+            sample_array = np.array(sample.select_feature_matrix).flatten()   #[density, transitivity]
+            # sample_array = [density, transitivity]
+            # print ("xx", sample_array)
+            data.append(sample_array)
+            # print (sample_array, sample.disease)
+            label.append(sample.disease)
+        data = np.array(data)
+        label = np.array(label)
+        return data, label
 
 
-('o__Selenomonadales&o__Selenomonadales', 0.014672024945974043)
-('o__Lachnospirales&o__Victivallales', 0.022404032554737458)
-('o__Victivallales&o__Victivallales', 0.022475737915170338)
-('o__Peptostreptococcales&o__Tissierellales', 0.0428060113882183)
-('o__TANB77&o__TANB77', 0.047048392371124195)
-"""
 
       
 if __name__ == "__main__":
@@ -987,23 +1143,7 @@ if __name__ == "__main__":
     # analyze.bkp_pair_count()
 
     rf = RF()
-    rf.random_forest()
+    # rf.random_forest()
     # rf.feature_matrix()
-
-
-
-
-
-
-
-
-
-# print (taxonomy.taxonomy_dict["GUT_GENOME000002"])
-
-# file = "run_result/SRR6915098.acc.csv"
-# ID = "SRR6915098"
-# sample = Sample(file, ID)
-# sample.read_bkp()
-# print (sample.disease)
-
-# all_samples()
+    # rf.LODO()
+    rf.complex_feature()

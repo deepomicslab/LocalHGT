@@ -294,8 +294,13 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
                 char j;
                 fq_file.get(j);
                 if (j == '\n'){ //the @ should be the first char in a line
-                    pos = i;
-                    break;                    
+                    fq_file.seekg(i, ios::beg);
+                    getline(fq_file,reads_seq);
+                    string read_name_forward = get_read_ID(reads_seq);
+                    if (read_name_forward.length() < 40){
+                        pos = i;
+                        break;
+                    }                    
                 }
             }
         }       

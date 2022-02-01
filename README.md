@@ -1,4 +1,5 @@
 #LocalHGT
+
 samtools==1.11
 bwa-0.7.17
 scipy
@@ -8,6 +9,7 @@ sklearn
 pysam
 scikit-bio
 Bio
+pyfaidx
 
 install
 make
