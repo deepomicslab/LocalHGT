@@ -68,6 +68,7 @@ class Acc_Bkp(object):
         self.from_ref_lineage = taxonomy.taxonomy_dict[self.from_ref_genome]
         self.to_ref_genome = "_".join(self.to_ref.split("_")[:-1])
         self.to_ref_lineage = taxonomy.taxonomy_dict[self.to_ref_genome]
+        self.score = float(list[9])
         # print (self.from_ref_genome, self.from_ref_lineage, self.to_ref_genome, self.to_ref_lineage)
 
     def print_out(self):
@@ -82,82 +83,163 @@ class Phenotype():
     def __init__(self):
         self.name_disease = {}
         self.name_cohort = {}
+        self.name_bases = {}
+        self.name_basics = {}
         self.ID_disease = {}
         self.ID_cohort = {}
         self.ID_bases = {}
+        self.ID_basics = {}
+        self.name_sample_id = {}
+        self.ID_marker_abundance = {}
+        self.name_marker_abundance = {}
         self.read_pheno()
+        self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/japan.csv")
         self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/yu_2015.csv")
         self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/germany.csv")
-        # self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/france/france.csv")
+        self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/france/france.csv")
         self.read_sra_meta("/mnt/d/breakpoints/script/analysis/italy.csv")
+        self.read_sra_meta("/mnt/d/breakpoints/script/analysis/new_result/usa_canada.csv")
+        self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/austria/austria.csv")     
         
-        
-    def read_sra_meta(self, sra_meta):
+    def read_sra_meta(self, sra_meta, for_name = "no"):
         # f = open(sra_meta)
         df = pd.read_csv(sra_meta)
-        
         for i in range(len(df.index)):
             sra_ID = df["Run"][i]
-            bases = df["Bases"][i]
-            if "sample_name" in df.columns and df["sample_name"][i] != "Illumina":
+            # bases = float(df["Bases"][i])
+            if "sample_name" in df.columns and df["sample_name"][i] != "Illumina" and df["BioProject"][i] != "PRJDB4176" :
                 sample_name = df["sample_name"][i]
             else:
                 sample_name = df["Sample Name"][i]
+
+            study = df["SRA Study"][i]
             # for col in df.columns:
             #     print (col, df[col][i])
-                
-            # print (sra_ID, bases, sample_name) 
+            
             if sample_name not in self.name_disease:
                 continue
+            # if sra_ID == "DRR127737":
+            #     print (sra_ID, sample_name, self.name_disease[sample_name]) 
+
             self.ID_disease[sra_ID] = self.name_disease[sample_name]
             self.ID_cohort[sra_ID] = self.name_cohort[sample_name]
-            self.ID_bases[sra_ID] = bases
+            self.ID_bases[sra_ID] = self.name_bases[sample_name]
+            self.ID_basics[sra_ID] = self.name_basics[sample_name]
+            if sample_name not in sample_abd:
+                # sample_name = df["Sample Name"][i]
+                # sample_name = df["sample_name"][i]
+                sample_id = self.name_sample_id[sample_name]
+                abundance = sample_abd[sample_id]
+                # print ('no abd', sample_name, sample_id, abundance)
+            else:
+                abundance = sample_abd[sample_name]
+            self.ID_marker_abundance[sra_ID] = abundance
+            self.name_marker_abundance[sample_name] = abundance
+            # print (sra_ID, sample_name, study, ID_abd_file[sra_ID])
+            # get_abd(study, sample_name)
+            # self.name_bases[sample_name] = bases
         # print (len(self.ID_bases))
 
     def read_pheno(self):     
         df = pd.read_excel(pheno_file, header=None) 
         # print (df)
+        # crc = 0
+        # control = 0 
         for index, row in df.iterrows():
+            if index == 0:
+                continue
             sample_name = row[3]
+            sample_id = row[2]
             condition = row[6]
             full_disease = row[7]
             cohort = row[1]
-            # print (cohort)
+            bases = float(row[18])
+            age = str(row[8])
+            BMI = str(row[25])
+            gender = gender_dict[str(row[11])]
+            # print (index, age, gender, BMI)
+            if age == "nan":
+                age = 0
+            else:
+                age = int(age)
+            
+            
+            # print (BMI)
+            if BMI == "nan":
+                BMI = 0
+            else:
+                # print (BMI)
+                BMI = round(float(BMI))
+            if cohort == "ZellerG_2014" or cohort == "YachidaS_2019" or cohort == "HanniganGD_2017":
+                sample_name = row[2]
+
+            # if cohort == "YachidaS_2019":
+            #     print (cohort, sample_name)
+
             self.name_disease[sample_name] = condition
             self.name_cohort[sample_name] = cohort
+            self.name_basics[sample_name] = [age, gender, BMI]
+            self.name_bases[sample_name] = bases
+            self.name_sample_id[sample_name] = sample_id
             # print (sample_name,condition) 
+        # print (crc, control)
 
 class Sample():
 
-    def __init__(self, bkp_file, ID):
+    def __init__(self, bkp_file, ID, level):
         self.bkp_file = bkp_file
         self.bkps = []
         self.filter_bkps = [] #recheck, not the same species
         self.ID = ID
-        self.disease = phenotype.ID_disease[ID]
-        self.cohort = phenotype.ID_cohort[ID]    
-        self.bases = phenotype.ID_bases[ID]    
+        self.tag = "normal"
+        
+        if ID in phenotype.ID_disease:
+            self.disease = phenotype.ID_disease[ID]
+            self.cohort = phenotype.ID_cohort[ID]    
+            self.bases = phenotype.ID_bases[ID]   
+            self.basic_features =  phenotype.ID_basics[ID] 
+            self.marker_abundance = phenotype.ID_marker_abundance[ID]
+        elif ID in phenotype.name_disease:
+            self.disease = phenotype.name_disease[ID]
+            self.cohort = phenotype.name_cohort[ID]    
+            self.bases = phenotype.name_bases[ID]    
+            self.basic_features = phenotype.name_basics[ID] 
+            self.marker_abundance = phenotype.name_marker_abundance[ID] 
+        else:
+            print ("no pheno", ID) 
+            self.tag = "no pheno"    
         self.single = {}
         self.pair = {}
-        self.level = 5
+        # self.level = 5
+        self.level = level
         
 
         self.read_bkp()
         self.bkp_num = len(self.filter_bkps)
-        self.average_bkp_per_species = round(self.bkp_num/len(self.single), 2)
-        self.matrix = []
-        self.select_feature_matrix = []
-        self.select_feature_graph = []
-        self.nodes = list(self.single.keys()) #node num significant 4
-        self.build_matrix()
-        self.graph = nx.from_numpy_matrix(self.matrix)
-        self.graph_density = nx.density(self.graph) #significant 4 5 6
-        self.graph_average_clustering = nx.average_clustering(self.graph, nodes=None, weight=None, count_zeros=True) #not
-        self.transtivity = nx.transitivity(self.graph) #significant 6
-        self.weighted_degree = self.matrix.sum(axis=1, dtype='float') #list
-        # print (self.weighted_degree)
+        if self.bkp_num == 0:
+            self.tag = "no bkp"
+            print ("no bkp", ID)
+        if self.tag != "no bkp":
+            pass
+            # """
+            self.average_bkp_per_species = round(self.bkp_num/len(self.single), 2)
+            self.matrix = []
+            self.select_feature_matrix = []
+            self.select_feature_graph = []
+            self.select_feature_array = []
+            self.nodes = list(self.single.keys()) #node num significant 4
+            self.build_matrix()
+            self.graph = nx.from_numpy_matrix(self.matrix)
+            self.graph_density = nx.density(self.graph) #significant 4 5 6
+            self.graph_average_clustering = nx.average_clustering(self.graph, nodes=None, weight=None, count_zeros=True) #not
+            self.transtivity = nx.transitivity(self.graph) #significant 6
+            self.weighted_degree = self.matrix.sum(axis=1, dtype='float') #list
+            # print (self.weighted_degree)
+            # """
+        # print ("one sample")
 
     def read_bkp(self):
+        window = 500
         f = open(self.bkp_file)
         all_rows = csv.reader(f)
         for row in all_rows:
@@ -168,9 +250,27 @@ class Sample():
             self.bkps.append(eb)
             if eb.from_ref_genome != eb.to_ref_genome and eb.from_ref_lineage.split(";")[6] != eb.to_ref_lineage.split(";")[6]:
                 self.filter_bkps.append(eb)
-
-                from_tax = eb.from_ref_lineage.split(";")[self.level]
-                to_tax = eb.to_ref_lineage.split(";")[self.level]
+    
+                if self.level == 7:
+                    from_tax = eb.from_ref
+                    to_tax = eb.to_ref
+                    tax = sorted([from_tax, to_tax])
+                    tag = "&".join(tax)
+                    if tax[0] == from_tax:
+                        from_b = eb.from_bkp
+                        to_b = eb.to_bkp
+                    else:
+                        to_b = eb.from_bkp
+                        from_b = eb.to_bkp 
+                    from_b = int(from_b/window)     
+                    to_b = int(to_b/window)
+                    new_tag = "&".join(tax) + "&" +str(from_b) + "&"+ str(to_b)
+                    array = tax + [from_b, to_b]
+                    from_tax = array[0] + "&" + str(array[2])
+                    to_tax = array[1] + "&" + str(array[3])
+                else:
+                    from_tax = eb.from_ref_lineage.split(";")[self.level]
+                    to_tax = eb.to_ref_lineage.split(";")[self.level]
 
                 if from_tax not in self.single:
                     self.single[from_tax] = 1
@@ -190,32 +290,52 @@ class Sample():
         # print ('bkp num is', len(self.bkps))
         f.close()
 
-    def given_nodes_make_matrix(self, common_nodes_dict, window):
+    def given_nodes_make_matrix(self, common_nodes_dict, window, select_edges):
         nodes = list(common_nodes_dict.keys())
-        self.select_feature_matrix = np.zeros((len(common_nodes_dict), len(common_nodes_dict)))
+        n = len(common_nodes_dict)
+        self.select_feature_matrix = np.zeros((n, n))
+        self.select_feature_array = np.zeros(len(select_edges))
         nodes_index = {}
         for i in range(len(nodes)):
             nodes_index[nodes[i]] = i
         for bkp in self.filter_bkps:
-            from_tax = bkp.from_ref
-            to_tax = bkp.to_ref
-            tax = sorted([from_tax, to_tax])
-            tag = "&".join(tax)
-            if tax[0] == from_tax:
-                from_b = bkp.from_bkp
-                to_b = bkp.to_bkp
+            
+            if self.level == 7:
+                from_tax = bkp.from_ref
+                to_tax = bkp.to_ref
+                tax = sorted([from_tax, to_tax])
+                tag = "&".join(tax)
+                if tax[0] == from_tax:
+                    from_b = bkp.from_bkp
+                    to_b = bkp.to_bkp
+                else:
+                    to_b = bkp.from_bkp
+                    from_b = bkp.to_bkp 
+                from_b = int(from_b/window)     
+                to_b = int(to_b/window)
+                new_tag = "&".join(tax) + "&" +str(from_b) + "&"+ str(to_b)
+                array = tax + [from_b, to_b]
+                node1 = array[0] + "&" + str(array[2])
+                node2 = array[1] + "&" + str(array[3])
             else:
-                to_b = bkp.from_bkp
-                from_b = bkp.to_bkp 
-            from_b = int(from_b/window)     
-            to_b = int(to_b/window)
-            array = tax + [from_b, to_b]
-            node1 = array[0] + "&" + str(array[2])
-            node2 = array[1] + "&" + str(array[3])
+                from_tax = bkp.from_ref_lineage.split(";")[self.level] #  bkp.from_ref
+                to_tax = bkp.to_ref_lineage.split(";")[self.level]  #bkp.to_ref
+                tax = sorted([from_tax, to_tax])
+                new_tag = "&".join(tax)       
+                node1 = from_tax  
+                node2 = to_tax   
+
+
             if node1 in common_nodes_dict and node2 in common_nodes_dict:
                 pass
             else:
                 continue
+            
+            if new_tag in select_edges:
+                # if self.select_feature_array[select_edges[new_tag]] < bkp.score:
+                #     self.select_feature_array[select_edges[new_tag]] = bkp.score #1
+                self.select_feature_array[select_edges[new_tag]] = 1
+                # print (bkp.score)
             a = nodes_index[node1]
             b = nodes_index[node2]
             self.select_feature_matrix[a][b] = 1
@@ -230,27 +350,37 @@ class Sample():
             nodes_index[self.nodes[i]] = i
         for pairs in self.pair.keys():
             pair_list = pairs.split("&")
-            if pair_list[0] == pair_list[1]:
+            if self.level == 7:
+                node1 = pair_list[0] + "&" + pair_list[1]
+                node2 = pair_list[2] + "&" + pair_list[3]
+            else:
+                node1 = pair_list[0]
+                node2 = pair_list[1]
+            if node1 == node2:
                 continue
-            if self.check_valid_name(pair_list[0]) == False or self.check_valid_name(pair_list[1]) == False:
+            if self.check_valid_name(node1) == False or self.check_valid_name(node2) == False:
                 continue  #remove s__
             # print (pair_list[0], self.check_valid_name(pair_list[0]))
-            a = nodes_index[pair_list[0]]
-            b = nodes_index[pair_list[1]]
+            a = nodes_index[node1]
+            b = nodes_index[node2]
             self.matrix[a][b] = 1
             self.matrix[b][a] = 1
         self.matrix = np.matrix(self.matrix)
 
     def check_valid_name(self, name):
-        if name.split("__")[1] != '':
-            return True
+        if self.level < 7:
+            if name.split("__")[1] != '':
+                return True
+            else:
+                return False
         else:
-            return False
+            return True
         
 class Analyze():
 
-    def __init__(self):
+    def __init__(self, level):
         self.data = []
+        self.level = level
         self.disease = ["CRC", "control", "adenoma"]
         self.disease_index = {"CRC":0, "control":1, "adenoma":2}
         self.disease_sample_num = {"CRC":0, "control":0, "adenoma":0}
@@ -262,6 +392,7 @@ class Analyze():
     def all_samples(self):
         all_acc_file = "acc.list"
         os.system(f"ls new_result/*acc.csv>{all_acc_file}")
+
         for line in open(all_acc_file):
             acc_file = line.strip()
             ID = acc_file.split("/")[1].split(".")[0]
@@ -269,10 +400,14 @@ class Analyze():
             # os.system(f"python3 /mnt/d/breakpoints/script/remove_repeat.py {acc_file} new_result/{new_file}")
             acc_file = f"new_result/{new_file}"
             
-            sample = Sample(acc_file, ID)
-            # print (sample.cohort)
+            sample = Sample(acc_file, ID, self.level)
+            if sample.tag == "no pheno" or sample.tag == "no bkp":
+                continue            
             if sample.disease == "adenoma":
                 continue
+            # if sample.bases < 2000000000:
+            #     continue
+
             self.data.append(sample)
             self.disease_sample_num[sample.disease] += 1
             if sample.cohort not in self.disease_sample_num_cohort:
@@ -852,16 +987,26 @@ class Analyze():
             sec = pair[0].split("&")[1]
             print (genome_lineag[fir], genome_lineag[sec]) 
 
+    def __del__(self):
+        del self.data
+        del self.disease_sample_num_cohort
+        print ("object, deleted")
+
 class RF():
-    def __init__(self):
-        analyze = Analyze()
+
+    def __init__(self, level, meta_flag, feature_num, common_ratio):
+        analyze = Analyze(level)
         self.all_data = analyze.data
+        del analyze
         # shuffle(self.all_data)
         self.diff_cohorts = self.classify_cohorts()        
-        self.feature_num = 50
+        self.feature_num = feature_num #10000
         self.window = 500
-        self.level = 5
+        self.common_ratio = common_ratio #0.01
+        self.level = self.all_data[0].level
         self.remove_adenoma = True
+        self.meta_flag = meta_flag
+        print ("RF init done")
 
     def classify_cohorts(self):
         diff_cohorts = {}
@@ -877,19 +1022,26 @@ class RF():
     def select_tag(self, bkp):
         # from_tax = bkp.from_ref_lineage.split(";")[self.level] #  bkp.from_ref
         # to_tax = bkp.to_ref_lineage.split(";")[self.level]  #bkp.to_ref
-        from_tax = bkp.from_ref
-        to_tax = bkp.to_ref
-        tax = sorted([from_tax, to_tax])
-        tag = "&".join(tax)
-        if tax[0] == from_tax:
-            from_b = bkp.from_bkp
-            to_b = bkp.to_bkp
+        if self.level == 7:
+            from_tax = bkp.from_ref
+            to_tax = bkp.to_ref
+            tax = sorted([from_tax, to_tax])
+            tag = "&".join(tax)
+            if tax[0] == from_tax:
+                from_b = bkp.from_bkp
+                to_b = bkp.to_bkp
+            else:
+                to_b = bkp.from_bkp
+                from_b = bkp.to_bkp 
+            from_b = int(from_b/self.window)     
+            to_b = int(to_b/self.window)
+            return "&".join(tax) + "&" +str(from_b) + "&"+ str(to_b)
         else:
-            to_b = bkp.from_bkp
-            from_b = bkp.to_bkp 
-        from_b = int(from_b/self.window)     
-        to_b = int(to_b/self.window)
-        return "&".join(tax) + "&" +str(from_b) + "&"+ str(to_b)
+            from_tax = bkp.from_ref_lineage.split(";")[self.level] #  bkp.from_ref
+            to_tax = bkp.to_ref_lineage.split(";")[self.level]  #bkp.to_ref
+            tax = sorted([from_tax, to_tax])
+            tag = "&".join(tax)
+            return tag
 
     def select_feature(self, cohort_data):    
         specific_HGT = {} 
@@ -1042,72 +1194,163 @@ class RF():
         print (train_num, "CRC:",crc_num, "control:",control_num)
         i, j = 0, 0
         for sample in cohort_data:
+            sample_dict = {}
             for bkp in sample.filter_bkps:
                 tag = self.select_tag(bkp)
                 if tag not in specific_HGT:
-                    specific_HGT[tag] = [[0]*crc_num, [0]*control_num]
+                    specific_HGT[tag] = [0, 0]
+                #only add once
+                # if tag in sample_dict:
+                #     continue
+                # else:
+                #     sample_dict[tag] = 1
                 if sample.disease == "CRC":
-                    specific_HGT[tag][0][i] += 1
+                    specific_HGT[tag][0] += 1
                 if sample.disease == "control":
-                    specific_HGT[tag][1][j] += 1
+                    specific_HGT[tag][1] += 1
 
             if sample.disease == "CRC":
                 i += 1
             if sample.disease == "control":
                 j += 1
-
+        print ("specific_HGT num", len(specific_HGT))
         p_specific_HGT = {}
         for tag in specific_HGT:
-            crc = specific_HGT[tag][0]
-            control = specific_HGT[tag][1]
+            crc = specific_HGT[tag][0]*[1] + (crc_num-specific_HGT[tag][0]) *[0]
+            control = specific_HGT[tag][1]*[1] + (control_num-specific_HGT[tag][1])*[0]
             # if float(sum(crc) + sum(control))/train_num > 0.05:
-            if max([float(sum(crc))/len(crc), float(sum(control))/len(control)]) > 0.2:
+            # if max([float(sum(crc))/len(crc), float(sum(control))/len(control)]) > 0.1:  #0.2
+            if max([float(specific_HGT[tag][0])/crc_num, float(specific_HGT[tag][1])/control_num]) > self.common_ratio:
 
                 U1, p = mannwhitneyu(crc, control, method="auto")
+                # p=0
+                # if p == 0:
+                #     print (tag, specific_HGT[tag][0], specific_HGT[tag][1])
                 p_specific_HGT[tag] =  p
-        print ("edges num:", len(p_specific_HGT))
+                # p_specific_HGT[tag] =  -1 * max([float(specific_HGT[tag][0])/crc_num, float(specific_HGT[tag][1])/control_num])
+        print ("filter specific_HGT num", len(p_specific_HGT))
+        # self.feature_num = len(p_specific_HGT)
         sort_specific_HGT = sorted(p_specific_HGT.items(), key=lambda item: item[1], reverse = False)[:self.feature_num]
         # sort_specific_HGT = p_specific_HGT.items()
 
         sort_specific_HGT_dict = {}
         select_nodes = {}
+        select_edges = {}
         for i in range(len(sort_specific_HGT)):
-            # print (sort_specific_HGT[i])
+            if i < 10:
+                print (sort_specific_HGT[i], specific_HGT[sort_specific_HGT[i][0]][0], specific_HGT[sort_specific_HGT[i][0]][1])
             sort_specific_HGT_dict[sort_specific_HGT[i][0]] = i
             edge = sort_specific_HGT[i][0]
+            select_edges[edge] = i
             array = edge.split("&")
-            node1 = array[0] + "&" + array[2]
-            node2 = array[1] + "&" + array[3]
+            if self.level == 7:
+            
+                node1 = array[0] + "&" + array[2]
+                node2 = array[1] + "&" + array[3]
+            else:
+                node1 = array[0]
+                node2 = array[1]
             select_nodes[node1] = 1
             select_nodes[node2] = 1
-        return select_nodes
+        return select_nodes, select_edges
 
-    def complex_feature(self):
+    def get_feature(self, select_feature_num):
+        feature_importances = np.load('importances.npy', allow_pickle=True) 
+        # select_edges = np.load('features.npy', allow_pickle=True) 
+        with open('features.pkl', 'rb') as f:
+            select_edges = pickle.load(f)
+
+        # print (feature_importances)
+        i = 0
+        feature_importances_dict = {}
+        for edge in select_edges.keys():
+            feature_importances_dict[edge] = feature_importances[i]
+            # print (i)
+            i += 1
+        # print ("sort")
+        sort_select_edges = sorted(feature_importances_dict.items(), key=lambda item: item[1], reverse = True)
+        print (sort_select_edges[:5])
+
+
+        select_nodes = {}
+        select_edges = {}
+        for i in range(select_feature_num):
+
+            edge = sort_select_edges[i][0]
+            select_edges[edge] = i
+            array = edge.split("&")
+            node1 = array[0]
+            node2 = array[1]
+            select_nodes[node1] = 1
+            select_nodes[node2] = 1
+        # print (select_nodes, select_edges)
+        print ("features readed.")
+        return select_nodes, select_edges
+
+    def complex_feature(self, select_feature_num):
+        auc_list = []
         datasets = list(self.diff_cohorts.keys())
+        
         for lack in range(len(self.diff_cohorts)):
             train_sam, test_sam = self.split_test_train(lack)
-            features_dict = self.select_common_nodes(train_sam)
+            print ("samples splitted.")
+            # features_dict, select_edges = self.select_common_nodes(train_sam)
+            features_dict, select_edges = self.get_feature(select_feature_num)
+            print ("features selected.")
+            check_features = {}
             for sample in self.all_data:
-                sample.given_nodes_make_matrix(features_dict, self.window)
+                sample.given_nodes_make_matrix(features_dict, self.window, select_edges)
 
+                hit_num = np.sum(sample.select_feature_array)
+                if sample.cohort not in check_features:
+                    check_features[sample.cohort] = [[],[]]
+                if sample.disease == "CRC":
+                    check_features[sample.cohort][0].append(hit_num)
+                if sample.disease == "control":
+                    check_features[sample.cohort][1].append(hit_num)
+            for cohort in check_features:
+                if len(check_features[cohort][0]) > 0:
+                    print (cohort, int(np.median(check_features[cohort][0])), int(np.median(check_features[cohort][1])))
+                else:
+                    print (cohort, 0)
+            print ("prepare data")
             train_data, train_label =  self.complex_data(train_sam)
             test_data, test_label = self.complex_data(test_sam) 
-            clf = RandomForestClassifier(n_estimators=1000, criterion="entropy", min_samples_leaf=5, ) #max_depth=2, random_state=0
+            if len(test_data) < 10:
+                continue
+            print ("start training")
+            clf = RandomForestClassifier(n_estimators=1000, criterion="entropy", min_samples_leaf=5, ) #max_depth=2, random_state=0 entropy gini
             clf.fit(train_data, train_label)     
             roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
-            print (datasets[lack] , len(self.diff_cohorts[datasets[lack]]), "AUC", roc_auc)  
+            print (datasets[lack] , len(self.diff_cohorts[datasets[lack]]), "AUC", roc_auc) 
+            useful_fea = 0
+            for c in  clf.feature_importances_:
+                if c > 0:
+                    useful_fea += 1
+            # print (useful_fea, clf.feature_importances_)
+            # self.sort_features(clf, select_edges)
             print ("*************************")
+            auc_list.append(roc_auc)
+        return auc_list
 
     def complex_data(self, cohort_data):
         data = []
         label = []
         for sample in cohort_data:
             
-            density = nx.density(sample.select_feature_graph)
-            transitivity = nx.transitivity(sample.select_feature_graph)
-            sample_array = np.array(sample.select_feature_matrix).flatten()   #[density, transitivity]
+            # density = nx.density(sample.select_feature_graph)
+            # transitivity = nx.transitivity(sample.select_feature_graph)
+            # sample_array = np.array(sample.select_feature_matrix).flatten()   #[density, transitivity]
             # sample_array = [density, transitivity]
-            # print ("xx", sample_array)
+            # sample_array = sample.basic_features + [sample.bases]
+
+            # if self.meta_flag:
+            #     sample_array = list(sample.select_feature_array) + sample.basic_features + [sample.bases]
+            # else:
+            #     sample_array = list(sample.select_feature_array)# + sample.basic_features + [sample.bases]
+            # sample_array = sample.marker_abundance + sample.basic_features + [sample.bases] + list(sample.select_feature_array)
+            sample_array = list(sample.select_feature_array) #+ sample.marker_abundance
+            # sample_array = list(sample.select_feature_array) 
             data.append(sample_array)
             # print (sample_array, sample.disease)
             label.append(sample.disease)
@@ -1115,16 +1358,176 @@ class RF():
         label = np.array(label)
         return data, label
 
+    def sort_features(self, clf, select_edges):
+        # print (len(select_edges),len(clf.feature_importances_))
+        # i = 0
+        # feature_importances_dict = {}
+        # for edge in select_edges.keys():
+        #     feature_importances_dict[edge] = clf.feature_importances_[i]
+        #     print (i)
+        #     i += 1
+        # print ("sort")
+        # sort_select_edges = sorted(select_edges.items(), key=lambda item: item[1], reverse = True)
+        # print (sort_select_edges[:5])
+        np.save('importances.npy',clf.feature_importances_) 
+        # np.save('features.npy',select_edges) 
+        with open('features.pkl', 'wb') as f:
+            pickle.dump(select_edges, f)
+
+    def compute_feature(self):
+        datasets = list(self.diff_cohorts.keys())
+        train_sam, test_sam = self.split_test_train(datasets[0])
+        all_sam = train_sam + test_sam
+        print ("samples got.")
+        features_dict, select_edges = self.select_common_nodes(all_sam)
+        # features_dict, select_edges = self.get_feature()
+        print (len(features_dict), "nodes selected.")
+        for sample in self.all_data:
+            sample.given_nodes_make_matrix(features_dict, self.window, select_edges)
+        train_data, train_label =  self.complex_data(all_sam)
+        print ("start training")
+        clf = RandomForestClassifier(n_estimators=1000, criterion="entropy", min_samples_leaf=5, ) #max_depth=2, random_state=0 entropy gini
+        clf.fit(train_data, train_label)   
 
 
+        useful_fea = 0
+        for c in  clf.feature_importances_:
+            if c > 0:
+                useful_fea += 1
+        print (useful_fea, clf.feature_importances_)
+        self.sort_features(clf, select_edges)
+        print ("feature saved*************************")
+
+
+    def __del__(self):
+        del self.all_data
+        del self.diff_cohorts
+        print ("object, deleted")
+
+def get_abd():
+    marker_species_dict = {}
+    i = 0
+    for species in marker_species:
+        if species.split()[-1] == "spp.":
+            form_name = "g__" + species.split()[0] 
+        else:
+            form_name = "s__" + "_".join(species.split()) 
+        # print (form_name)
+        marker_species_dict[form_name] = i 
+        i += 1
+    print (marker_species_dict)
+    return marker_species_dict
+
+def get_samples_abd():
+    sample_abd = {}
+    marker_species_dict = get_abd()
+    marker_species_num = len(marker_species)
+    for cohort in cohort_abd:
+        abd_file = cohort_abd[cohort]
+        f = open("use/" + abd_file, 'r')
+        i = 0
+        for line in f:
+            array = line.strip().split()
+            if i == 0:
+                sample_list = array
+                for sample in sample_list:
+                    sample_abd[sample] = [0] * marker_species_num
+            else:
+                species_name = array[0].split("|")[-1]
+                
+                if species_name in marker_species_dict:
+                    species_index = marker_species_dict[species_name]
+                    for j in range(len(sample_list)):
+                        sample = sample_list[j]
+                        abundance = float(array[j+1])
+                        sample_abd[sample][species_index] = abundance
+                else:
+                    genus_name = species_name = array[0].split("|")[-2]
+                    if genus_name in marker_species_dict:
+                        species_index = marker_species_dict[genus_name]
+                        for j in range(len(sample_list)):
+                            sample = sample_list[j]
+                            abundance = float(array[j+1])
+                            sample_abd[sample][species_index] += abundance
+                            # print (sample_abd[sample])
+                        
+                # print (len(sample_list), len(array))
+            i += 1
+    # print (sample_abd)
+    return sample_abd
+
+def get_abd_file_name():
+    ID_abd_file = {} 
+    file = "last_gutmeta_sample.tsv"
+    df = pd.read_csv(file, sep = "\t")
+    for i in range(len(df.index)):
+        sra_ID = df["run_name"][i]
+        sample_name = df["sample_name"][i]
+        project_name  = df["project_name"][i]
+        if pd.isnull(sra_ID):
+            continue
+        #     print ("******")
+        # print (sra_ID, sample_name, project_name)
+        array = sra_ID.split(";")
+        for ID in array:
+            ID = ID.strip()
+            ID_abd_file[ID] = project_name + "_" + sample_name
+            # print (ID, project_name + "_" + sample_name)
+        # print (sra_ID, sample_name, project_name)
+    return ID_abd_file
       
+
+
 if __name__ == "__main__":
     level_dict = {"phylum":1, "class":2, "order":3, "family":4, "genus":5, "species":6}
+    gender_dict = {"male":0, "female":1, "nan": 2}
     # sra_meta = "italy.csv"
     pheno_file = "allmetadata.xlsx"#"CRC.xlsx"
     UHGG_meta = "/mnt/d/breakpoints/HGT/UHGG/genomes-all_metadata.tsv"
+    cohort_abd = {"YuJ_2015":"2021-03-31.YuJ_2015.relative_abundance.xls",
+    "WirbelJ_2018":"2021-03-31.WirbelJ_2018.relative_abundance.xls",
+    "HanniganGD_2017":"2021-03-31.HanniganGD_2017.relative_abundance.xls",
+    "YachidaS_2019":"2021-10-14.YachidaS_2019.relative_abundance.xls",
+    "ThomasAM_2018a":"2021-03-31.ThomasAM_2018a.relative_abundance.xls",
+    "ThomasAM_2018b":"2021-03-31.ThomasAM_2018b.relative_abundance.xls",
+    "ZellerG_2014":"2021-03-31.ZellerG_2014.relative_abundance.xls",
+    }
+    marker_species = ["Peptostreptococcus stomatis", "Fusobacterium nucleatum", "Parvimonas spp.", "Porphyromonas asaccharolytica", "Gemella morbillorum",
+    "Clostridium symbiosum", "Parvimonas micra", "Escherichia coli", "Streptococcus parasanguinis", "Clostridium leptum", "Clostridium hathewayi",
+    "Anaerotruncus colihominis", "Prevotella copri", "Lachnospiraceae 3 1 57FAA CT1", "Actinomyces graevenitzii", "Alistipes spp."]
+    # print (cohort_abd)
+    sample_abd = get_samples_abd()
+    # ID_abd_file = get_abd_file_name()
     phenotype = Phenotype()
     taxonomy = Taxonomy()
+    
+    result_file = open("random_forest.log", 'w')
+    level, meta_flag, feature_num, common_ratio = 5, False, 10000, 0.01
+    rf = RF(level, meta_flag, feature_num, common_ratio)
+    rf.compute_feature()
+    auc_list = rf.complex_feature(120)
+    # for select_feature_num in range(50, 200, 10):
+    #     auc_list = rf.complex_feature(select_feature_num)
+    # # del rf
+    #     print (select_feature_num, auc_list, np.mean(auc_list), np.median(auc_list))
+    #     print (select_feature_num, auc_list, np.mean(auc_list), np.median(auc_list), file = result_file)
+
+    # for level in [6, 5, 4, 3]:
+    #     for meta_flag in [False, True]:
+    #         for feature_num in [10000, 5000, 1000, 100]:
+    #             for common_ratio in [0.1, 0.01, 0.2, 0.3]:
+    #                 print ("result", level, meta_flag, feature_num, common_ratio)
+    #                 print (level, meta_flag, feature_num, common_ratio, file = result_file)
+    #                 rf = RF(level, meta_flag, feature_num, common_ratio)
+    #                 auc_list = rf.complex_feature()
+    #                 del rf
+    #                 print (auc_list, np.mean(auc_list), np.median(auc_list), file = result_file)
+                    
+    #                 print ("result", auc_list, np.mean(auc_list), np.median(auc_list))
+    #                 print ("**********", file = result_file)
+    result_file.close()
+
+
 
     # cohort = "ThomasAM_2018b"
     # analyze = Analyze()
@@ -1142,8 +1545,7 @@ if __name__ == "__main__":
     # analyze.plot_most_common_pair()
     # analyze.bkp_pair_count()
 
-    rf = RF()
+    
     # rf.random_forest()
     # rf.feature_matrix()
     # rf.LODO()
-    rf.complex_feature()
