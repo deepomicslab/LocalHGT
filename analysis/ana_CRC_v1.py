@@ -1180,38 +1180,6 @@ class RF():
                 train_sam += self.diff_cohorts[datasets[i]]  
         return train_sam, test_sam       
 
-    def select_ranking(self, cohort_data):
-        select_nodes = {}
-        select_edges = {}
-        i = 0
-        for sample in cohort_data:
-            for bkp in sample.filter_bkps:
-                edge = self.select_tag(bkp)
-                if edge not in select_edges:
-                    select_edges[edge] = i
-                    i += 1
-                array = edge.split("&")
-                if self.level == 7:
-                    node1 = array[0] + "&" + array[2]
-                    node2 = array[1] + "&" + array[3]
-                else:
-                    node1 = array[0]
-                    node2 = array[1]
-                select_nodes[node1] = 1
-                select_nodes[node2] = 1
-
-        print (len(select_edges), "edges selected.")
-
-        for sample in self.all_data:
-            sample.given_nodes_make_matrix(select_nodes, self.window, select_edges)
-        train_data, train_label =  self.complex_data(cohort_data)
-        print ("start training")
-        clf = RandomForestClassifier(n_estimators=1000, criterion="entropy", min_samples_leaf=5,random_state = np.random.seed(2021)) #max_depth=2, random_state=0 entropy gini
-        clf.fit(train_data, train_label)   
-        self.sort_features(clf, select_edges)
-        print ("feature saved*************************")
-
-
     def select_common_nodes(self, cohort_data):
         specific_HGT = {} 
         train_num = len(cohort_data)
@@ -1254,15 +1222,12 @@ class RF():
             # if max([float(sum(crc))/len(crc), float(sum(control))/len(control)]) > 0.1:  #0.2
             if max([float(specific_HGT[tag][0])/crc_num, float(specific_HGT[tag][1])/control_num]) > self.common_ratio:
 
-                # U1, p = mannwhitneyu(crc, control, method="auto")
+                U1, p = mannwhitneyu(crc, control, method="auto")
                 # if p > 0.05:
                 #     continue
                 # p=0
                 # if p == 0:
                 #     print (tag, specific_HGT[tag][0], specific_HGT[tag][1])
-                a = float(specific_HGT[tag][0])/crc_num
-                b = float(specific_HGT[tag][1])/control_num
-                p = - abs(a - b) 
                 p_specific_HGT[tag] =  p
                 # p_specific_HGT[tag] =  -1 * max([float(specific_HGT[tag][0])/crc_num, float(specific_HGT[tag][1])/control_num])
         print ("filter specific_HGT num", len(p_specific_HGT))
@@ -1311,8 +1276,6 @@ class RF():
 
         select_nodes = {}
         select_edges = {}
-        if select_feature_num > len(sort_select_edges):
-            select_feature_num = len(sort_select_edges)
         for i in range(select_feature_num):
 
             edge = sort_select_edges[i][0]
@@ -1334,9 +1297,8 @@ class RF():
             train_sam, test_sam = self.split_test_train(lack)
             print ("samples splitted.")
             # features_dict, select_edges = self.select_common_nodes(train_sam)
-            self.select_ranking(train_sam)
             features_dict, select_edges = self.get_feature(select_feature_num)
-            print ("%s features selected."%(len(select_edges)))
+            print ("features selected.")
             check_features = {}
             for sample in self.all_data:
                 sample.given_nodes_make_matrix(features_dict, self.window, select_edges)
@@ -1359,7 +1321,7 @@ class RF():
             if len(test_data) < 10:
                 continue
             print ("start training")
-            clf = RandomForestClassifier(n_estimators=1000, criterion="entropy", min_samples_leaf=5, random_state = np.random.seed(2021)) #max_depth=2, random_state=0 entropy gini
+            clf = RandomForestClassifier(n_estimators=1000, criterion="entropy", min_samples_leaf=5, ) #max_depth=2, random_state=0 entropy gini
             clf.fit(train_data, train_label)     
             roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
             print (datasets[lack] , len(self.diff_cohorts[datasets[lack]]), "AUC", roc_auc) 
@@ -1389,9 +1351,8 @@ class RF():
             # else:
             #     sample_array = list(sample.select_feature_array)# + sample.basic_features + [sample.bases]
             # sample_array = sample.marker_abundance + sample.basic_features + [sample.bases] + list(sample.select_feature_array)
-            # sample_array = list(sample.select_feature_array) + sample.marker_abundance
-            # sample_array = sample.marker_abundance
-            sample_array = list(sample.select_feature_array) 
+            sample_array = list(sample.select_feature_array) #+ sample.marker_abundance
+            # sample_array = list(sample.select_feature_array) 
             data.append(sample_array)
             # print (sample_array, sample.disease)
             label.append(sample.disease)
@@ -1415,176 +1376,19 @@ class RF():
         with open('features.pkl', 'wb') as f:
             pickle.dump(select_edges, f)
 
-    def each_cohort_diff(self):
-        cohort_markers = {}
-        all_markers = {}
-        select_markers = {}
-        for cohort in self.diff_cohorts:
-            cohort_data = self.diff_cohorts[cohort]
-            cohort_markers[cohort] = {}
-            train_num = len(cohort_data)
-            specific_HGT = {} 
-            crc_num, control_num = 0, 0
-            for sample in cohort_data:
-                if sample.disease == "CRC":
-                    crc_num += 1
-                if sample.disease == "control":
-                    control_num += 1
-                sample_dict = {}
-                for bkp in sample.filter_bkps:
-                    tag = self.select_tag(bkp)
-                    if tag not in specific_HGT:
-                        specific_HGT[tag] = [0, 0]
-                    #only add once
-                    if tag in sample_dict:
-                        continue
-                    else:
-                        sample_dict[tag] = 1
-                    if sample.disease == "CRC":
-                        specific_HGT[tag][0] += 1
-                    if sample.disease == "control":
-                        specific_HGT[tag][1] += 1
-            print (cohort, "specific_HGT num", len(specific_HGT))
-            for tag in specific_HGT:
-                crc = specific_HGT[tag][0]*[1] + (crc_num-specific_HGT[tag][0]) *[0]
-                control = specific_HGT[tag][1]*[1] + (control_num-specific_HGT[tag][1])*[0]
-                U1, p = mannwhitneyu(crc, control, method="auto")
-                if p < 0.01:
-                    cohort_markers[cohort][tag] = 1
-                    all_markers[tag] =1
-            print (cohort, "filter specific_HGT num", len(cohort_markers[cohort]))
-        for tag in all_markers:
-            num = 0
-            for cohort in self.diff_cohorts.keys():
-                if tag in cohort_markers[cohort]:
-                    num += 1
-            if num > 0:
-                select_markers[tag] = 1
-        print ("after combination", len(select_markers))
-        select_nodes = {}
-        select_edges = {}
-
-        i = 0
-        for edge in select_markers.keys():
-            select_edges[edge] = i
-            array = edge.split("&")
-            if self.level == 7:
-            
-                node1 = array[0] + "&" + array[2]
-                node2 = array[1] + "&" + array[3]
-            else:
-                node1 = array[0]
-                node2 = array[1]
-            select_nodes[node1] = 1
-            select_nodes[node2] = 1
-            i += 1
-        return select_nodes, select_edges
-
-    def each_cohort_ranking_score(self):
-        cohort_markers = {}
-        all_markers = {}
-        select_markers = {}
-        for cohort in self.diff_cohorts:
-            cohort_data = self.diff_cohorts[cohort]
-            cohort_markers[cohort] = {}
-            train_num = len(cohort_data)
-            specific_HGT = {} 
-            for sample in cohort_data:
-                for bkp in sample.filter_bkps:
-                    tag = self.select_tag(bkp)
-                    if tag in specific_HGT:
-                        continue
-                    else:
-                        specific_HGT[tag] = 1
-            print (cohort, "specific_HGT num", len(specific_HGT))
-            select_nodes = {}
-            select_edges = {}
-            i = 0
-            for edge in specific_HGT.keys():
-                select_edges[edge] = i
-                array = edge.split("&")
-                node1 = array[0]
-                node2 = array[1]
-                select_nodes[node1] = 1
-                select_nodes[node2] = 1
-                i += 1
-            print ("*****")
-            for sample in cohort_data:
-                sample.given_nodes_make_matrix(select_nodes, self.window, select_edges)
-            print ("======")
-            train_data, train_label =  self.complex_data(cohort_data)
-            print ("======")
-            clf = RandomForestClassifier(n_estimators=1000, criterion="entropy", min_samples_leaf=5, ) 
-            clf.fit(train_data, train_label)  
-            print ("======")
-            del cohort_data
-            del train_data
-            del train_label
-            del specific_HGT
-            
-            del select_nodes
-
-            important_array = np.array(clf.feature_importances_)
-            # i = 0
-            # feature_importances_dict = {}
-            # for edge in select_edges.keys():
-            #     feature_importances_dict[edge] = clf.feature_importances_[i]
-            #     # print (i)
-            #     i += 1
-            # # print ("sort")
-            # del select_edges
-            # sort_select_edges = sorted(feature_importances_dict.items(), key=lambda item: item[1], reverse = True)
-            i = 0
-            for eg in select_edges.keys():
-                if important_array[i] > 0.001:
-                    cohort_markers[cohort][eg] = 1
-                    all_markers[eg] = 1
-                i += 1
-            print (cohort, len(cohort_markers[cohort]))
-            
-
-        for tag in all_markers:
-            num = 0
-            for cohort in self.diff_cohorts.keys():
-                if tag in cohort_markers[cohort]:
-                    num += 1
-            if num > 1:
-                select_markers[tag] = 1
-        print ("after combination", len(select_markers))
-        select_nodes = {}
-        select_edges = {}
-
-        i = 0
-        for edge in select_markers.keys():
-            select_edges[edge] = i
-            array = edge.split("&")
-            if self.level == 7:
-            
-                node1 = array[0] + "&" + array[2]
-                node2 = array[1] + "&" + array[3]
-            else:
-                node1 = array[0]
-                node2 = array[1]
-            select_nodes[node1] = 1
-            select_nodes[node2] = 1
-            i += 1
-        return select_nodes, select_edges
-
     def compute_feature(self):
         datasets = list(self.diff_cohorts.keys())
         train_sam, test_sam = self.split_test_train(datasets[0])
         all_sam = train_sam + test_sam
         print ("samples got.")
         features_dict, select_edges = self.select_common_nodes(all_sam)
-        # features_dict, select_edges = self.each_cohort_diff()
-        # features_dict, select_edges = self.each_cohort_ranking_score()
         # features_dict, select_edges = self.get_feature()
         print (len(features_dict), "nodes selected.")
         for sample in self.all_data:
             sample.given_nodes_make_matrix(features_dict, self.window, select_edges)
         train_data, train_label =  self.complex_data(all_sam)
         print ("start training")
-        clf = RandomForestClassifier(n_estimators=1000, criterion="entropy", min_samples_leaf=5,random_state = np.random.seed(2021)) #max_depth=2, random_state=0 entropy gini
+        clf = RandomForestClassifier(n_estimators=1000, criterion="entropy", min_samples_leaf=5, ) #max_depth=2, random_state=0 entropy gini
         clf.fit(train_data, train_label)   
 
 
@@ -1592,7 +1396,7 @@ class RF():
         for c in  clf.feature_importances_:
             if c > 0:
                 useful_fea += 1
-        # print (useful_fea, clf.feature_importances_)
+        print (useful_fea, clf.feature_importances_)
         self.sort_features(clf, select_edges)
         print ("feature saved*************************")
 
@@ -1692,10 +1496,10 @@ if __name__ == "__main__":
     marker_species = ["Peptostreptococcus stomatis", "Fusobacterium nucleatum", "Parvimonas spp.", "Porphyromonas asaccharolytica", "Gemella morbillorum",
     "Clostridium symbiosum", "Parvimonas micra", "Escherichia coli", "Streptococcus parasanguinis", "Clostridium leptum", "Clostridium hathewayi",
     "Anaerotruncus colihominis", "Prevotella copri", "Lachnospiraceae 3 1 57FAA CT1", "Actinomyces graevenitzii", "Alistipes spp."]
-    # marker_species = ["Fusobacterium nucleatum", "Parvimonas micra", "Parvimonas spp.", "Gemella morbillorum", "Peptostreptococcus stomatis",\
-    # "Solobacterium moorei", "Clostridium symbiosum", "Anaerococcus vaginalis", "Porphyromonas asaccharolytica", "Prevotella intermedia",\
-    #  "Bacteroides fragilis", "Porphyromonas somerae", "Anaerococcus obesiensis", "Porphyromonas uenonis", "Peptostreptococcus anaerobius",\
-    #  "Streptococcus constellatus", "Granulicatella adiacens"]
+    marker_species_1 = ["Fusobacterium nucleatum", "Parvimonas micra", "Parvimonas spp.", "Gemella morbillorum", "Peptostreptococcus stomatis",\
+    "Solobacterium moorei", "Clostridium symbiosum", "Anaerococcus vaginalis", "Porphyromonas asaccharolytica", "Prevotella intermedia",\
+     "Bacteroides fragilis", "Porphyromonas somerae", "Anaerococcus obesiensis", "Porphyromonas uenonis", "Peptostreptococcus anaerobius",\
+     "Streptococcus constellatus", "Granulicatella adiacens"]
     # print (cohort_abd)
     sample_abd = get_samples_abd()
     # ID_abd_file = get_abd_file_name()
@@ -1703,21 +1507,50 @@ if __name__ == "__main__":
     taxonomy = Taxonomy()
     
     result_file = open("random_forest.log", 'w')
-    level, meta_flag, feature_num, common_ratio = 5, False, 100000, 0.02
+    level, meta_flag, feature_num, common_ratio = 5, False, 100000, 0.01
     rf = RF(level, meta_flag, feature_num, common_ratio)
-    # # rf.compute_feature()
-    auc_list = rf.complex_feature(140)
+    rf.compute_feature()
+    auc_list = rf.complex_feature(120)
+    # for select_feature_num in range(50, 200, 10):
+    #     auc_list = rf.complex_feature(select_feature_num)
+    # # del rf
+    #     print (select_feature_num, auc_list, np.mean(auc_list), np.median(auc_list))
+    #     print (select_feature_num, auc_list, np.mean(auc_list), np.median(auc_list), file = result_file)
 
-
-    # for common_ratio in range(1, 20, 1):
-    #     common_ratio *= 0.01
-    #     rf = RF(level, meta_flag, feature_num, common_ratio)
-    #     rf.compute_feature()
-    #     for select_feature_num in range(20, 520, 20):
-    #         auc_list = rf.complex_feature(select_feature_num)
-    #         print (common_ratio, select_feature_num, auc_list, np.mean(auc_list), np.median(auc_list))
-    #         print (common_ratio, select_feature_num, auc_list, np.mean(auc_list), np.median(auc_list), file = result_file)
-    #     del rf
-
-
+    # for level in [6, 5, 4, 3]:
+    #     for meta_flag in [False, True]:
+    #         for feature_num in [10000, 5000, 1000, 100]:
+    #             for common_ratio in [0.1, 0.01, 0.2, 0.3]:
+    #                 print ("result", level, meta_flag, feature_num, common_ratio)
+    #                 print (level, meta_flag, feature_num, common_ratio, file = result_file)
+    #                 rf = RF(level, meta_flag, feature_num, common_ratio)
+    #                 auc_list = rf.complex_feature()
+    #                 del rf
+    #                 print (auc_list, np.mean(auc_list), np.median(auc_list), file = result_file)
+                    
+    #                 print ("result", auc_list, np.mean(auc_list), np.median(auc_list))
+    #                 print ("**********", file = result_file)
     result_file.close()
+
+
+
+    # cohort = "ThomasAM_2018b"
+    # analyze = Analyze()
+    # analyze.taxonomy_count()
+    # analyze.taxonomy_pair_count()
+    # analyze.check_CRC_related_species()
+    # analyze.compare_HGT_complexity()
+    # analyze.taxonomy_pair_samples()
+    # analyze.cohort_HGT()
+    # analyze.each_species()
+    # analyze.cohort_specific_HGT()
+    # analyze.per_species_HGT_comparison()
+    # analyze.taxonomy_barplot()
+    # analyze.taxonomy_circos()
+    # analyze.plot_most_common_pair()
+    # analyze.bkp_pair_count()
+
+    
+    # rf.random_forest()
+    # rf.feature_matrix()
+    # rf.LODO()
