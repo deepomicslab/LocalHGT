@@ -250,6 +250,7 @@ class Figure():
             # plt.xticks(rotation=0)
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
         plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))
+        self.df.to_csv('analysis/depth_comparison.csv', sep=',')
 
     def plot_all(self):
         self.convert_df()
@@ -319,8 +320,6 @@ def cami():
             print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy ,lemon_pe.accuracy)
     fi.plot_cami()
             
-
-
 def snp():
     fi = Figure()
     ba = Parameters()
@@ -384,12 +383,12 @@ def depth():
 if __name__ == "__main__":
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
-    local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results/"
+    local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results_paper/"
     print ("evaluation")
-    cami()
+    # cami()
     # snp()
 
-    # depth()
+    depth()
 
 
 

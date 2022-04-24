@@ -2,6 +2,7 @@
 
 from simulation import Parameters
 import re
+import os
 
 class Batch(Parameters):
 
@@ -193,14 +194,59 @@ def batch_japan():
         if array[0] == "Run":
             continue
         else:
-            if i >= 80:
-                break
+            # if i >= 80:
+            #     break
             ba.sample = array[0]
             ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/japan/%s_1.fastq"%(ba.sample)
             ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/japan/%s_2.fastq"%(ba.sample)
             order = ba.get_normal_order()
-            print (order, file = h)
+            if not os.path.isfile("/mnt/d/breakpoints/HGT/CRC/japan/result/%s.repeat.acc.csv"%(ba.sample)):
+                print (order, file = h)
             i += 1
+    h.close()
+
+def batch_austria():
+    ba = Batch()
+    ba.get_fq_dir("/mnt/d/breakpoints/HGT/CRC/austria/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/CRC/austria/result")
+
+    h = open("/mnt/d/breakpoints/HGT/CRC/austria/run_localHGT_austria.sh", 'w')
+
+    i = 0
+    index = 0
+    for line in open("/mnt/d/breakpoints/HGT/CRC/austria/austria.csv"):
+        array = line.split(",")
+        if array[0] == "Run":
+            continue
+        elif re.search("SINGLE", line):
+            continue
+        else:
+            ba.sample = array[0]
+            ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/austria/%s_1.fastq"%(ba.sample)
+            ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/austria/%s_2.fastq"%(ba.sample)
+            order = ba.get_normal_order()
+            if not os.path.isfile("/mnt/d/breakpoints/HGT/CRC/austria/result/%s.repeat.acc.csv"%(ba.sample)):
+                print (order, file = h)
+    h.close()
+
+def batch_USA():
+    ba = Batch()
+    ba.get_fq_dir("/mnt/d/breakpoints/HGT/CRC/USA/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/CRC/USA/result")
+
+    h = open("/mnt/d/breakpoints/HGT/CRC/USA/run_localHGT_USA.sh", 'w')
+
+    i = 0
+    index = 0
+    for line in open("/mnt/d/breakpoints/HGT/CRC/USA/USA.list"):
+        ID = line.strip()
+
+        ba.sample = ID
+        ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/USA/%s_1.fastq"%(ba.sample)
+        ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/USA/%s_2.fastq"%(ba.sample)
+        order = ba.get_normal_order()
+        if not os.path.isfile("/mnt/d/breakpoints/HGT/CRC/USA/result/%s.repeat.acc.csv"%(ba.sample)):
+            print (order, file = h)
     h.close()
 
 
@@ -208,5 +254,7 @@ if __name__ == "__main__":
     # batch_snp()
     # batch_cami()
     # batch_depth()
-    batch_germany()
-    batch_japan()
+    # batch_germany()
+    # batch_japan()
+    # batch_USA()
+    batch_austria()

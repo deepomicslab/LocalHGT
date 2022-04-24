@@ -3,12 +3,14 @@ library(ggplot2)
 require(gridExtra)
  
 # The mpg dataset is natively available
-dat<-read.table("for_box.csv", header=TRUE)
-head(dat)
+dat<-read.table("graph_density.csv", header=TRUE)
+
 pdf(file="density_box.pdf", width=8, height=8)
 
 # geom_boxplot proposes several arguments to custom appearance
-plot1 <- ggplot(dat, aes(x=Condition, y=Density)) + 
+
+new_dat<-dat[dat[,"level"] == 1,]
+plot1 <- ggplot(new_dat, aes(x=Status, y=Density)) + 
     geom_boxplot(
         
         # custom boxes
@@ -25,9 +27,13 @@ plot1 <- ggplot(dat, aes(x=Condition, y=Density)) +
         outlier.fill="red",
         outlier.size=3
     
-    )
+    )+
+    ggtitle("Phylum")+
+    theme(plot.title = element_text(hjust = 0.5))
+    # level_dict = {"phylum":1, "class":2, "order":3, "family":4, "genus":5, "species":6}
 
-plot2 <- ggplot(dat, aes(x=Condition, y=Transtivity)) + 
+new_dat<-dat[dat[,"level"] == 2,]
+plot2 <- ggplot(new_dat, aes(x=Status, y=Density)) + 
     geom_boxplot(
         
         # custom boxes
@@ -44,9 +50,12 @@ plot2 <- ggplot(dat, aes(x=Condition, y=Transtivity)) +
         outlier.fill="red",
         outlier.size=3
     
-    )
+    )+
+    ggtitle("Class")+
+    theme(plot.title = element_text(hjust = 0.5))
 
-plot3 <- ggplot(dat, aes(x=Condition, y=Nodes_Number)) + 
+new_dat<-dat[dat[,"level"] == 3,]
+plot3 <- ggplot(new_dat, aes(x=Status, y=Density)) + 
     geom_boxplot(
         
         # custom boxes
@@ -63,9 +72,12 @@ plot3 <- ggplot(dat, aes(x=Condition, y=Nodes_Number)) +
         outlier.fill="red",
         outlier.size=3
     
-    )
+    )+
+    ggtitle("Order")+
+    theme(plot.title = element_text(hjust = 0.5))
 
-plot4 <- ggplot(dat, aes(x=Condition, y=Pair_Number)) + 
+new_dat<-dat[dat[,"level"] == 4,]
+plot4 <- ggplot(new_dat, aes(x=Status, y=Density)) + 
     geom_boxplot(
         
         # custom boxes
@@ -82,7 +94,9 @@ plot4 <- ggplot(dat, aes(x=Condition, y=Pair_Number)) +
         outlier.fill="red",
         outlier.size=3
     
-    )
+    )+
+    ggtitle("Family")+
+    theme(plot.title = element_text(hjust = 0.5))
 
-grid.arrange(plot1, plot2, plot3, plot4, ncol=2)
+grid.arrange(plot1, plot2, plot3, plot4)
 dev.off()

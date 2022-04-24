@@ -1,9 +1,14 @@
 LEMON
 extract_ref
+analysis
+analysis/importances.npy
 analysis/new_result
+analysis/abd_files
+analysis/use
 *pdf
 *csv
 *pkl
 *xlsx
 *list
 *xls
+*npy

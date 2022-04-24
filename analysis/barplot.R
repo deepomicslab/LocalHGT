@@ -9,7 +9,7 @@ data <- data.frame(
 )
 
 data
-pdf(file="density.pdf")
+pdf(file="density.pdf", width = 10, height = 2)
 # Most basic error bar
 ggplot(data) +
     geom_bar( aes(x=Condition, y=Density), stat="identity", fill="skyblue", alpha=0.7) +
