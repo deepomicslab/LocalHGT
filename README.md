@@ -16,7 +16,10 @@ bwa-0.7.17
 
 ## Reference database
 ```
-Please contruct the database before running. The database (a single file in fasta formate) should contain all the representative references of your concerning envirment. You can 
+Please contruct the database before running. The database (a single file in fasta 
+formate) should contain all the representative references of your concerning 
+envirment. 
+
 For human gut, we can download it from the UHGG database.
 
 Please use samtools to index the database first by
@@ -27,7 +30,9 @@ LocalHGT also needs a index file, with the first running, Local will build the i
 ```
 ## Running
 ```
-For each sample, with the unzipped fastq files, we can perform LocalHGT like
+For each paired-end sequencing sample, with the unzipped fastq files, we can perform
+LocalHGT like
+
 bash pipeline.sh reference_database.fasta sample.1.fq sample.2.fq sample_name result_dir/ 0.1 0.08
 ```
 
