@@ -39,7 +39,7 @@ bash pipeline.sh reference_database.fasta sample.1.fq sample.2.fq sample_name re
 ## Output interpretion
 The HGT breakpoints would be saved in the *acc.csv file.
 Each line contain a pair of breakpoints, it record the two genome's ID and 
-the breakpint positions. Here is a example
+the breakpint positions. Here is an example
 ```
 from_ref,to_ref,from_pos,to_pos,from_side,to_side,if_reverse,read_seq,ref_seq,similarity
 GUT_GENOME001770_6,3495,GUT_GENOME147678_1,1797790,left,right,False,TCACCTTGCCTATATGACAGGAATCTTGCCAATCAAGAAGT,TCACCTTGCCTATATGACAGGAATCTTGCCAATCAAGAAGT,2.0
