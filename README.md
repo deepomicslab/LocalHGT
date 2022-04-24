@@ -35,4 +35,8 @@ LocalHGT like
 
 bash pipeline.sh reference_database.fasta sample.1.fq sample.2.fq sample_name result_dir/ 0.1 0.08
 ```
+## Output interpretion
+The HGT breakpoints would be saved in the *acc.csv file.
+Each line contain a pair of breakpoints, it record the two genome's ID and 
+the breakpint positions.
 
