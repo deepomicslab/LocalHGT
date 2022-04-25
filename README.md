@@ -7,13 +7,14 @@ make
 ```
 ## Dependency
 ```
+Python 3.8+
 Python Module: scipy, numpy, pandas, sklearn, pysam, scikit-bio, Bio, pyfaidx
 ```
 Please install samtools and bwa, and add them to system path, the version 
 should be
 ```
-samtools==1.11
-bwa-0.7.17
+samtools==1.11+
+bwa-0.7.17+
 ```
 
 ## Reference database
@@ -21,7 +22,7 @@ Please contruct the database before running. The database (a single file in fast
 formate) should contain all the representative references of your concerning envirment. 
 
 For human gut, we can download it from the Unified Human Gastrointestinal Genome 
-([UHGG](https://www.ebi.ac.uk/metagenomics/genome-catalogues/)) database.
+([UHGG](https://www.nature.com/articles/s41587-020-0603-3)) database.
 
 Please use samtools to index the database first by
 
