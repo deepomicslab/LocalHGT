@@ -1,4 +1,4 @@
-# LocalHGT
+# LocalHGT: an ultrafast HGT detection method from large microbial communities
 
 ## Install
 ```
@@ -22,7 +22,8 @@ Please construct the database before running. The database (a single file in fas
 formate) should contain all the representative references of your concerning environment. 
 
 For the human gut, we can download it from the Unified Human Gastrointestinal Genome 
-([UHGG](https://www.nature.com/articles/s41587-020-0603-3)) database.
+([UHGG](https://www.nature.com/articles/s41587-020-0603-3)) database. 
+The script build_UHGG_reference.py can be used to download the UHGG v1 genomes.
 
 Please use samtools to index the database first by
 
