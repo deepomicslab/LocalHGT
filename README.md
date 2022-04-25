@@ -18,10 +18,10 @@ bwa-0.7.17+
 ```
 
 ## Reference database
-Please contruct the database before running. The database (a single file in fasta 
-formate) should contain all the representative references of your concerning envirment. 
+Please construct the database before running. The database (a single file in fasta 
+formate) should contain all the representative references of your concerning environment. 
 
-For human gut, we can download it from the Unified Human Gastrointestinal Genome 
+For the human gut, we can download it from the Unified Human Gastrointestinal Genome 
 ([UHGG](https://www.nature.com/articles/s41587-020-0603-3)) database.
 
 Please use samtools to index the database first by
@@ -30,7 +30,7 @@ Please use samtools to index the database first by
 samtools faidx ref_database.fasta
 
 ```
-LocalHGT also needs a index file, with the first running, Local will build the index 
+LocalHGT also needs an index file, with the first running, Local will index 
 the database automatically, and it will take several hours.
 ## Running
 For each paired-end sequencing sample, with the unzipped fastq files, we can perform
@@ -41,14 +41,15 @@ bash pipeline.sh reference_database.fasta sample.1.fq sample.2.fq sample_name re
 ```
 ## Output interpretion
 The HGT breakpoints would be saved in the *acc.csv file.
-Each line contain a pair of breakpoints, it record the two genome's ID and 
-the breakpint positions. Here is an example
+Each line contains a pair of breakpoints, it records the two genome's ID and 
+the breakpoint positions. Here is an example:
 ```
 from_ref,to_ref,from_pos,to_pos,from_side,to_side,if_reverse,read_seq,ref_seq,similarity
-GUT_GENOME001770_6,3495,GUT_GENOME147678_1,1797790,left,right,False,TCACCTTGCCTATATGACAGGAATCTTGCCAATCAAGAAGT,TCACCTTGCCTATATGACAGGAATCTTGCCAATCAAGAAGT,2.0
-GUT_GENOME001261_6,80859,GUT_GENOME140320_24,26086,right,right,True,CCAGCGAAGATCCGGCAGGTTGTGGATATCGTCAGGAAATTATA,CGAAGATCCGGCAGGTTGTGGATATCGTCAGGAAAATGAAAGAA,1.591
-GUT_GENOME001770_6,96104,GUT_GENOME268486_26,113,left,right,False,TGAAATGATATGTACCCGGTTTTCTGGACACCGGTTCAAAA,ATGATTGATATGTACCCGGTTTTCTGGACACCGGTTCAAAA,1.756
-GUT_GENOME001770_6,96035,GUT_GENOME000367_1,418068,left,left,True,GCTTCAGCAGTTATCGCTGCTTTGTTCCATAAATACCCTCCTTGCTGC,GCTGCTTTGTTCCATAAATACCCTCCTTGCTGCAAGTAATAAAACCAT,1.375
-GUT_GENOME001770_6,97080,GUT_GENOME111111_58,2172,left,left,True,TAGAAAGGTATGGTAATTATTATGTGGAATG,GAAAGGCATGGTAATTATTATGTGGAATGGT,1.71
+GUT_GENOME000729_19,4074,GUT_GENOME000139_8,30127,right,right,True,CAATCCTTCTATTACGTCAGGGGAAATGGTAGCCGCCCCGATTCCATACTCACAGAGGTCG,CAATCCTTCTATTACGTCAGGGGAAATGGTAGCCGCCCCGATTCCATACTCACAGAGTTCA,1.885
+GUT_GENOME000729_19,39463,GUT_GENOME000139_8,30121,left,left,True,AAGCATCCCTTCTCCCATGCCGAATTCTTTCGCGGCCGAAAA,AGCATCCCTTCTCCCATGCCGAATTCTTTCGCGGCCGAAAAC,1.952
+GUT_GENOME000232_7,104924,GUT_GENOME044018_8,2495,right,left,False,CATTCTCTCTGGCAGTTACACTGATTTTACCTCCTGCAGGCACATG,CATTCTCTCTGGCAGTTACACTGATTTTACCTCCTGCAGGCACATG,2.0
+GUT_GENOME000232_7,108957,GUT_GENOME044018_8,2494,left,right,False,GTATGCGGTCTGTCCGTCCAAGGCGATCGTATCATCGACAAGCGTCCCATAGGA,GTATTCGGTCTGTCCGTCCAAGGCGATCGTATCATCGACAAGCGTCCCATAGGA,1.907
+GUT_GENOME057980_1,853,GUT_GENOME000963_8,156831,left,right,False,CTTAATGTGAAGGTTGATGGAAGGGAAGTAAAAGAGGAGGATATTATTTTCTGCCTCCACGGTAAGAAATTTGGTG,TTGACATTGAAGGTTGATGGAAGGGAAGTAAAAGAGGAGGATATTATTTTCTGCCTCCACGGTAAGGAATTTGGTG,1.75
+GUT_GENOME057980_1,851,GUT_GENOME000963_8,198483,right,left,False,ATTTCTAAGATGGAAAGCATATTAAGGCTAACTCTAATGATGAAG,CATTAACGGATGGAAAGCATATTAAGGCTAACTCTAATGATGAAG,1.644
 ```
 
