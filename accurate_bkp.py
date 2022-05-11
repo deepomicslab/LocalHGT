@@ -526,7 +526,7 @@ if __name__ == "__main__":
 
         f = open(output_acc_bkp_file, 'w', newline='')
         writer = csv.writer(f)
-        header = ['from_ref','to_ref','from_pos','to_pos','from_side','to_side',\
+        header = ['from_ref','from_pos','to_ref','to_pos','from_side','to_side',\
         'if_reverse','read_seq','ref_seq','similarity']
         writer.writerow(header)
         for acc in acc_bkp_list:

@@ -28,7 +28,7 @@ echo Time taken to prepare ref is ${take} seconds. >> ${sample}.log
 ##################skip bam-sorting#################
 bwa mem -M -t $thread -R "@RG\tID:id\tSM:sample\tLB:lib" $extracted_ref $fq1 $fq2 > $sample.unique.sam
 python $dir/extractSplitReads_BwaMem.py -i $sample.unique.sam >$sample.splitters.sam
-
+# samtools view $sample.unique.sam 
 # samtools view -h -q 20 $sample.sam > $sample.unique.sam
 
 end=$(date +%s)

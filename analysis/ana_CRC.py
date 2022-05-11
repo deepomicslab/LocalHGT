@@ -362,8 +362,18 @@ class Sample():
 
             HGT_matrix[node1_ind][node2_ind] = 1
             HGT_matrix[node2_ind][node1_ind] = 1
+        # origin_matrix = HGT_matrix.copy()
         HGT_matrix = nx.from_numpy_matrix(HGT_matrix)
         density = nx.density(HGT_matrix)
+        # print ("1", HGT_matrix)
+        # laplacian = nx.laplacian_matrix(HGT_matrix)
+        # laplacian = unnormalized_laplacian(origin_matrix)
+        # laplacian = nx.normalized_laplacian_matrix(HGT_matrix)
+        # laplacian = scipy.sparse.csr_matrix.toarray(laplacian)
+
+        # a, b = np.linalg.eig(laplacian)
+        # density = sorted(a)[1]
+
         # density = nx.transitivity(HGT_matrix)
         return density
 
