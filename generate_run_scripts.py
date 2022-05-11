@@ -253,8 +253,8 @@ def batch_USA():
 if __name__ == "__main__":
     # batch_snp()
     # batch_cami()
-    # batch_depth()
+    batch_depth()
     # batch_germany()
     # batch_japan()
     # batch_USA()
-    batch_austria()
+    # batch_austria()

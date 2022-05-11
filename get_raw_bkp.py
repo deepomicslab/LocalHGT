@@ -688,7 +688,7 @@ def main():
         os.mknod(output_filename)
     bam_name = args["u"]
     # processed_ref_list = [] #get_processed_ref(output_filename)
-    bamfile = pysam.AlignmentFile(filename = bam_name, mode = 'r')
+    bamfile = pysam.AlignmentFile(filename = bam_name, mode = 'rb')
     dict_Interact_Big = calCrossReads(bamfile)
     ref_dict_Interact_Big = indexReadBasedOnRef(dict_Interact_Big)
     ref_list_Interact_Big = indexReadBasedOnPos(ref_dict_Interact_Big)
@@ -733,7 +733,7 @@ if __name__ == "__main__":
     optional.add_argument("-h", "--help", action="help")
     args = vars(parser.parse_args())
     unique_bam_name = args["u"]
-    unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'r')
+    unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
     mean, sdev, rlen = getInsertSize(unique_bamfile)
     insert_size = int(mean + 2*sdev)
     rlen = int(rlen)

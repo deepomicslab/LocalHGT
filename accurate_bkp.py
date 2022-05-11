@@ -269,7 +269,7 @@ class Each_Split_Read(object):
 
 def read_split_bam(split_bam_name):
     used_reads_num = 0
-    split_bamfile = pysam.AlignmentFile(filename = split_bam_name, mode = 'r')
+    split_bamfile = pysam.AlignmentFile(filename = split_bam_name, mode = 'rb')
     for read in split_bamfile:
         if not read.has_tag('SA'): 
             continue   
@@ -499,7 +499,7 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
 
     unique_bam_name = args["u"]
-    unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'r')
+    unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
     mean, sdev, rlen = getInsertSize(unique_bamfile)
     insert_size = int(mean + 2*sdev)
     rlen = int(rlen)

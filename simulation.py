@@ -538,18 +538,19 @@ if __name__ == "__main__":
 
     t0 = time.time()
     pa = Parameters()
-    # uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
-    # blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
+    uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
+    blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
 
-    uniq_segs_file = "/mnt/d/breakpoints/HGT/proGenomes/uniq_region_proGenomes.npy"
-    blast_file = '/mnt/d/breakpoints/HGT/proGenomes/freeze12.contigs.representatives.fasta.blast.out.xz'
+    # uniq_segs_file = "/mnt/d/breakpoints/HGT/proGenomes/uniq_region_proGenomes.npy"
+    # blast_file = '/mnt/d/breakpoints/HGT/proGenomes/freeze12.contigs.representatives.fasta.blast.out.xz'
 
-    uniq_segs_loci = extract_uniq_region(blast_file)  
-    np.save(uniq_segs_file, uniq_segs_loci)
+    # uniq_segs_loci = extract_uniq_region(blast_file)  
+    # np.save(uniq_segs_file, uniq_segs_loci)
 
     # generate_complexity()
+    
 
-    """
+    # """
     if os.path.isfile(uniq_segs_file):
         uniq_segs_loci = np.load(uniq_segs_file, allow_pickle='TRUE').item()
     else:
@@ -560,7 +561,7 @@ if __name__ == "__main__":
     print ("genome num:", len(uniq_segs_loci))
     # UHGG_snp(uniq_segs_loci)
     UHGG_depth(uniq_segs_loci)
-    """
+    # """
 
-
+    # UHGG_depth()
     # UHGG_cami()
