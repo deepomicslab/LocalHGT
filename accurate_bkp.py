@@ -462,6 +462,7 @@ class Acc_Bkp(object):
         self.cross = 0
         self.from_strand = '.'
         self.to_strand = '.'
+        self.pair_end = 0
 
     def print_out(self):
         print (self.from_ref, self.from_bkp, self.from_side, self.from_strand, self.to_ref, self.to_bkp,\
@@ -470,7 +471,7 @@ class Acc_Bkp(object):
     def write_out(self, writer):
         writer.writerow ([self.from_ref, self.from_bkp, self.from_side, self.from_strand, self.to_ref, self.to_bkp, \
         self.to_side, self.to_strand, self.if_reverse, self.read_str, self.ref_str, self.similarity, self.from_reads,\
-         self.to_reads, self.cross])
+         self.to_reads, self.cross, self.pair_end])
 
     def compare_two_refs(self):
         check_len = 50
@@ -536,22 +537,23 @@ class Acc_Bkp(object):
 
 def count_reads_for_norm(): # for normalization
     around_cutoff = 20
-    split_bamfile = pysam.AlignmentFile(filename = split_bam_name, mode = 'rb')
+    # split_bamfile = pysam.AlignmentFile(filename = split_bam_name, mode = 'rb')
     for acc in acc_bkp_list:
 
         from_segment_name, from_new_pos = convert_chr2_segment(acc.from_ref, acc.from_bkp)
         to_segment_name, to_new_pos = convert_chr2_segment(acc.to_ref, acc.to_bkp)
         
-        from_reads_list, to_reads_list = set(), set()
-        ref1_first, ref2_first = 0, 0
-
+        from_split_reads, to_split_reads = set(), set()
         strand_flag = False
 
-        for read in split_bamfile.fetch(from_segment_name, from_new_pos-around_cutoff, from_new_pos+around_cutoff):
-            if read.mapping_quality < 20:
-                continue
-
-            from_reads_list.add(read.query_name)
+        start_pos = from_new_pos-around_cutoff
+        if start_pos < 1:
+            start_pos = 1
+        for read in unique_bamfile.fetch(from_segment_name, start_pos, from_new_pos+around_cutoff):
+            # if read.mapping_quality < 20:
+            #     continue
+            if read.has_tag('SA'):
+                from_split_reads.add(read.query_name)
             if strand_flag == False:
                 if read.has_tag('SA'):
                     array = read.get_tag('SA').split(',')
@@ -568,9 +570,12 @@ def count_reads_for_norm(): # for normalization
                             # print (read.next_reference_name, to_new_pos, to_bkp_strand, read.reference_name, from_new_pos, "-", read.query_name)
                         strand_flag = True
 
-        for read in split_bamfile.fetch(to_segment_name, to_new_pos-around_cutoff, to_new_pos+around_cutoff):
-            if read.mapping_quality < 20:
-                continue
+        start_pos = to_new_pos-around_cutoff
+        if start_pos < 1:
+            start_pos = 1
+        for read in unique_bamfile.fetch(to_segment_name, start_pos, to_new_pos+around_cutoff):
+            # if read.mapping_quality < 20:
+            #     continue
 
             if strand_flag == False:
                 if read.has_tag('SA'):
@@ -587,11 +592,27 @@ def count_reads_for_norm(): # for normalization
                             acc.from_strand = from_bkp_strand
                             # print (read.next_reference_name, from_new_pos, from_bkp_strand, read.reference_name, to_new_pos, "-")
                         strand_flag = True
+            if read.has_tag('SA'):
+                to_split_reads.add(read.query_name)
+        acc.from_reads = len(from_split_reads)
+        acc.to_reads = len(to_split_reads)
+        acc.cross = len(to_split_reads & from_split_reads)
 
-            to_reads_list.add(read.query_name)
-        acc.from_reads = len(from_reads_list)
-        acc.to_reads = len(to_reads_list)
-        acc.cross = len(to_reads_list & from_reads_list)
+        PE_reads = set()
+        start_pos = from_new_pos-insert_size
+        if start_pos < 1:
+            start_pos = 1
+        for read in unique_bamfile.fetch(from_segment_name, start_pos, from_new_pos+insert_size):
+            if read.next_reference_name == to_segment_name and abs(read.next_reference_start - to_new_pos) < insert_size:
+                PE_reads.add(read.query_name)
+        start_pos = to_new_pos-insert_size
+        if start_pos < 1:
+            start_pos = 1
+        for read in unique_bamfile.fetch(to_segment_name, start_pos, to_new_pos+insert_size):
+            if read.next_reference_name == from_segment_name and abs(read.next_reference_start - from_new_pos) < insert_size:
+                PE_reads.add(read.query_name)
+        acc.pair_end = len(PE_reads)
+
 
         # print (acc.from_reads, acc.to_reads, acc.cross, ref1_first, ref2_first)
         # break
@@ -669,7 +690,8 @@ if __name__ == "__main__":
         print ("# the number of reads in the sample is: %s; Insert size is %s."%(rnum, insert_size), file = f)
         writer = csv.writer(f)
         header = ['from_ref','from_pos','from_side','from_strand','to_ref','to_pos','to_side',\
-        'to_strand','if_reverse','read_seq','ref_seq','similarity','from_reads','to_reads','cross_reads']
+        'to_strand','if_reverse','read_seq','ref_seq','similarity','from_split_reads',\
+        'to_split_reads','cross_split_reads', 'pair_end']
         writer.writerow(header)
         for acc in acc_bkp_list:
             acc.refine_bkp()

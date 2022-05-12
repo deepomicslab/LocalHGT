@@ -256,5 +256,6 @@ if __name__ == "__main__":
     # batch_depth()
     # batch_germany()
     # batch_japan()
-    batch_USA()
+    # batch_USA()
     # batch_austria()
+    batch_france()

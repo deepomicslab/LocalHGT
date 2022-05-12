@@ -5,7 +5,7 @@ fq1=$2
 fq2=$3
 ID=$4
 outdir=$5
-thread=10
+thread=5
 
 interval_file=$outdir/$ID.interval.txt
 sample=$outdir/$ID
@@ -28,12 +28,14 @@ echo Time taken to prepare ref is ${take} seconds. >> ${sample}.log
 ##################skip bam-sorting#################
 bwa mem -M -t $thread -R "@RG\tID:id\tSM:sample\tLB:lib" $extracted_ref $fq1 $fq2 | samtools view -bhS -> $sample.unsort.bam
 samtools sort -o $sample.bam $sample.unsort.bam
-samtools view -h $sample.bam \
+
+mv $sample.bam $sample.unique.bam
+samtools view -h $sample.unique.bam \
 | python3 $dir/extractSplitReads_BwaMem.py -i stdin \
 | samtools view -Sb > $sample.unsort.splitters.bam
 
 samtools sort -o $sample.splitters.bam $sample.unsort.splitters.bam
-mv $sample.bam $sample.unique.bam
+
 
 
 samtools index $sample.splitters.bam
@@ -44,7 +46,7 @@ take=$(( end - start ))
 echo Time taken to map reads is ${take} seconds. >> ${sample}.log
 
 python $dir/get_raw_bkp.py -t $thread -u $sample.unique.bam -o $sample.raw.csv
-
+!
 python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.bam -b ${interval_file}.bed \
 -s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv
 
@@ -55,7 +57,7 @@ wc -l $sample.acc.csv
 rm $extracted_ref*
 rm $sample.unsort.splitters.bam
 rm $sample.unsort.bam
-rm $sample.splitters.bam
+# rm $sample.splitters.bam
 
 end=$(date +%s)
 take=$(( end - start ))
