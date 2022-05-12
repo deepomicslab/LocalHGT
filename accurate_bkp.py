@@ -603,12 +603,16 @@ def count_reads_for_norm(): # for normalization
         if start_pos < 1:
             start_pos = 1
         for read in unique_bamfile.fetch(from_segment_name, start_pos, from_new_pos+insert_size):
+            if read.mapping_quality < 20:
+                continue
             if read.next_reference_name == to_segment_name and abs(read.next_reference_start - to_new_pos) < insert_size:
                 PE_reads.add(read.query_name)
         start_pos = to_new_pos-insert_size
         if start_pos < 1:
             start_pos = 1
         for read in unique_bamfile.fetch(to_segment_name, start_pos, to_new_pos+insert_size):
+            if read.mapping_quality < 20:
+                continue
             if read.next_reference_name == from_segment_name and abs(read.next_reference_start - from_new_pos) < insert_size:
                 PE_reads.add(read.query_name)
         acc.pair_end = len(PE_reads)
