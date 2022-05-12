@@ -242,8 +242,8 @@ def batch_USA():
         ID = line.strip()
 
         ba.sample = ID
-        ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/USA/%s_1.fastq"%(ba.sample)
-        ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/USA/%s_2.fastq"%(ba.sample)
+        ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/USA/%s_1.fastq.gz"%(ba.sample)
+        ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/USA/%s_2.fastq.gz"%(ba.sample)
         order = ba.get_normal_order()
         if not os.path.isfile("/mnt/d/breakpoints/HGT/CRC/USA/result/%s.repeat.acc.csv"%(ba.sample)):
             print (order, file = h)
@@ -253,8 +253,8 @@ def batch_USA():
 if __name__ == "__main__":
     # batch_snp()
     # batch_cami()
-    batch_depth()
+    # batch_depth()
     # batch_germany()
     # batch_japan()
-    # batch_USA()
+    batch_USA()
     # batch_austria()

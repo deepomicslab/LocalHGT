@@ -14,8 +14,8 @@ start=$(date +%s)
 dir=$(cd `dirname $0`; pwd)
 
 # :<<!
-$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7 $thread
-python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
+# $dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7 $thread
+# python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
 
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
 
@@ -44,8 +44,8 @@ take=$(( end - start ))
 echo Time taken to map reads is ${take} seconds. >> ${sample}.log
 
 python $dir/get_raw_bkp.py -t $thread -u $sample.unique.bam -o $sample.raw.csv
-!
-python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.bam \
+
+python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.bam -b ${interval_file}.bed \
 -s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv
 
 python $dir/remove_repeat.py $sample.repeat.acc.csv $sample.acc.csv
@@ -53,6 +53,8 @@ wc -l $sample.acc.csv
 
 
 rm $extracted_ref*
+rm $sample.unsort.splitters.bam
+rm $sample.unsort.bam
 rm $sample.splitters.bam
 
 end=$(date +%s)

@@ -27,18 +27,19 @@ def readFilter(read):
 def getInsertSize(unique_bamfile):
     read_length_list = []
     insert_size_list = []
-    num = 0
+    r_num = 0
     for read in unique_bamfile:
         if readFilter(read):
             insert_size_list.append(read.tlen)
             read_length_list.append(len(read.query_sequence))
-            num += 1
-        if num > 10000:
-            break
+            # num += 1
+        # if num > 10000:
+        #     break
+        r_num += 1
     read_length = int(sum(read_length_list) / len(read_length_list))
     mean = float(sum(insert_size_list)) / len(insert_size_list)
     sdev = math.sqrt(float(sum([(x - mean)**2 for x in insert_size_list])) / (len(insert_size_list) - 1))
-    return mean, sdev, read_length
+    return mean, sdev, read_length, r_num
 
 def calCrossReads(bamfile):
     dict_Interact_Big = {}
@@ -734,7 +735,7 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     unique_bam_name = args["u"]
     unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
-    mean, sdev, rlen = getInsertSize(unique_bamfile)
+    mean, sdev, rlen, rnum = getInsertSize(unique_bamfile)
     insert_size = int(mean + 2*sdev)
     rlen = int(rlen)
     sys.exit(main())

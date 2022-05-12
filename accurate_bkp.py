@@ -49,6 +49,7 @@ class Each_Bkp(object):
         self.support_reads = []
         self.pos1 = 0
         self.pos2 = 0
+        self.five2three = 1
 
     def add_support_reads(self, read_obj):
         self.support_reads.append(read_obj)
@@ -70,7 +71,6 @@ class Each_Bkp(object):
             new_reads.append(record[qname])
         self.support_reads = new_reads
 
-
     def reverse_bkp(self):
         a = self.ref1
         b = self.ref1_positions
@@ -78,6 +78,7 @@ class Each_Bkp(object):
         self.ref1_positions = self.ref2_positions
         self.ref2 = a
         self.ref2_positions = b
+        # self.five2three = 0
         return self
 
 def key_name(a, b):
@@ -149,8 +150,6 @@ class Each_Split_Read(object):
         
         self.ref1 = read.reference_name
         self.ref2 = read.get_tag('SA').split(',')[0]
-        self.raw_ref1 = self.ref1
-        self.raw_ref2 = self.ref2
         self.ref2_cigar = read.get_tag('SA').split(',')[3]
         self.pos1 = read.reference_start
         self.pos2 = int(read.get_tag('SA').split(',')[1])
@@ -279,6 +278,25 @@ def read_split_bam(split_bam_name):
         if len(read_obj.seq1) == 0 and len(read_obj.seq2) == 0:
             continue
         xy_name = key_name(read_obj.ref1, read_obj.ref2)
+
+        # print (read.next_reference_name, read_obj.ref1, read_obj.ref2)
+        # if read.next_reference_name.split(':')[0] == read_obj.ref1:
+        #     if read.is_read1:
+        #         direction = "ref2->ref1"
+        #     else:
+        #         direction = "ref1->ref2"
+        # if read.next_reference_name.split(':')[0] == read_obj.ref2:
+        #     if read.is_read2:
+        #         direction = "ref2->ref1"
+        #     else:
+        #         direction = "ref1->ref2"
+        # if direction == "ref1->ref2":
+        #     if xy_name in rrm.raw_bkps_cluster.keys():
+        #         for cluster in rrm.raw_bkps_cluster[xy_name]: #for a R1 and R2
+        #             add_support_split_reads(cluster, read_obj)
+
+
+
         if xy_name in rrm.raw_bkps_cluster.keys():
             for cluster in rrm.raw_bkps_cluster[xy_name]: #for a R1 and R2
                 add_support_split_reads(cluster, read_obj)
@@ -339,10 +357,6 @@ def choose_acc_from_cluster(cluster):
     inte = 2 * rlen # search with a larger interval
     cluster.sort_support_reads()
     for readobj in cluster.support_reads:
-        # if readobj.qname == "GUT_GENOME036853_4-1172_2":
-        #     print ("*******",readobj.qname, reads_mapped_len[readobj.qname], readobj.end_point)
-        # if reads_mapped_len[readobj.qname] < rlen - tolerate_read_mismatch_num:
-        #     continue
         if readobj.end_point == True: #the pos is near the segment end, so may be false positive
             continue
         score1 = 0
@@ -356,14 +370,6 @@ def choose_acc_from_cluster(cluster):
             extract_ref_direction = 'right'
         else:
             extract_ref_direction = 'left'
-        #for right clipped seq, if the seg is reverse-complement, extract seq from left to the breakpoint.
-        #else, we extract seq from the breakpoint to right
-        # test = ['GUT_GENOME000634_11', '25913', 'GUT_GENOME001340_8', '45847']
-        # if readobj.ref1 in test and readobj.ref2 in test:
-
-        #     print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
-        #         readobj.mapped_len, readobj.clipped_direction, readobj.end_point, readobj.clipped,\
-        #          readobj.direction_confict, readobj.ref2_clipped_direction)
 
         read_seq = readobj.seq1
         read_seq_len = len(read_seq)
@@ -423,7 +429,7 @@ def choose_acc_from_cluster(cluster):
                     score2 = matches
                     cluster.pos2 = possible_bkp
                     if readobj.real_ref == cluster.ref1:
-                        cluster.pos1 =  readobj.pos1   
+                        cluster.pos1 =  readobj.pos1                     
                     acc2 = Acc_Bkp(cluster, from_side, to_side, read_seq, ref_seq, score2)
 
         if cluster.pos1 > 0 and cluster.pos2 > 0:
@@ -451,14 +457,20 @@ class Acc_Bkp(object):
         self.similarity = round(score, 3)
         self.refs_sim = 0
         self.max_refs_sim = 0.4
+        self.from_reads = 0
+        self.to_reads = 0
+        self.cross = 0
+        self.from_strand = '.'
+        self.to_strand = '.'
 
     def print_out(self):
-        print (self.from_ref, self.from_bkp, self.to_ref, self.to_bkp, self.from_side,\
-         self.to_side, self.if_reverse, self.similarity)
+        print (self.from_ref, self.from_bkp, self.from_side, self.from_strand, self.to_ref, self.to_bkp,\
+         self.to_side, self.to_strand, self.if_reverse, self.similarity, self.from_reads, self.to_reads, self.cross)
 
     def write_out(self, writer):
-        writer.writerow ([self.from_ref, self.from_bkp, self.to_ref, self.to_bkp, \
-        self.from_side, self.to_side, self.if_reverse, self.read_str, self.ref_str, self.similarity])
+        writer.writerow ([self.from_ref, self.from_bkp, self.from_side, self.from_strand, self.to_ref, self.to_bkp, \
+        self.to_side, self.to_strand, self.if_reverse, self.read_str, self.ref_str, self.similarity, self.from_reads,\
+         self.to_reads, self.cross])
 
     def compare_two_refs(self):
         check_len = 50
@@ -481,6 +493,129 @@ class Acc_Bkp(object):
         else:
             return True
 
+    def reverse_direction(self):
+        a = self.from_ref
+        self.from_ref = self.to_ref
+        self.to_ref = a
+
+        a = self.from_side
+        self.from_side = self.to_side
+        self.to_side = a
+
+        a = self.from_bkp
+        self.from_bkp = self.to_bkp
+        self.to_bkp = a
+
+        a = self.from_reads
+        self.from_reads = self.to_reads
+        self.to_reads = a
+
+        a = self.from_strand
+        self.from_strand = self.to_strand
+        self.to_strand = a
+
+    def refine_bkp(self):
+        if self.from_side == "right":
+            self.from_side = "tail"
+        else:
+            self.from_side = "head"
+        if self.to_side == "right":
+            self.to_side = "tail"
+        else:
+            self.to_side = "head"
+
+        if self.from_strand == "+" and self.from_side == "tail":
+            self.reverse_direction()
+        if self.from_strand == "-" and self.from_side == "head":
+            # self.reverse_direction()
+            self.from_strand = "+"
+            if self.to_strand == "+":
+                self.to_strand = "-"
+            else:
+                self.to_strand = "+"
+
+def count_reads_for_norm(): # for normalization
+    around_cutoff = 20
+    split_bamfile = pysam.AlignmentFile(filename = split_bam_name, mode = 'rb')
+    for acc in acc_bkp_list:
+
+        from_segment_name, from_new_pos = convert_chr2_segment(acc.from_ref, acc.from_bkp)
+        to_segment_name, to_new_pos = convert_chr2_segment(acc.to_ref, acc.to_bkp)
+        
+        from_reads_list, to_reads_list = set(), set()
+        ref1_first, ref2_first = 0, 0
+
+        strand_flag = False
+
+        for read in split_bamfile.fetch(from_segment_name, from_new_pos-around_cutoff, from_new_pos+around_cutoff):
+            if read.mapping_quality < 20:
+                continue
+
+            from_reads_list.add(read.query_name)
+            if strand_flag == False:
+                if read.has_tag('SA'):
+                    array = read.get_tag('SA').split(',')
+
+                    if array[0] == to_segment_name and abs(int(array[1]) - to_new_pos) < 150:
+                        to_bkp_strand = array[2]
+                        if read.is_reverse == False:
+                            acc.from_strand = "+"
+                            acc.to_strand = to_bkp_strand
+                            # print (read.reference_name, from_new_pos, "+", read.next_reference_name, to_new_pos, to_bkp_strand)
+                        else:
+                            acc.from_strand = "-"
+                            acc.to_strand = to_bkp_strand
+                            # print (read.next_reference_name, to_new_pos, to_bkp_strand, read.reference_name, from_new_pos, "-", read.query_name)
+                        strand_flag = True
+
+        for read in split_bamfile.fetch(to_segment_name, to_new_pos-around_cutoff, to_new_pos+around_cutoff):
+            if read.mapping_quality < 20:
+                continue
+
+            if strand_flag == False:
+                if read.has_tag('SA'):
+                    array = read.get_tag('SA').split(',')
+
+                    if array[0] == from_segment_name and abs(int(array[1]) - from_new_pos) < 500:
+                        from_bkp_strand = array[2]
+                        if read.is_reverse == False:
+                            acc.to_strand = "+"
+                            acc.from_strand = from_bkp_strand
+                            # print (read.reference_name, to_new_pos, "+", read.next_reference_name, from_new_pos, from_bkp_strand)
+                        else:
+                            acc.to_strand = "-"
+                            acc.from_strand = from_bkp_strand
+                            # print (read.next_reference_name, from_new_pos, from_bkp_strand, read.reference_name, to_new_pos, "-")
+                        strand_flag = True
+
+            to_reads_list.add(read.query_name)
+        acc.from_reads = len(from_reads_list)
+        acc.to_reads = len(to_reads_list)
+        acc.cross = len(to_reads_list & from_reads_list)
+
+        # print (acc.from_reads, acc.to_reads, acc.cross, ref1_first, ref2_first)
+        # break
+
+def find_chr_segment_name(bed_file):
+    # bed_file =  "/mnt/d/breakpoints/HGT/test_5_11/species20_snp0.01_depth30_reads150_sample_1.interval.txt.bed"  
+    chr_segments = {} 
+    for line in open(bed_file):   
+        segment = line.strip()
+        my_chr = segment.split(":")[0]
+        start = int(segment.split(":")[1].split("-")[0])
+        end = int(segment.split(":")[1].split("-")[1])
+        if my_chr not in chr_segments:
+            chr_segments[my_chr] = []
+        chr_segments[my_chr].append([start, end])
+    return chr_segments
+
+def convert_chr2_segment(ref, pos):
+    for interval in chr_segments[ref]:
+        if pos >= interval[0] and pos <= interval[1]:
+            new_pos = pos - interval[0] 
+            segment_name = "%s:%s-%s"%(ref, interval[0], interval[1])
+            return segment_name, new_pos
+
 
 if __name__ == "__main__":
 
@@ -494,13 +629,15 @@ if __name__ == "__main__":
     required.add_argument("-u", type=str, help="<str> unique reads bam file.", metavar="\b")
     required.add_argument("-s", type=str, help="<str> split reads bam file.", metavar="\b")
     optional.add_argument("-t", type=int, default=5, help="<int> number of threads", metavar="\b")
+    optional.add_argument("-b", type=str, help="bed file of extracted ref.", metavar="\b")
     optional.add_argument("-n", type=int, default=1, help="<0/1> 1 indicates the aligned-ref is extracted.", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
     args = vars(parser.parse_args())
 
+    bed_file = args["b"]
     unique_bam_name = args["u"]
     unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
-    mean, sdev, rlen = getInsertSize(unique_bamfile)
+    mean, sdev, rlen, rnum = getInsertSize(unique_bamfile)
     insert_size = int(mean + 2*sdev)
     rlen = int(rlen)
 
@@ -524,13 +661,20 @@ if __name__ == "__main__":
         read_split_bam(split_bam_name)
         find_accurate_bkp()
 
+        chr_segments = find_chr_segment_name(bed_file)  #find the reads support each breakpoint
+        count_reads_for_norm()
+
+
         f = open(output_acc_bkp_file, 'w', newline='')
+        print ("# the number of reads in the sample is: %s; Insert size is %s."%(rnum, insert_size), file = f)
         writer = csv.writer(f)
-        header = ['from_ref','from_pos','to_ref','to_pos','from_side','to_side',\
-        'if_reverse','read_seq','ref_seq','similarity']
+        header = ['from_ref','from_pos','from_side','from_strand','to_ref','to_pos','to_side',\
+        'to_strand','if_reverse','read_seq','ref_seq','similarity','from_reads','to_reads','cross_reads']
         writer.writerow(header)
         for acc in acc_bkp_list:
+            acc.refine_bkp()
             # acc.print_out()
+            # print (acc.from_strand, acc.to_strand)
             acc.write_out(writer)
         f.close()
         print ('Final bkp num is %s'%(len(acc_bkp_list)))
