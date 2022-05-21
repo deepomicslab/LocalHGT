@@ -13,7 +13,7 @@ extracted_ref=$outdir/$ID.specific.ref.fasta
 start=$(date +%s)
 dir=$(cd `dirname $0`; pwd)
 
-# :<<!
+:<<!
 # $dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7 $thread
 # python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
 

@@ -174,10 +174,11 @@ def batch_germany():
             continue
         else:
             ba.sample = array[0]
-            ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/%s_1.fastq"%(ba.sample)
-            ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/%s_2.fastq"%(ba.sample)
+            ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/germany/%s_1.fastq.gz"%(ba.sample)
+            ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/germany/%s_2.fastq.gz"%(ba.sample)
             order = ba.get_normal_order()
-            print (order, file = h)
+            if not os.path.isfile("/mnt/d/breakpoints/HGT/CRC/germany/result/%s.repeat.acc.csv"%(ba.sample)):
+                print (order, file = h)
     h.close()
 
 def batch_japan():
@@ -194,11 +195,11 @@ def batch_japan():
         if array[0] == "Run":
             continue
         else:
-            # if i >= 80:
-            #     break
+            if i > 80:
+                break
             ba.sample = array[0]
-            ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/japan/%s_1.fastq"%(ba.sample)
-            ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/japan/%s_2.fastq"%(ba.sample)
+            ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/japan/%s_1.fastq.gz"%(ba.sample)
+            ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/japan/%s_2.fastq.gz"%(ba.sample)
             order = ba.get_normal_order()
             if not os.path.isfile("/mnt/d/breakpoints/HGT/CRC/japan/result/%s.repeat.acc.csv"%(ba.sample)):
                 print (order, file = h)
@@ -222,8 +223,8 @@ def batch_austria():
             continue
         else:
             ba.sample = array[0]
-            ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/austria/%s_1.fastq"%(ba.sample)
-            ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/austria/%s_2.fastq"%(ba.sample)
+            ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/austria/%s_1.fastq.gz"%(ba.sample)
+            ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/austria/%s_2.fastq.gz"%(ba.sample)
             order = ba.get_normal_order()
             if not os.path.isfile("/mnt/d/breakpoints/HGT/CRC/austria/result/%s.repeat.acc.csv"%(ba.sample)):
                 print (order, file = h)
@@ -249,13 +250,36 @@ def batch_USA():
             print (order, file = h)
     h.close()
 
+def batch_china():
+    ba = Batch()
+    ba.get_fq_dir("/mnt/d/breakpoints/HGT/CRC/china/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/CRC/china/result")
+
+    h = open("/mnt/d/breakpoints/HGT/CRC/china/run_localHGT_china.sh", 'w')
+
+    i = 0
+    index = 0
+    for line in open("/mnt/d/breakpoints/HGT/CRC/china/yu_2015.csv"):
+        ID = line.strip().split(",")[0]
+        if ID == "Run":
+            continue
+
+        ba.sample = ID
+        ba.fq1 = "/mnt/f/PRJEB10878_crc_bgi/%s_1.fastq.gz"%(ba.sample)
+        ba.fq2 = "/mnt/f/PRJEB10878_crc_bgi/%s_2.fastq.gz"%(ba.sample)
+        order = ba.get_normal_order()
+        if not os.path.isfile("/mnt/d/breakpoints/HGT/CRC/china/result/%s.repeat.acc.csv"%(ba.sample)):
+            print (order, file = h)
+    h.close()
+
 
 if __name__ == "__main__":
     # batch_snp()
     # batch_cami()
     # batch_depth()
     # batch_germany()
-    # batch_japan()
+    batch_japan()
     # batch_USA()
     # batch_austria()
-    batch_france()
+    # batch_france()
+    # batch_china()

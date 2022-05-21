@@ -635,11 +635,15 @@ def find_chr_segment_name(bed_file):
     return chr_segments
 
 def convert_chr2_segment(ref, pos):
+    tolerate_gap = 150
     for interval in chr_segments[ref]:
-        if pos >= interval[0] and pos <= interval[1]:
+        if pos >= interval[0] - tolerate_gap and pos <= interval[1] + tolerate_gap:
             new_pos = pos - interval[0] 
             segment_name = "%s:%s-%s"%(ref, interval[0], interval[1])
+            if new_pos < 1:
+                new_pos = 1
             return segment_name, new_pos
+    print ("Can't find corresponding for", ref, pos)
 
 
 if __name__ == "__main__":
@@ -685,7 +689,7 @@ if __name__ == "__main__":
 
         read_split_bam(split_bam_name)
         find_accurate_bkp()
-
+        print ("accurate bkps are found, count support reads")
         chr_segments = find_chr_segment_name(bed_file)  #find the reads support each breakpoint
         count_reads_for_norm()
 
