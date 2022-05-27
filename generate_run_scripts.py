@@ -178,7 +178,9 @@ def batch_germany():
             ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/germany/%s_2.fastq.gz"%(ba.sample)
             order = ba.get_normal_order()
             if not os.path.isfile("/mnt/d/breakpoints/HGT/CRC/germany/result/%s.repeat.acc.csv"%(ba.sample)):
-                print (order, file = h)
+                if os.path.isfile("/mnt/d/breakpoints/HGT/CRC/germany/result/%s.acc.csv"%(ba.sample)):
+                    if os.path.isfile(ba.fq1):
+                        print (order, file = h)
     h.close()
 
 def batch_japan():
@@ -277,8 +279,8 @@ if __name__ == "__main__":
     # batch_snp()
     # batch_cami()
     # batch_depth()
-    # batch_germany()
-    batch_japan()
+    batch_germany()
+    # batch_japan()
     # batch_USA()
     # batch_austria()
     # batch_france()

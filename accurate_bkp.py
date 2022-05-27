@@ -542,6 +542,8 @@ def count_reads_for_norm(): # for normalization
 
         from_segment_name, from_new_pos = convert_chr2_segment(acc.from_ref, acc.from_bkp)
         to_segment_name, to_new_pos = convert_chr2_segment(acc.to_ref, acc.to_bkp)
+        if from_segment_name == "NA" or to_segment_name == "NA":
+            continue
         
         from_split_reads, to_split_reads = set(), set()
         strand_flag = False
@@ -644,6 +646,7 @@ def convert_chr2_segment(ref, pos):
                 new_pos = 1
             return segment_name, new_pos
     print ("Can't find corresponding for", ref, pos)
+    return "NA", 0
 
 
 if __name__ == "__main__":
