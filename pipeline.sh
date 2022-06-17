@@ -5,7 +5,7 @@ fq1=$2
 fq2=$3
 ID=$4
 outdir=$5
-thread=5
+thread=10
 
 interval_file=$outdir/$ID.interval.txt
 sample=$outdir/$ID
@@ -14,8 +14,8 @@ start=$(date +%s)
 dir=$(cd `dirname $0`; pwd)
 
 # :<<!
-# $dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7 $thread
-# python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
+$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7 $thread
+python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
 
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
 

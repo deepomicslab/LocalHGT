@@ -580,6 +580,7 @@ def calculateCandidateBkpList(cluster_label_dict, dict_xy, sub_sub_key):
 def worker(preClusterData, ref_name, file_name, ref_dict_Interact_Big):
     scanned_pair_ref = {}
     key = ref_name
+    # print (len(preClusterData))
     for sub_key in preClusterData.get(key):
         cross_name = sub_key
         if cross_name in scanned_pair_ref:
@@ -598,6 +599,7 @@ def worker(preClusterData, ref_name, file_name, ref_dict_Interact_Big):
         dict_xy = preClusterData.get(key).get(sub_key)
         # if len(dict_xy) < minSample:
         #     continue
+        # print (key, sub_key, len(dict_xy))
         for sub_sub_key in dict_xy:
             cluster_label_dict = clusterBasedOnDensity(dict_xy,sub_sub_key)
             improved_cross_cluster = calculateCandidateBkpList(cluster_label_dict, dict_xy, sub_sub_key)
@@ -705,8 +707,10 @@ def main():
     for ref_name in tmp_ref_name_list:
         # if ref_name not in processed_ref_list:
         ref_name_list.append(ref_name)
+    print ("ref_name len:", len(ref_name_list))
     i = 0
     while i < len(ref_name_list):
+        print (i)
         start_pos = i
         end_pos = min(i + split_num, len(ref_name_list))
         procs = []
@@ -738,4 +742,5 @@ if __name__ == "__main__":
     mean, sdev, rlen, rnum = getInsertSize(unique_bamfile)
     insert_size = int(mean + 2*sdev)
     rlen = int(rlen)
+    print ("read length is %s"%(rlen))
     sys.exit(main())

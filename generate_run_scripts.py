@@ -137,6 +137,57 @@ def batch_depth():
     f.close()
     h.close()
 
+def batch_snp_pure():
+    ba = Batch()
+    ba.get_fq_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/uhgg_snp_pure/")
+    ba.change_lemon_dir("/mnt/e/HGT/lemon_snp_pure/")
+
+    f = open("/mnt/d/breakpoints/lemon/run_lemon_snp_pure.sh", 'w')
+    h = open("/mnt/d/breakpoints/HGT/run_localHGT_snp_pure.sh", 'w')
+
+    index = 0
+    for snp_rate in [0.01, 0.02, 0.03, 0.04, 0.05]:
+        ba.snp_rate = snp_rate 
+        for index in range(10):
+            ba.get_ID(index)
+            ba.get_fq()
+            ba.change_ref()
+            order = ba.get_lemon_order()
+            print (order, file = f)
+            order = ba.get_normal_order()
+            print (order, file = h)
+            ba.get_ID(index) # refresh ID
+
+    f.close()
+    h.close()
+
+def batch_length_pure():
+    ba = Batch()
+    ba.get_fq_dir("/mnt/d/breakpoints/HGT/uhgg_length/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/uhgg_length_results/")
+    ba.change_lemon_dir("/mnt/e/HGT/lemon_length_results/")
+
+    f = open("/mnt/d/breakpoints/lemon/run_lemon_length.sh", 'w')
+    h = open("/mnt/d/breakpoints/HGT/run_localHGT_length.sh", 'w')
+
+    index = 0
+    # for snp_rate in [0.01, 0.02, 0.03, 0.04, 0.05]:
+    #     ba.snp_rate = snp_rate 
+    for read_length in [100, 125]:
+        ba.reads_len = read_length
+        for index in range(10):
+            ba.get_ID(index)
+            ba.get_fq()
+            ba.change_ref()
+            order = ba.get_lemon_order()
+            print (order, file = f)
+            order = ba.get_normal_order()
+            print (order, file = h)
+            ba.get_ID(index) # refresh ID
+
+    f.close()
+    h.close()
 
 def batch_france():
     ba = Batch()
@@ -187,7 +238,6 @@ def batch_japan():
     ba = Batch()
     ba.get_fq_dir("/mnt/d/breakpoints/HGT/CRC/japan/")
     ba.get_result_dir("/mnt/d/breakpoints/HGT/CRC/japan/result")
-
     h = open("/mnt/d/breakpoints/HGT/CRC/japan/run_localHGT_japan.sh", 'w')
 
     i = 0
@@ -206,6 +256,33 @@ def batch_japan():
             if not os.path.isfile("/mnt/d/breakpoints/HGT/CRC/japan/result/%s.repeat.acc.csv"%(ba.sample)):
                 print (order, file = h)
             i += 1
+    h.close()
+
+def batch_japan_reverse():
+    ba = Batch()
+    ba.get_fq_dir("/mnt/d/breakpoints/HGT/CRC/japan/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/CRC/japan/result")
+    h = open("/mnt/d/breakpoints/HGT/CRC/japan/run_localHGT_japan_reverse.sh", 'w')
+    order_list = []
+    i = 0
+    index = 0
+    for line in open("/mnt/d/breakpoints/HGT/CRC/japan.csv"):
+        array = line.split(",")
+        if array[0] == "Run":
+            continue
+        else:
+            if i > 80:
+                break
+            ba.sample = array[0]
+            ba.fq1 = "/mnt/d/breakpoints/HGT/CRC/japan/%s_1.fastq.gz"%(ba.sample)
+            ba.fq2 = "/mnt/d/breakpoints/HGT/CRC/japan/%s_2.fastq.gz"%(ba.sample)
+            order = ba.get_normal_order()
+            if not os.path.isfile("/mnt/d/breakpoints/HGT/CRC/japan/result/%s.repeat.acc.csv"%(ba.sample)):
+                # print (order, file = h)
+                order_list.append(order)
+            i += 1
+    for order in order_list[::-1]:
+        print (order, file = h)
     h.close()
 
 def batch_austria():
@@ -274,14 +351,47 @@ def batch_china():
             print (order, file = h)
     h.close()
 
+def batch_donor():
+    ba = Batch()
+
+    ba.HGT_num = 5
+    ba.scaffold_num = 5
+
+    f = open("/mnt/d/breakpoints/lemon/run_lemon_donor.sh", 'w')
+    h = open("/mnt/d/breakpoints/HGT/run_localHGT_donor.sh", 'w')
+
+    index = 0
+    # for snp_rate in [0.01, 0.02, 0.03, 0.04, 0.05]:
+    for donor_f in ["in", "not_in"]:
+        # ba.snp_rate = snp_rate 
+
+        ba.get_fq_dir("/mnt/d/breakpoints/HGT/donor/%s/"%(donor_f))
+        ba.get_result_dir("/mnt/d/breakpoints/HGT/donor_result/localhgt/%s/"%(donor_f))
+        ba.change_lemon_dir("/mnt/e/HGT/donor_result/lemon/%s/"%(donor_f))
+        for index in range(10):
+            ba.get_ID(index)
+            ba.get_fq()
+            ba.change_ref()
+            order = ba.get_lemon_order()
+            print (order, file = f)
+            order = ba.get_normal_order()
+            print (order, file = h)
+            ba.get_ID(index) # refresh ID
+
+    f.close()
+    h.close()
+
 
 if __name__ == "__main__":
-    # batch_snp()
+    batch_donor()
+    # batch_snp_pure()
+    # batch_length_pure()
     # batch_cami()
     # batch_depth()
-    batch_germany()
+    # batch_germany()
     # batch_japan()
     # batch_USA()
     # batch_austria()
     # batch_france()
     # batch_china()
+    # batch_japan_reverse()

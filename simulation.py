@@ -234,6 +234,9 @@ def random_HGT(pa):
         # new_seq_dict[second_chrom] = second_seq[:second_uniq_region_s] + second_seq[second_uniq_region_e:]
         if pa.donor_in_flag == False:
             del new_seq_dict[second_chrom]
+        else:
+            # if the donor genome is also in the sample
+            new_seq_dict[second_chrom] = second_seq[:second_uniq_region_s] + second_seq[second_uniq_region_e:]
 
         print (i, first_chrom, first_uniq_region_s, second_chrom, second_uniq_region_s, \
         second_uniq_region_e, i, chrom_num)
@@ -257,7 +260,7 @@ def generate_fastq(new_seq_dict, truth_HGT, pa):
     fasta_file = pa.outdir+'/%s.true.fasta'%(pa.sample)
     fasta = open(fasta_file, 'w')
     i = 0
-    sequencing_method = {75:'NS50', 100:'HS20', 150:'HS25'}
+    sequencing_method = {75:'NS50', 100:'HS20', 150:'HS25', 125:'HS25'}
     for chrom in new_seq_dict.keys():
         print ('>%s'%(chrom), file = fasta)
         print (new_seq_dict[chrom], file = fasta)
@@ -270,7 +273,7 @@ def generate_fastq(new_seq_dict, truth_HGT, pa):
         ######### random depth ###########
         # dp = np.random.randint(10, 50)
 
-        fq = 'art_illumina -ss %s --noALN -p -i %s -l %s -m 350 -s 10 --fcov %s -o %s/%s_HGT_%s_tmp.'\
+        fq = 'art_illumina -ss %s -nf 0 --noALN -p -i %s -l %s -m 350 -s 10 --fcov %s -o %s/%s_HGT_%s_tmp.'\
         %(sequencing_method[pa.reads_len], tmp_file, pa.reads_len, pa.depth, pa.outdir, pa.sample, i)
         # fq = 'wgsim -e 0 -N %s -r 0.00 -S 1 -1 150 -2 150 %s /mnt/d/breakpoints/meta_simu/03.samples//%s_HGT_%s_tmp.1.fq /mnt/d/breakpoints/meta_simu/03.samples//%s_HGT_%s_tmp.2.fq'%(int(len(new_seq_dict[chrom])/6), tmp_file, ID, i, ID, i)
         os.system(fq)
@@ -352,6 +355,46 @@ def UHGG_snp(uniq_segs_loci):
                     pa.add_species(species_dict, seq_dict)                  
                     if_success = random_HGT(pa)
 
+def UHGG_length(uniq_segs_loci): 
+    # different read length
+    species_dict = {} 
+    pa = Parameters()
+    pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_length/")
+    pa.add_segs(uniq_segs_loci)
+    pa.get_uniq_len()
+
+    for read_length in [100, 125]:
+        pa.reads_len = read_length
+        for index in range(pa.iteration_times):
+            pa.get_ID(index)
+            if_success = 0
+            while if_success == 0:
+                ############random select scaffold###########
+                all_ref = pa.outdir + '/%s.fa'%(pa.sample)
+                fasta_sequences = SeqIO.parse(open(pa.origin_ref),'fasta')       
+                f = open(all_ref, 'w')
+                select_num = 0
+                for record in fasta_sequences:
+                    if len(record.seq) < pa.min_genome:
+                        continue
+                    if pa.uniq_len[str(record.id)] < pa.min_uniq_len:
+                        continue
+                    if np.random.random() < pa.random_rate:
+                        rec1 = SeqRecord(record.seq, id=str(record.id), description="simulation")
+                        SeqIO.write(rec1, f, "fasta") 
+                        # uniq_segs_loci[str(record.id)] = [[1, len(record.seq)]]
+                        species_dict[str(record.id)] = str(record.id)
+                        select_num += 1
+                    if select_num == pa.scaffold_num + pa.HGT_num:
+                        break
+
+                f.close()
+                print ('%s scaffolds were extracted.'%(select_num))
+                if select_num ==pa.scaffold_num + pa.HGT_num:
+                    seq_dict = read_fasta(all_ref)  
+                    pa.add_species(species_dict, seq_dict)                  
+                    if_success = random_HGT(pa)
+
 def UHGG_depth(uniq_segs_loci): 
     species_dict = {} 
     pa = Parameters()
@@ -365,6 +408,50 @@ def UHGG_depth(uniq_segs_loci):
     for depth in [10]:
         pa.change_depth(depth)
         for index in range(9, 10):
+            pa.get_ID(index)
+            if_success = 0
+            while if_success == 0:
+                ############random select scaffold###########
+                all_ref = pa.outdir + '/%s.fa'%(pa.sample)
+                fasta_sequences = SeqIO.parse(open(pa.origin_ref),'fasta')       
+                f = open(all_ref, 'w')
+                select_num = 0
+                for record in fasta_sequences:
+                    if len(record.seq) < pa.min_genome:
+                        continue
+                    if pa.uniq_len[str(record.id)] < pa.min_uniq_len:
+                        continue
+                    if np.random.random() < pa.random_rate:
+                        rec1 = SeqRecord(record.seq, id=str(record.id), description="simulation")
+                        SeqIO.write(rec1, f, "fasta") 
+                        # uniq_segs_loci[str(record.id)] = [[1, len(record.seq)]]
+                        species_dict[str(record.id)] = str(record.id)
+                        select_num += 1
+                    if select_num == pa.scaffold_num + pa.HGT_num:
+                        break
+
+                f.close()
+                print ('%s scaffolds were extracted.'%(select_num))
+                if select_num ==pa.scaffold_num + pa.HGT_num:
+                    seq_dict = read_fasta(all_ref)  
+                    pa.add_species(species_dict, seq_dict)                  
+                    if_success = random_HGT(pa)
+
+def UHGG_donor(uniq_segs_loci): 
+    species_dict = {} 
+    pa = Parameters()
+    # pa.get_dir("/mnt/d/breakpoints/HGT/donor/")
+    pa.add_segs(uniq_segs_loci)
+    pa.get_uniq_len()
+    pa.HGT_num = 5
+    pa.scaffold_num = 5
+
+    flag = [True, False]
+    folders = ["in", "not_in"]
+    for i in range(2):
+        pa.donor_in_flag =  flag[i]
+        pa.get_dir("/mnt/d/breakpoints/HGT/donor/" + folders[i] + "/" )
+        for index in range(pa.iteration_times):
             pa.get_ID(index)
             if_success = 0
             while if_success == 0:
@@ -430,9 +517,9 @@ class Parameters():
         self.scaffold_num = self.HGT_num
         self.snp_rate = 0.01
         self.indel_rate = self.snp_rate * 0.1  
-        self.depth = 100
+        self.depth = 30
         self.reads_len = 150
-        self.iteration_times = 1
+        self.iteration_times = 10
         self.donor_in_flag = False
         self.min_genome = 100000
         self.min_uniq_len = 20000
@@ -559,9 +646,7 @@ if __name__ == "__main__":
     t1 = time.time()
     print ('Uniq extraction is done.', t1 - t0)
     print ("genome num:", len(uniq_segs_loci))
-    # UHGG_snp(uniq_segs_loci)
-    UHGG_depth(uniq_segs_loci)
+    UHGG_donor(uniq_segs_loci)
+    # UHGG_length(uniq_segs_loci)
+    # UHGG_depth(uniq_segs_loci)
     # """
-
-    # UHGG_depth()
-    # UHGG_cami()

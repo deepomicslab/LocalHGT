@@ -101,6 +101,22 @@ def read_lemon(lemon):
         past = array[:4]
     return lemon_bkp
 
+def read_localHGT(lemon):
+    lemon_bkp = []
+    past = ['', '', '', '']
+    for line in open(lemon):
+        if line[0] == "#":
+            continue
+        array = line.strip().split(',')
+        if array[0] == "from_ref": #skip the annotation line
+            continue
+        from_ref = array[0]
+        from_pos = int(array[1])
+        to_ref = array[4]
+        to_pos = int(array[5])
+        lemon_bkp.append([from_ref, from_pos, to_ref, to_pos])
+    return lemon_bkp
+
 def compare(true_bkp, our_bkp):
     right = 0
     error = 0
@@ -146,7 +162,10 @@ def compare(true_bkp, our_bkp):
     else:
         FDR = 0
     precision = 1-FDR
-    F1_score = 2/((1/precision) + (1/recall)) 
+    if precision > 0 and recall > 0:
+        F1_score = 2/((1/precision) + (1/recall)) 
+    else:
+        F1_score = 0
     return round(accuracy,2), round(FDR,2), round(F1_score,2)#, false_positive_locus
 
 class Performance():
@@ -179,9 +198,12 @@ class Sample():
         else:
             return '_'.join(array[:6])
 
-    def eva_tool(self, tool_dir):
+    def eva_tool(self, tool_dir, tool):
         acc_file = tool_dir + '/' + self.ID + '.acc.csv'
-        bkp = read_lemon(acc_file)
+        if tool == "lemon":
+            bkp = read_lemon(acc_file)
+        else:
+            bkp = read_localHGT(acc_file)
         accuracy, FDR, F1_score = compare(self.true_bkp, bkp)
         time_file = tool_dir + '/' + self.ID + '.time'
         tool_time = self.extract_time(time_file)
@@ -238,7 +260,7 @@ class Figure():
 
     def convert_df(self):
         self.df=pd.DataFrame(self.data,columns=['CPU time', 'Recall','FDR', 'Peak RAM', \
-        'Ref Accuracy',  'Extracted Ref (M)', 'Methods', self.variation, "F1 score", "Complexity"])
+        'Ref Accuracy',  'Extracted Ref (M)', 'Methods', self.variation, "F1", "Complexity"])
 
     def plot(self):
         self.convert_df()
@@ -337,23 +359,6 @@ def snp():
             local_pe = sa.eva_tool(local_dir)
             print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.FDR)
             # print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy)
-"""
-            lemon_pe = sa.eva_tool(lemon_dir)
-            local_pe = sa.eva_tool(local_dir)
-            
-            local_pe.add_ref(ref_accuracy, ref_len)
-            print ("time:", lemon_pe.user_time, local_pe.user_time)
-            print ("Recall", lemon_pe.accuracy, local_pe.accuracy)
-            print ("mem",lemon_pe.max_mem, local_pe.max_mem)
-            print ("ref", local_pe.ref_accuracy, local_pe.ref_len, "Mb")
-            
-            fi.add_local_sample(local_pe, snp_rate)
-            fi.add_lemon_sample(lemon_pe, snp_rate)
-        #     break
-        # break
-    # fi.plot()
-"""
-
 
 def depth():
     fi = Figure()
@@ -380,6 +385,81 @@ def depth():
             fi.add_lemon_sample(lemon_pe, depth)
     fi.plot()
 
+def pure_snp():
+    fi = Figure()
+    ba = Parameters()
+    true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
+    lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp_pure/"
+    local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_pure/"
+
+    for snp_rate in ba.snp_level:
+        ba.change_snp_rate(snp_rate)
+        for index in range(10):
+            ba.get_ID(index)    
+            sa = Sample(ba.sample, true_dir)
+            ref_accuracy, ref_len = sa.eva_ref(local_dir)
+        
+            local_pe = sa.eva_tool(local_dir, 'localHGT')
+            local_pe.add_ref(ref_accuracy, ref_len)
+            lemon_pe = sa.eva_tool(lemon_dir, "lemon")
+            fi.add_local_sample(local_pe, snp_rate)
+            fi.add_lemon_sample(lemon_pe, snp_rate)
+    fi.variation = "snp"
+    fi.convert_df()
+    fi.df.to_csv('/mnt/c/Users/swang66/Documents/For_methods/pure_snp_comparison.csv', sep=',')
+
+def pure_length():
+    fi = Figure()
+    ba = Parameters()
+    true_dir = "/mnt/d/breakpoints/HGT/uhgg_length/"
+    lemon_dir = "/mnt/d/breakpoints/HGT/lemon_length_results/"
+    local_dir = "/mnt/d/breakpoints/HGT/uhgg_length_results/"
+
+    # for snp_rate in ba.snp_level:
+    #     ba.change_snp_rate(snp_rate)
+    for read_length in [75]:
+        ba.reads_len = read_length
+        for index in range(10):
+            ba.get_ID(index)    
+            sa = Sample(ba.sample, true_dir)
+            ref_accuracy, ref_len = sa.eva_ref(local_dir)
+        
+            local_pe = sa.eva_tool(local_dir, 'localHGT')
+            local_pe.add_ref(ref_accuracy, ref_len)
+            lemon_pe = sa.eva_tool(lemon_dir, "lemon")
+            fi.add_local_sample(local_pe, read_length)
+            fi.add_lemon_sample(lemon_pe, read_length)
+            print ("#ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.FDR)
+    fi.variation = "length"
+    fi.convert_df()
+    fi.df.to_csv('/mnt/c/Users/swang66/Documents/For_methods/pure_length_comparison.csv', sep=',')
+
+def pure_donor():
+    fi = Figure()
+    ba = Parameters()
+    true_dir = "/mnt/d/breakpoints/HGT/uhgg_length/"
+    lemon_dir = "/mnt/d/breakpoints/HGT/lemon_length_results/"
+    local_dir = "/mnt/d/breakpoints/HGT/uhgg_length_results/"
+
+    # for snp_rate in ba.snp_level:
+    #     ba.change_snp_rate(snp_rate)
+    for read_length in [75]:
+        ba.reads_len = read_length
+        for index in range(10):
+            ba.get_ID(index)    
+            sa = Sample(ba.sample, true_dir)
+            ref_accuracy, ref_len = sa.eva_ref(local_dir)
+        
+            local_pe = sa.eva_tool(local_dir, 'localHGT')
+            local_pe.add_ref(ref_accuracy, ref_len)
+            lemon_pe = sa.eva_tool(lemon_dir, "lemon")
+            fi.add_local_sample(local_pe, read_length)
+            fi.add_lemon_sample(lemon_pe, read_length)
+            print ("#ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.FDR)
+    fi.variation = "length"
+    fi.convert_df()
+    fi.df.to_csv('/mnt/c/Users/swang66/Documents/For_methods/pure_length_comparison.csv', sep=',')
+
 if __name__ == "__main__":
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
@@ -387,8 +467,9 @@ if __name__ == "__main__":
     print ("evaluation")
     # cami()
     # snp()
-
-    depth()
+    # pure_snp()
+    # depth()
+    # pure_length()
 
 
 
