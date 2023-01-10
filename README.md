@@ -20,7 +20,7 @@ Then index the database. First, build `samtools` index
 ```
 samtools faidx ref_database.fasta
 ```
-Second, at the first running, LocalHGT will index the database automatically, and it will take several hours.
+Second, at the first running, `LocalHGT` will index the database automatically, and it will take several hours.
 
 ## Running
 Run `python main.py` like
@@ -54,9 +54,7 @@ python ./main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//speci
 ```
 
 ## Output interpretion
-The HGT breakpoints would be saved in the *acc.csv file.
-Each line contains a pair of breakpoints, it records the two genome's ID and 
-the breakpoint positions. Here is an example:
+The HGT breakpoints would be saved in the `*acc.csv` file. Here is an example:
 ```
 # the number of reads in the sample is: 41723899; Insert size is 681.
 from_ref,from_pos,from_side,from_strand,to_ref,to_pos,to_side,to_strand,if_reverse,read_seq,ref_seq,similarity,from_split_reads,to_split_reads,cross_split_reads,pair_end
