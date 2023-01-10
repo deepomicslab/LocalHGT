@@ -19,8 +19,9 @@ class Accept_Parameters:
         self.run_order = ''
 
     def get_order(self):
-        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq1}\
+        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2}\
          {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio}"
+        print ("Running command:")
         print (self.run_order)
 
     def run(self):
@@ -53,4 +54,3 @@ if __name__ == "__main__":
         acc_pa = Accept_Parameters(options)
         acc_pa.get_order()
         acc_pa.run()
-        sys.exit(acc_pa.run())

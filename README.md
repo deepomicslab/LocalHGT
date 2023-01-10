@@ -85,7 +85,7 @@ Interpret each column as:
 We recommand construct the environment using `conda` with the `environment.yml`.
 Users can also prepare the env as follows: 
 ```
-Python 3.8+
+Python 3.7+
 Python Module: scipy, numpy, pandas, sklearn, pysam, scikit-bio, biopython, pyfaidx
 ```
 Please install samtools and bwa, and add them to system path, the version 

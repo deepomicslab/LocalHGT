@@ -13,6 +13,11 @@ extracted_ref=$outdir/$ID.specific.ref.fasta
 start=$(date +%s)
 dir=$(cd `dirname $0`; pwd)
 
+
+if [ ! -d $outdir ]; then
+  mkdir $outdir
+fi
+
 # :<<!
 $dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7 $thread
 python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
@@ -51,8 +56,13 @@ python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.bam -b ${interval
 -s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv
 
 python $dir/remove_repeat.py $sample.repeat.acc.csv $sample.acc.csv
-wc -l $sample.acc.csv
 
+if [ ! -f "$sample.acc.csv" ]; then
+    echo "Error: Final HGT breakpoint file is not generated."
+else
+    echo "Final HGT breakpoint file is generated."
+    wc -l $sample.acc.csv
+fi
 
 rm $extracted_ref*
 rm $sample.unsort.splitters.bam
@@ -62,6 +72,9 @@ rm $sample.unsort.bam
 end=$(date +%s)
 take=$(( end - start ))
 echo Time taken to execute commands is ${take} seconds. >> ${sample}.log
+echo "Final result is in $sample.acc.csv"
+echo "--------------------------"
+echo "Finished!"
 
 
 
