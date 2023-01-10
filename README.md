@@ -8,6 +8,7 @@ conda env create --name localhgt -f environment.yml
 conda activate localhgt
 make
 sudo chmod 744 ./extract_ref
+python main.py -h
 ```
 
 ## Reference database
