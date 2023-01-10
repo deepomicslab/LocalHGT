@@ -22,8 +22,7 @@ First, use samtools to index the database
 ```
 samtools faidx ref_database.fasta
 ```
-Second, LocalHGT also needs an index file for the reference. With the first running, LocalHGT will index 
-the database automatically, and it will take several hours.
+Second, at the first running, LocalHGT will index the database automatically, and it will take several hours.
 
 ## Running
 Run `python main.py` like
@@ -83,6 +82,8 @@ Interpret each column as:
 |pair_end| number of paired-end reads supported the breakpoint pair     |
 
 ## Dependency
+We recommand construct the environment using `conda` with the `environment.yml`.
+Users can also prepare the env as follows: 
 ```
 Python 3.8+
 Python Module: scipy, numpy, pandas, sklearn, pysam, scikit-bio, biopython, pyfaidx
