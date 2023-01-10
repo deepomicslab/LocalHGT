@@ -381,9 +381,38 @@ def batch_donor():
     f.close()
     h.close()
 
+def batch_frag():
+    ba = Batch()
+
+    f = open("/mnt/d/breakpoints/lemon/run_lemon_frag.sh", 'w')
+    h = open("/mnt/d/breakpoints/HGT/run_localHGT_frag.sh", 'w')
+
+
+    # for frag in [500, 1000, 1500]:
+    for frag in [200, 350, 500, 650, 800, 950]:
+        ba.mean_frag = frag
+        os.system("mkdir /mnt/d/breakpoints/HGT/frag_result/localhgt/f%s/"%(frag))
+        os.system("mkdir /mnt/e/HGT/frag_result/lemon/f%s/"%(frag))
+        ba.get_fq_dir("/mnt/d/breakpoints/HGT/frag_size/f%s/"%(frag) )
+        ba.get_result_dir("/mnt/d/breakpoints/HGT/frag_result/localhgt/f%s/"%(frag))
+        ba.change_lemon_dir("/mnt/e/HGT/frag_result/lemon/f%s/"%(frag))
+        for index in range(10):
+            ba.get_ID(index)
+            ba.get_fq()
+            ba.change_ref()
+            order = ba.get_lemon_order()
+            print (order, file = f)
+            order = ba.get_normal_order()
+            print (order, file = h)
+            ba.get_ID(index) # refresh ID
+
+    f.close()
+    h.close()
+
 
 if __name__ == "__main__":
-    batch_donor()
+    batch_frag()
+    # batch_donor()
     # batch_snp_pure()
     # batch_length_pure()
     # batch_cami()

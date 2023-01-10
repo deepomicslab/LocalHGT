@@ -16,6 +16,7 @@ import sys
 from collections import Counter
 from datetime import datetime
 from simulation import Parameters
+from generate_run_scripts import Batch
 
 tolerate_dist = 50
 ref_gap = 50
@@ -437,14 +438,20 @@ def pure_length():
 def pure_donor():
     fi = Figure()
     ba = Parameters()
-    true_dir = "/mnt/d/breakpoints/HGT/uhgg_length/"
-    lemon_dir = "/mnt/d/breakpoints/HGT/lemon_length_results/"
-    local_dir = "/mnt/d/breakpoints/HGT/uhgg_length_results/"
-
-    # for snp_rate in ba.snp_level:
-    #     ba.change_snp_rate(snp_rate)
-    for read_length in [75]:
-        ba.reads_len = read_length
+    # true_dir = "/mnt/d/breakpoints/HGT/uhgg_length/"
+    # lemon_dir = "/mnt/d/breakpoints/HGT/lemon_length_results/"
+    # local_dir = "/mnt/d/breakpoints/HGT/uhgg_length_results/"
+    # ba = Batch()
+    ba.HGT_num = 5
+    ba.scaffold_num = 5
+    for donor_f in ["in", "not_in"]:
+        # ba.snp_rate = snp_rate 
+        true_dir = "/mnt/d/breakpoints/HGT/donor/%s/"%(donor_f)
+        lemon_dir = "/mnt/e/HGT/donor_result/lemon/%s/"%(donor_f)
+        local_dir = "/mnt/d/breakpoints/HGT/donor_result/localhgt/%s/"%(donor_f)
+        # ba.get_fq_dir()
+        # ba.get_result_dir()
+        # ba.change_lemon_dir()
         for index in range(10):
             ba.get_ID(index)    
             sa = Sample(ba.sample, true_dir)
@@ -453,12 +460,42 @@ def pure_donor():
             local_pe = sa.eva_tool(local_dir, 'localHGT')
             local_pe.add_ref(ref_accuracy, ref_len)
             lemon_pe = sa.eva_tool(lemon_dir, "lemon")
-            fi.add_local_sample(local_pe, read_length)
-            fi.add_lemon_sample(lemon_pe, read_length)
-            print ("#ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.FDR)
-    fi.variation = "length"
+            fi.add_local_sample(local_pe, donor_f)
+            fi.add_lemon_sample(lemon_pe, donor_f)
+            # print ("#ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.FDR)
+    fi.variation = "donor"
     fi.convert_df()
-    fi.df.to_csv('/mnt/c/Users/swang66/Documents/For_methods/pure_length_comparison.csv', sep=',')
+    fi.df.to_csv('/mnt/c/Users/swang66/Documents/For_methods/pure_donor_comparison.csv', sep=',')
+
+def pure_frag():
+    fi = Figure()
+    ba = Parameters()
+    # true_dir = "/mnt/d/breakpoints/HGT/uhgg_length/"
+    # lemon_dir = "/mnt/d/breakpoints/HGT/lemon_length_results/"
+    # local_dir = "/mnt/d/breakpoints/HGT/uhgg_length_results/"
+    # ba = Batch()
+    for frag in [200, 350, 500, 650, 800, 950]:
+        print (frag)
+        ba.mean_frag = frag
+        true_dir = "/mnt/d/breakpoints/HGT/frag_size/f%s/"%(frag) 
+        local_dir = "/mnt/d/breakpoints/HGT/frag_result/localhgt/f%s/"%(frag)
+        lemon_dir = "/mnt/e/HGT/frag_result/lemon/f%s/"%(frag)
+
+        for index in range(10):
+            ba.get_ID(index)    
+            sa = Sample(ba.sample, true_dir)
+            ref_accuracy, ref_len = sa.eva_ref(local_dir)
+        
+            local_pe = sa.eva_tool(local_dir, 'localHGT')
+            local_pe.add_ref(ref_accuracy, ref_len)
+            lemon_pe = sa.eva_tool(lemon_dir, "lemon")
+            fi.add_local_sample(local_pe, frag)
+            fi.add_lemon_sample(lemon_pe, frag)
+            # print ("#ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.FDR)
+    fi.variation = "frag"
+    fi.convert_df()
+    fi.df.to_csv('/mnt/c/Users/swang66/Documents/For_methods/pure_frag_comparison.csv', sep=',')
+
 
 if __name__ == "__main__":
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
@@ -470,6 +507,8 @@ if __name__ == "__main__":
     # pure_snp()
     # depth()
     # pure_length()
+    # pure_donor()
+    pure_frag()
 
 
 
