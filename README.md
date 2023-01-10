@@ -16,7 +16,7 @@ The database (a single `fasta` file) should contain all the representative refer
 For example, use gut-specific representative genomes collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
 The script `paper_results/build_UHGG_reference.py` can download the gut-specific UHGG v1 database.
 
-Then index the database. First, use samtools to index the database
+Then index the database. First, build `samtools` index 
 ```
 samtools faidx ref_database.fasta
 ```
