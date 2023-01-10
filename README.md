@@ -44,7 +44,7 @@ GUT_GENOME147854_27,694,tail,-,GUT_GENOME001745_51,2933,tail,+,True,CATAACGGCACA
 ```
 Interpret each column as:
 | Header  | Description |
-| ------------- | ------------- |
+| :-------------:| :-------------: |
 | from_ref  | from reference ID  |
 | from_pos  | from reference breakpoint position  |
 | from_side  | from reference side  |
