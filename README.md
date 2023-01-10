@@ -15,19 +15,39 @@ formate) should contain all the representative references of your concerning env
 
 For the human gut, we can download it from the Unified Human Gastrointestinal Genome 
 ([UHGG](https://www.nature.com/articles/s41587-020-0603-3)) database. 
-The script `build_UHGG_reference.py` can be used to download the UHGG v1 genomes.
+The script `paper_results/build_UHGG_reference.py` can be used to download the UHGG v1 genomes.
 
-Please use samtools to index the database first by
+First, use samtools to index the database
 
 ```
 samtools faidx ref_database.fasta
 ```
-LocalHGT also needs an index file for the reference, with the first running, LocalHGT will index 
+Second, LocalHGT also needs an index file for the reference. With the first running, LocalHGT will index 
 the database automatically, and it will take several hours.
 
 ## Running
-For each paired-end sequencing sample, with the unzipped fastq files, we can perform
-LocalHGT like
+Run `python main.py` like
+```
+usage: main.py -h
+
+Detect HGT events from metagenomics sequencing data.
+
+required arguments:
+  -r             <str> Reference file. (default: None)
+  --fq1          <str> unzipped fastq 1 file. (default: None)
+  --fq2          <str> unzipped fastq 2 file. (default: None)
+  -s             <str> Sample name. (default: sample)
+  -o             <str> Output folder. (default: ./)
+
+optional arguments:
+  -t             <int> number of threads (default: 5)
+  --hit_ratio    <float> Minimum approximate kmer match ratio to extract a
+                   reference fragment. (default: 0.1)
+  --match_ratio  <float> Minimum exact kmer match ratio to extract a
+                   reference fragment. (default: 0.08)
+  -h, --help
+```
+Or, with the unzipped paired-end fastq files, run
 ```
 bash pipeline.sh reference_database.fasta sample.1.fq sample.2.fq sample_name result_dir/ 0.1 0.08
 ```

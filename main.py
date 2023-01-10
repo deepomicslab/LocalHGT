@@ -29,7 +29,7 @@ class Accept_Parameters:
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Detect HGT events from sequencing data.", add_help=False, \
+    parser = argparse.ArgumentParser(description="Detect HGT events from metagenomics sequencing data.", add_help=False, \
     usage="%(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required = parser.add_argument_group("required arguments")
     optional = parser.add_argument_group("optional arguments")
@@ -41,8 +41,8 @@ if __name__ == "__main__":
 
     
     optional.add_argument("-t", type=int, default=5, help="<int> number of threads", metavar="\b")
-    optional.add_argument("--hit_ratio", type=float, default=0.2, help="<float> Minimum hit ratio to extract a reference fragment.", metavar="\b")
-    optional.add_argument("--match_ratio", type=float, default=0.04, help="<float> Minimum match ratio to extract a reference fragment.", metavar="\b")
+    optional.add_argument("--hit_ratio", type=float, default=0.1, help="<float> Minimum approximate kmer match ratio to extract a reference fragment.", metavar="\b")
+    optional.add_argument("--match_ratio", type=float, default=0.08, help="<float> Minimum exact kmer match ratio to extract a reference fragment.", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
 
     options = parser.parse_args()
