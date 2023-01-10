@@ -98,3 +98,6 @@ samtools==1.11+
 bwa-0.7.17+
 ```
 
+## Getting help
+Should you have any queries, please feel free to contact us, we will reply as soon as possible (swang66-c@my.cityu.edu.hk).
+
