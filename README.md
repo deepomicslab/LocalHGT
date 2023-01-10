@@ -22,6 +22,13 @@ samtools faidx ref_database.fasta
 ```
 Second, at the first running, `LocalHGT` will index the database automatically, and it will take several hours.
 
+## Test
+```
+cd test/
+sh run.sh
+```
+See `test/output/` for results. 
+
 ## Running
 Run `python main.py` like
 ```
@@ -58,8 +65,8 @@ The HGT breakpoints would be saved in the `*acc.csv` file. Here is an example:
 ```
 # the number of reads in the sample is: 41723899; Insert size is 681.
 from_ref,from_pos,from_side,from_strand,to_ref,to_pos,to_side,to_strand,if_reverse,read_seq,ref_seq,similarity,from_split_reads,to_split_reads,cross_split_reads,pair_end
-GUT_GENOME001745_51,3736,head,+,GUT_GENOME147854_27,1150,head,-,True,GCTGAACTAAAGGGAGTAAAACTGAAAGATTATGCAGGCACGAA,GCTGAACTAAAGGGAGTAAAACTGAAAGATTATGCAGGCACGAA,2.0,3,2,1,6371
-GUT_GENOME147854_27,694,tail,-,GUT_GENOME001745_51,2933,tail,+,True,CATAACGGCACAAGAAAAGATAACCGACCTTATCGG,CATAACGGCACAAGAAAAGATAACCGACCTTATCGG,2.0,11,4,1,401
+GUT_GENOME000031_3,41994,head,+,GUT_GENOME096518_4,692224,tail,+,False,GTGTCGGGGCTTATGATAATCATATCTTATTTTTC,GTGTCGGGGCTTATGATAATCATATCTTTTTTTTC,1.857,3,2,2,5
+GUT_GENOME096518_4,725079,head,+,GUT_GENOME000031_3,41992,tail,+,False,TACGCGGAGGGATTATGGGAATGCTCACGGCAATCGAAATGGGAA,CCCGCGGCGGGATTATGGGAATGCTCACGGCAATCGAAATGGGAA,1.8,1,3,1,5
 ```
 Interpret each column as:
 | Header  | Description |

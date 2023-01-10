@@ -12,3 +12,5 @@ analysis/use
 *xls
 *npy
 src
+test/output
+test/ref.fa.*
