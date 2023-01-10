@@ -1,3 +1,5 @@
+### The scripts for the results generation in the paper
+
 | Files  | Description |
 | :------------- | :------------- |
 | ana_CRC_species.py  | read HGT results, identify differential HGTs, construct the CRC classifier  |
