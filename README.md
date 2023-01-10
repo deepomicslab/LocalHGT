@@ -4,7 +4,7 @@
 ```
 git clone https://github.com/deepomicslab/LocalHGT.git --depth 1
 cd LocalHGT/
-conda env create --prefix localhgt -f environment.yml
+conda env create --name localhgt -f environment.yml
 conda activate localhgt
 make
 sudo chmod 744 ./extract_ref
