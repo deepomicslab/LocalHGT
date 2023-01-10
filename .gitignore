@@ -1,5 +1,4 @@
 LEMON
-extract_ref
 analysis
 analysis/importances.npy
 analysis/new_result
