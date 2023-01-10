@@ -12,15 +12,12 @@ python main.py -h
 ```
 
 ## Reference database
-Please construct the database before running. The database (a single file in fasta 
-formate) should contain all the representative references of your concerning environment. 
+The database (a single `fasta` file) should contain all the representative references of your concerning bacteria. 
 
-For the human gut, we can download it from the Unified Human Gastrointestinal Genome 
-([UHGG](https://www.nature.com/articles/s41587-020-0603-3)) database. 
-The script `paper_results/build_UHGG_reference.py` can be used to download the UHGG v1 genomes.
+For example, use gut-specific representative genomes collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
+The script `paper_results/build_UHGG_reference.py` can download the gut-specific UHGG v1 database.
 
-First, use samtools to index the database
-
+Then index the database. First, use samtools to index the database
 ```
 samtools faidx ref_database.fasta
 ```
@@ -51,6 +48,10 @@ optional arguments:
 Or, with the unzipped paired-end fastq files, run
 ```
 bash pipeline.sh reference_database.fasta sample.1.fq sample.2.fq sample_name result_dir/ 0.1 0.08
+```
+A command example:
+```
+python ./main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
 ```
 
 ## Output interpretion
