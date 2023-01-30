@@ -4,7 +4,7 @@
 | :------------- | :------------- |
 | ana_CRC_species.py  | read HGT results, identify differential HGTs, construct the CRC classifier  |
 | HGT_stastics.py  | HGT stastics, functional analysis, HGT network, Microhomology  |
-| allmetadata.xls  | Phenotypes of CRC samples|
+| additional_validation.py  | Get information of the indepedent CRC cohort|
 | ../simulation.py| simulate benchmark data to evaluate LocalHGT|
 |../generate_run_scripts.py| generate batch runing scripts for LocalHGT in evaluation|
 |../evaluation.py| evaluate LocalHGT's accuracy in benchmark data|

@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+1. get differential HGTs between CRC and control.
+2. establish the CRC classifier.
+
+"""
+
 import csv
 import pysam
 import random
@@ -48,6 +54,8 @@ np.set_printoptions(threshold=sys.maxsize)
 import scipy.special as sc
 # from math import comb #The comb function is new in Python 3.8
 from scipy.special import comb
+# from deep_learning import Classifier
+from KR_norm_juicer import KRnorm_sym
 
 level_dict = {"phylum":1, "class":2, "order":3, "family":4, "genus":5, "species":6}
 gender_dict = {"male":0, "female":1, "nan": 2}
@@ -400,7 +408,7 @@ class Sample():
         for bkp in self.bkps:
             new_tag = get_tag(bkp, self.level)
             if new_tag in select_edges:
-                self.select_feature_array[select_edges[new_tag]] = 1#bkp.cross_split_reads/self.reads_num #1 
+                self.select_feature_array[select_edges[new_tag]] = 1 #1#bkp.cross_split_reads/self.reads_num #1 
 
     def get_HGT_matrix(self, level, edge_num):
         nodes_index = {}
@@ -589,6 +597,11 @@ def svd_denoise(A, num):
     new_A = np.dot(U[:,0:num], np.dot(np.diag(s[0:num]), Vh[0:num,:]))
     return new_A
 
+def egen_denoise(A, num):
+    vals, vecs = np.linalg.eig(A)
+    new_A = np.dot(vecs[:,0:num], np.dot(np.diag(vals[0:num]), vecs.T[0:num,:]))
+    return new_A
+
 def infer_scale_free(g):
     d= g.degree()
     d = [x[1] for x in list(d)]
@@ -608,7 +621,7 @@ def infer_scale_free(g):
 
 class RF():
 
-    def __init__(self, common_ratio):
+    def __init__(self):
         self.all_data = []
         self.disease_sample_num_cohort = {}
         # self.all_samples()
@@ -617,7 +630,6 @@ class RF():
         with open("sample_data", "rb") as fp:
             self.all_data = pickle.load(fp)
         self.cohorts_names = {}        
-        self.common_ratio = common_ratio #0.01
         self.HGT_network = ''
         self.species_network = ''
         self.cohort_names = ["YachidaS_2019","FengQ_2015","VogtmannE_2016","ThomasAM_2018a","ThomasAM_2018b",\
@@ -634,7 +646,8 @@ class RF():
         # print (select_HGTs, len(select_HGTs))
         # with open('filtered_HGTs.pkl', 'rb') as f:
         #     abun_related_HGTs = pickle.load(f)
-        select_edges = {**select_HGTs, **abun_related_HGTs} # combine abundance-related HGT events
+        # select_edges = {**select_HGTs, **abun_related_HGTs} # combine abundance-related HGT events
+        select_edges = select_HGTs
         with open('selected_diff_edges.pkl', 'wb') as f:
             pickle.dump(select_edges, f) 
         # select_edges = select_HGTs
@@ -663,6 +676,7 @@ class RF():
             print (genus, '', sep = ",", file = out_marker)
 
         self.store_markers(marker_genus, select_edges)
+        print ("HGT num", len(select_edges), "abun num", len(marker_genus))
         return select_edges, marker_genus
 
     def get_abundance_marker_value(self, marker_genus, sample_list):
@@ -687,6 +701,17 @@ class RF():
             pickle.dump(marker_genus, f) 
         with open('select_edges.pkl', 'wb') as f:
             pickle.dump(select_edges, f) 
+    
+    def load_markers(self):
+        print ("load saved markers.")
+        with open('marker_genus.pkl', 'rb') as f:
+            marker_genus = pickle.load(f)
+        with open('select_edges.pkl', 'rb') as f:
+            select_edges = pickle.load(f)
+        self.get_HGT_network(select_edges)
+        self.get_abundance_marker_value(marker_genus, self.all_data)
+        self.get_genus_network(marker_genus)
+        return marker_genus, select_edges
 
     def select_top_HGT_BK(self, select_feature_num):
         specific_HGT = {} 
@@ -804,9 +829,9 @@ class RF():
                 crc_num += 1
             if sample.disease == "control" :
                 control_num += 1
-        print ("sample num :%s, Edge count: mean is %s, median is %s"%(len(edge_distribution),\
-            np.mean(edge_distribution), np.median(edge_distribution)), np.std(edge_distribution))
-        print ("read num, median %s, mean %s"%(np.median(reads_num_list),np.mean(reads_num_list)), min(reads_num_list), max(reads_num_list))
+        # print ("sample num :%s, Edge count: mean is %s, median is %s"%(len(edge_distribution),\
+        #     np.mean(edge_distribution), np.median(edge_distribution)), np.std(edge_distribution))
+        # print ("read num, median %s, mean %s"%(np.median(reads_num_list),np.mean(reads_num_list)), min(reads_num_list), max(reads_num_list))
         select_edges = {}
         # print (crc_num, control_num, crc_num+control_num, len(specific_HGT)/(crc_num+control_num))
         genus_level_markers = {}
@@ -814,7 +839,7 @@ class RF():
             if marker[0] == "s":
                 marker = "g__" + marker.split("_")[2]
             genus_level_markers[marker] = 1
-        print ("abundance marker-related genus:", genus_level_markers)
+        print ("abundance marker-related genus:", len(genus_level_markers))
         for tag in specific_HGT:
             if len(specific_HGT[tag][0]) + len(specific_HGT[tag][1]) < 25:
                 continue
@@ -834,8 +859,8 @@ class RF():
             select_feature_num = len(sort_select_edges)
         for i in range(select_feature_num):
             edge = sort_select_edges[i][0]
-            if i < 3:
-                print (sort_select_edges[i])
+            # if i < 3:
+            #     print (sort_select_edges[i])
             final_select_edges[edge] = i
             if edge in abun_related_HGTs:
                 del abun_related_HGTs[edge]
@@ -913,18 +938,20 @@ class RF():
 
     def LODO(self, select_feature_num):
         select_edges,marker_genus = self.combine_markers(select_feature_num)
+        # select_edges,marker_genus = self.load_markers()
+        print ("HGT marker num:", len(select_edges))
         for sample in self.all_data:
             sample.given_nodes_make_matrix(select_edges)
         auc_list = []   
         auc_total = 0    
         for lack in range(len(self.cohort_names)):
-            print ("prepare data")
+            # print ("prepare data")
             train_data, train_label =  self.complex_data("train", self.cohort_names[lack])
             test_data, test_label = self.complex_data("test", self.cohort_names[lack]) 
-            print ("start training, used feature:", len(train_data[0]))
+            # print ("start training, used feature:", len(train_data[0]))
 
             clf = RandomForestClassifier(n_estimators=TREE_NUM, criterion="entropy", n_jobs = 10, \
-             min_samples_leaf = LEAF_S, random_state = np.random.seed(2021)) 
+             min_samples_leaf = LEAF_S, random_state = np.random.seed(2021), max_features=NUM_FEATURE) 
             clf.fit(train_data, train_label)  
             roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
             auc_total += roc_auc * len(test_label)
@@ -933,7 +960,7 @@ class RF():
             auc_data_frame.append([round(roc_auc, 3), self.cohort_names[lack], group])
         print ("weighted mean:", auc_total/len(self.all_data))
         return auc_list, auc_total/len(self.all_data)
-    
+ 
     def validation(self, select_feature_num):
         select_edges,marker_genus = self.combine_markers(select_feature_num)
         for sample in self.all_data:
@@ -996,9 +1023,10 @@ class RF():
         # a, b = np.linalg.eig(laplacian)
         # self.HGT_network = b.T.real
 
-        B = np.diag([1]*len(event_array))
-        C = np.ones((len(event_array), len(event_array)))
-        self.HGT_network = event_array*h1 + B * h2 + C * h3
+        I = np.diag([1]*len(event_array))
+        U = np.ones((len(event_array), len(event_array)))
+        # self.HGT_network = event_array*hgt_alpha + I * hgt_beta + U * hgt_gamma # matrix not normalized
+        self.HGT_network = normalize(event_array, axis=1, norm='l1')*hgt_alpha + I * hgt_beta + U * hgt_gamma
 
     def get_genus_network(self, marker_genus):
         self.species_network = np.zeros((len(marker_genus), len(marker_genus)))
@@ -1019,7 +1047,7 @@ class RF():
             else:
                 genus_index[marker] += [index]
             # index += 1
-        print ("used genus abundance marker num:", len(genus_index))
+        
         nodes_list = list(marker_genus.keys())
         edges_list = []
         
@@ -1054,19 +1082,19 @@ class RF():
                     self.species_network[i][j] = 0
         with open('selected_abun_genus_graph.pkl', 'wb') as f:
             pickle.dump([nodes_list, edges_list], f) 
-        # print (self.species_network)
-        self.species_network = normalize(self.species_network, axis=1, norm='l1')
+        print ("abundance marker num:", len(marker_genus))
         pearson_network, pearson_edges_list = self.get_genus_matrix_pearson(marker_genus, id_conver)
         with open('selected_abun_genus_graph_pearson.pkl', 'wb') as f:
             pickle.dump([nodes_list, pearson_edges_list], f) 
-        B = np.diag([1]*len(marker_genus))
-        C = np.ones((len(marker_genus), len(marker_genus)))
-        self.species_network = self.species_network * delta + pearson_network * alpha + B * beta + C * gamma
-
-
-        # laplacian = unnormalized_laplacian(self.species_network)
-        # a, b = np.linalg.eig(laplacian)
-        # self.species_network = b.T.real
+        I = np.diag([1]*len(marker_genus))
+        U = np.ones((len(marker_genus), len(marker_genus)))
+        # self.species_network = normalize(self.species_network, axis=1, norm='l1')
+        # self.species_network = self.species_network * delta + pearson_network * zeta + I * eta + U * mu
+        # vals, vecs = np.linalg.eig(pearson_network)
+        # Lambda = np.diag(vals*0.5)
+        # new_pearson_network = np.dot(np.dot(vecs, Lambda), vecs.T)
+        new_pearson_network = normalize(pearson_network, axis=1, norm='l1')
+        self.species_network = normalize(self.species_network, axis=1, norm='l1') * delta +  new_pearson_network* zeta + I * eta + U * mu
 
     def get_genus_matrix_pearson(self, marker_genus, id_conver):
         sample_matrix = np.zeros((len(marker_genus), len(self.all_data)))
@@ -1089,9 +1117,16 @@ class RF():
                 if str(pearson[0]) == "nan":
                     # print (i, j, "no pearson")
                     continue
-                if abs(pearson[0]) > 0.3:
-                    event_array[i][j] = 1
+                # if abs(pearson[0]) > 0.3:
+                #     event_array[i][j] = 1
+                #     pearson_edges_list.append([id_conver[i], id_conver[j]])
+                if pearson[0] > corr_para:
+                    event_array[i][j] = pearson[0]
                     pearson_edges_list.append([id_conver[i], id_conver[j]])
+                else:
+                    event_array[i][j] = 0
+                # event_array[i][j] = pearson[0]
+                # pearson_edges_list.append([id_conver[i], id_conver[j]])
         return event_array, pearson_edges_list
 
     def complex_data(self, data_usage, select_cohort):
@@ -1108,7 +1143,8 @@ class RF():
             # network_property = sample.get_network_features(network_level)
             # network_property = sample.prepare_network_vector()
             sample_array = list(sample_array_HGT) + list(sample_array_genus) #+ proper_list #+ [proper_list[3]]#network_property
-            # sample_array = list(sample.select_feature_array) + list(sample_array_genus)
+            # sample_array = list(sample.select_feature_array) + list(np.array(sample.genus_abundance)*1)
+            # sample_array = list(sample.select_feature_array) + list(sample.marker_abundance)
             # sample_array = list(sample_array_genus)
             # sample_array = list(sample_array_HGT) + list(sample.marker_abundance)
             # sample_array = list(sample.select_feature_array) + list(sample.marker_abundance)
@@ -1235,13 +1271,436 @@ class RF():
         # roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
         # print ("AUC", "for validation", roc_auc) 
         accuracy = sklearn.metrics.accuracy_score(test_label, clf.predict(test_data))
-        print ("accuracy", accuracy)
+        print ("accuracy", accuracy, "FPR", 1-accuracy )
         
         return [], 0
 
     def __del__(self):
         del self.all_data
         print ("object, deleted")
+
+
+class Fast_RF():
+
+    def __init__(self):
+        self.all_data = []
+        self.disease_sample_num_cohort = {}   
+        self.HGT_network = ''
+        self.species_network = ''
+        self.pearson_network = ''
+        self.revised_HGT_network = ''
+        self.revised_species_network = ''
+        self.cohort_names = ["YachidaS_2019","FengQ_2015","VogtmannE_2016","ThomasAM_2018a","ThomasAM_2018b",\
+            "WirbelJ_2018","ZellerG_2014","YuJ_2015"]
+        self.sample_dict = {}
+
+
+    def combine_markers(self, select_feature_num):
+        select_HGTs, abun_related_HGTs = self.select_top_HGT(select_feature_num)
+        # select_edges = {**select_HGTs, **abun_related_HGTs} # combine abundance-related HGT events
+        select_edges = select_HGTs
+        i = 0
+        for edge in select_edges:
+            select_edges[edge] = i
+            i += 1
+        self.get_HGT_network(select_edges)
+
+        for edge in select_HGTs:  # add the species in HGT to abundance markers
+            array = edge.split("&")
+            if array[0] not in marker_genus:
+                marker_genus[array[0]] = 1
+            if array[1] not in marker_genus:
+                marker_genus[array[1]] = 1
+        i = 0
+        for genus in marker_genus:
+            marker_genus[genus] = i
+            i += 1
+        self.get_abundance_marker_value(marker_genus, self.all_data)
+        self.get_genus_network(marker_genus)
+        print ("HGT num", len(select_edges), "abun num", len(marker_genus))
+        return select_edges, marker_genus
+    
+    def basic_run(self, select_feature_num):
+        with open("sample_data", "rb") as fp:
+            self.all_data = pickle.load(fp) 
+        print ("data loaded")
+        select_edges,marker_genus = self.combine_markers(select_feature_num)  
+        for sample in self.all_data:
+            sample.given_nodes_make_matrix(select_edges)
+        self.save_sample_info()
+        del self.all_data
+    
+    def repeat_run(self):
+        self.network_revision()
+        auc_list, weighted_mean = self.LODO()
+        return auc_list, weighted_mean
+    
+    def network_revision(self):
+        I = np.diag([1]*len(marker_genus))
+        U = np.ones((len(marker_genus), len(marker_genus)))
+        # self.species_network = normalize(self.species_network, axis=1, norm='l1')
+        # self.revised_species_network = self.species_network * delta + self.pearson_network * zeta + I * eta + U * mu # origin
+        # self.revised_species_network = normalize_digraph_method1(self.pearson_network)* zeta + I * eta + U * mu 
+        # self.revised_species_network = normalizeAdjacency_method2(self.pearson_network)* zeta + I * eta + U * mu 
+        # vals, vecs = np.linalg.eig(self.pearson_network)
+        # Lambda = np.diag(vals**2)
+        # new_pearson_network = np.dot(np.dot(vecs, Lambda), vecs.T)
+        new_pearson_network = normalize(self.pearson_network, axis=1, norm='l1')
+        # new_pearson_network = self.pearson_network
+        # new_pearson_network = egen_denoise(self.pearson_network, test_para)
+
+        self.revised_species_network = normalize(self.species_network, axis=1, norm='l1') * delta + new_pearson_network * zeta + I * eta + U * mu 
+        # self.revised_species_network = self.species_network/np.sum(self.species_network) * delta + self.pearson_network/np.sum(self.pearson_network) * zeta + I/np.sum(I) * eta + U/np.sum(U) * mu
+        # self.revised_species_network = normalize(self.species_network, axis=1, norm='l1')*hgt_alpha * delta + normalize(self.pearson_network, axis=1, norm='l1') * zeta + normalize(I, axis=1, norm='l1') * eta + normalize(U, axis=1, norm='l1') * mu
+        # new_pearson_network, x = KRnorm_sym(self.pearson_network)
+        # self.revised_species_network = new_pearson_network * zeta + I * eta + U * mu 
+        # print (normalize(self.species_network, axis=1, norm='l1')* zeta)
+
+        I = np.diag([1]*len(self.HGT_network))
+        U = np.ones((len(self.HGT_network), len(self.HGT_network)))
+        # self.revised_HGT_network = self.HGT_network*hgt_alpha + I * hgt_beta + U * hgt_gamma # origin
+        self.revised_HGT_network = normalize(self.HGT_network, axis=1, norm='l1')*hgt_alpha + I * hgt_beta + U * hgt_gamma
+        # self.revised_HGT_network = self.HGT_network/np.sum(self.HGT_network)*hgt_alpha + I/np.sum(I) * hgt_beta + U/np.sum(U) * hgt_gamma
+        # self.revised_HGT_network = normalize(self.HGT_network, axis=1, norm='l1')*hgt_alpha + normalize(I, axis=1, norm='l1') * hgt_beta + normalize(U, axis=1, norm='l1') * hgt_gamma
+        # new_hgt_network, x = KRnorm_sym(self.HGT_network)
+        # self.revised_HGT_network = new_hgt_network*hgt_alpha + I * hgt_beta + U * hgt_gamma
+
+    def get_abundance_marker_value(self, marker_genus, sample_list):
+
+        sample_abd = get_genus_abd(marker_genus)
+        # print (sample_abd)
+        for sample in sample_list:
+            if sample.ID not in phenotype.ID_name:
+                sample_name = sample.ID
+            else:
+                sample_name = phenotype.ID_name[sample.ID]
+            if sample_name not in sample_abd:
+                sample_id = phenotype.name_sample_id[sample_name]
+                genus_abundance = sample_abd[sample_id]
+            else:
+                genus_abundance = sample_abd[sample_name]
+            sample.genus_abundance = genus_abundance
+
+    def same_HGT_number(self, sample_dict, choose_num, min_split_num): #only choose top x HGTs in each sample
+        new_same_dict = {}
+        sort_sample_dict = sorted(sample_dict.items(), key=lambda item: item[1], reverse = True)
+        if len(sort_sample_dict) < choose_num:
+            choose_num = len(sort_sample_dict)
+        for z in range(choose_num):
+            if sort_sample_dict[z][1] < min_split_num:
+                continue
+            # new_same_dict[sort_sample_dict[z][0]] = sort_sample_dict[z][1]
+            new_same_dict[sort_sample_dict[z][0]] = 1
+        # print (sort_sample_dict[choose_num-1])
+        return new_same_dict
+
+    def select_top_HGT(self, select_feature_num):
+        specific_HGT = {} 
+        abun_related_HGTs = {}
+        record_all_HGTs = {}
+        crc_num = 0
+        control_num = 0
+        edge_distribution = []
+        reads_num_list = []
+        for sample in self.all_data:
+            sample_dict = {}
+            reads_num_list.append(sample.reads_num)
+            min_split_num, p = get_split_reads_cutoff(sample.reads_num)
+            for bkp in sample.bkps:
+                edge = get_tag(bkp, level)
+                array = edge.split("&")
+                if len(array[0].strip()) <= 3 or len(array[1].strip()) <= 3:
+                    continue
+                support_ratio = bkp.cross_split_reads/sample.reads_num
+                # if support_ratio < min_cross:
+                #     continue
+                if support_ratio == 0:
+                    continue
+                # if bkp.cross_split_reads < min_split_num:
+                #     continue
+                # if bkp.pair_end/sample.reads_num < 2e-08:
+                #     continue
+                if edge not in record_all_HGTs:
+                    record_all_HGTs[edge] = 1
+                    specific_HGT[edge] = [[], []]
+                if edge not in sample_dict:
+                    sample_dict[edge] = 0
+                # if support_ratio > sample_dict[edge]:
+                #     sample_dict[edge] = support_ratio
+                # sample_dict[edge] += support_ratio
+                # sample_dict[edge] = 1
+                sample_dict[edge] += bkp.cross_split_reads
+            edge_distribution.append(len(sample_dict))
+            # in each sample, choose same number of edge.       
+            sample_dict = self.same_HGT_number(sample_dict, max_hgt_num, min_split_num)
+
+            for edge in sample_dict:
+                if sample.disease == "CRC" :
+                    specific_HGT[edge][0].append(sample_dict[edge])
+                else:
+                    specific_HGT[edge][1].append(sample_dict[edge])
+            if sample.disease == "CRC" :
+                crc_num += 1
+            if sample.disease == "control" :
+                control_num += 1
+        # print ("sample num :%s, Edge count: mean is %s, median is %s"%(len(edge_distribution),\
+        #     np.mean(edge_distribution), np.median(edge_distribution)), np.std(edge_distribution))
+        # print ("read num, median %s, mean %s"%(np.median(reads_num_list),np.mean(reads_num_list)), min(reads_num_list), max(reads_num_list))
+        select_edges = {}
+        # print (crc_num, control_num, crc_num+control_num, len(specific_HGT)/(crc_num+control_num))
+        genus_level_markers = {}
+        for marker in marker_genus:
+            if marker[0] == "s":
+                marker = "g__" + marker.split("_")[2]
+            genus_level_markers[marker] = 1
+        print ("abundance marker-related genus:", len(genus_level_markers))
+        for tag in specific_HGT:
+            if len(specific_HGT[tag][0]) + len(specific_HGT[tag][1]) < 25:
+                continue
+            array = tag.split("&")
+            species_1 = array[0]
+            species_2 = array[1]
+            crc_array = specific_HGT[tag][0] + [0] * (crc_num - len(specific_HGT[tag][0]))
+            control_array = specific_HGT[tag][1] + [0] * (control_num - len(specific_HGT[tag][1]))
+            U1, p = mannwhitneyu(crc_array, control_array)
+            if p < 0.01 and species_1 in genus_level_markers and species_2 in genus_level_markers:
+                abun_related_HGTs[tag] = 1
+            select_edges[tag] = p 
+        sort_select_edges = sorted(select_edges.items(), key=lambda item: item[1], reverse = False)
+
+        final_select_edges = {}
+        if select_feature_num > len(sort_select_edges):
+            select_feature_num = len(sort_select_edges)
+        for i in range(select_feature_num):
+            edge = sort_select_edges[i][0]
+            # if i < 3:
+            #     print (sort_select_edges[i])
+            final_select_edges[edge] = i
+            if edge in abun_related_HGTs:
+                del abun_related_HGTs[edge]
+        print ("abun_related_HGTs", len(abun_related_HGTs))
+
+        tree_edges = {}
+        for i in range(len(sort_select_edges)): # store the all differential genome pairs
+            # if sort_select_edges[i][1] > 0.05:
+            #     break
+            tag = sort_select_edges[i][0]
+            crc_ratio = len(specific_HGT[tag][0])/crc_num
+            control_ratio = len(specific_HGT[tag][1])/control_num
+            tree_edges[sort_select_edges[i][0]] = [crc_ratio, control_ratio, sort_select_edges[i][1]]
+        # with open('selected_diff_edges.pkl', 'wb') as f:
+        #     pickle.dump(tree_edges, f) 
+          
+        return final_select_edges, abun_related_HGTs
+
+    def all_samples(self):
+        all_acc_file = "acc.list"
+        # result_dir = "new_result_more"
+        result_dir = "new_result"
+        os.system(f"ls {result_dir}/*acc.csv>{all_acc_file}")
+        
+        for line in open(all_acc_file):
+            acc_file = line.strip()
+            ID = acc_file.split("/")[1].split(".")[0]
+            new_file = acc_file.split("/")[1]
+            acc_file = f"{result_dir}/{new_file}"
+            
+            sample = Sample(acc_file, ID)
+
+            if sample.tag == "no pheno" or sample.tag == "no bkp":
+                print (ID, sample.tag)
+                continue  
+            # if sample.cohort == "FengQ_2015":
+            #     print (sample.cohort, ID, sample.disease)          
+            if (sample.disease != "CRC") and (sample.disease != "control"):
+                continue
+            if str(sample.disease) == "nan":
+                continue
+            if sample.cohort == "HanniganGD_2017":
+                continue
+            self.all_data.append(sample)
+            if sample.cohort not in self.disease_sample_num_cohort:
+                self.disease_sample_num_cohort[sample.cohort] = {"CRC":0, "control":0, "adenoma":0}
+            self.disease_sample_num_cohort[sample.cohort][sample.disease] += 1
+
+        for key in self.disease_sample_num_cohort:
+            print ("Cohort", key, self.disease_sample_num_cohort[key])     
+
+    def LODO(self):
+        auc_list = []   
+        auc_total = 0    
+        for lack in range(len(self.cohort_names)):
+            # print ("prepare data")
+            train_data, train_label =  self.complex_data("train", self.cohort_names[lack])
+            test_data, test_label = self.complex_data("test", self.cohort_names[lack]) 
+            # print ("start training, used feature:", len(train_data[0]))
+
+            clf = RandomForestClassifier(n_estimators=TREE_NUM, criterion="entropy", n_jobs = 10, \
+             min_samples_leaf = LEAF_S, random_state = np.random.seed(2021), max_features=NUM_FEATURE) 
+            clf.fit(train_data, train_label)  
+            roc_auc = roc_auc_score(test_label, clf.predict_proba(test_data)[:,1])
+            auc_total += roc_auc * len(test_label)
+            # print ("AUC", self.cohort_names[lack], roc_auc) 
+            auc_list.append(roc_auc)
+            auc_data_frame.append([round(roc_auc, 3), self.cohort_names[lack], group])
+        print ("unweight mean", np.mean(auc_list))
+        return auc_list, auc_total/len(self.sample_dict)
+ 
+    def get_HGT_network(self, select_edges):
+        event_array = np.zeros((len(select_edges), len(select_edges)))
+        events = list(select_edges.keys())
+        # print ("events:", events[:5])
+        for i in range(len(events)):
+            for j in range(len(events)):
+                event_1 = events[i]
+                event_2 = events[j]
+                tag_array_1 = event_1.split("&")
+                tag_array_2 = event_2.split("&")
+                if i == j:
+                    continue
+                for tag in tag_array_1:
+                    if tag in tag_array_2:
+                        event_array[i][j] = 1 
+        self.HGT_network = event_array
+
+    def get_genus_network(self, marker_genus):
+        self.species_network = np.zeros((len(marker_genus), len(marker_genus)))
+        genus_index = {}
+        index = 0
+        id_conver = {} # save the index:marker pairs
+        events = list(marker_genus.keys())
+        for index in range(len(events)):
+        # for genus in marker_genus:
+            genus = events[index]
+            id_conver[index] = genus
+            if genus[0] == "s":
+                marker = "g__" + genus.split("_")[2]
+            else:
+                marker = genus
+            if marker not in genus_index:
+                genus_index[marker] = [index]
+            else:
+                genus_index[marker] += [index]
+            # index += 1
+        
+        nodes_list = list(marker_genus.keys())
+        edges_list = []
+        
+
+        for sample in self.all_data:
+            sample_dict = {}
+            for bkp in sample.bkps:
+                edge = get_tag(bkp, level)
+                array = edge.split("&")
+                if len(array[0].strip()) <= 3 or len(array[1].strip()) <= 3:
+                    continue
+                if edge in sample_dict:
+                    continue
+                else:
+                    sample_dict[edge] = 1
+                    if array[0] in genus_index and array[1] in genus_index:
+                        
+                        a_list = genus_index[array[0]]
+                        b_list = genus_index[array[1]]
+                        for a in a_list:
+                            for b in b_list:
+                                self.species_network[a][b] += 1
+                                self.species_network[b][a] += 1
+
+        for i in range(len(self.species_network)):
+            for j in range(len(self.species_network)):
+                if self.species_network[i][j] > 200: # the HGT should be in more than 200 samples
+                    self.species_network[i][j] = 1
+                    if id_conver[i] != id_conver[j]:
+                        edges_list.append([id_conver[i], id_conver[j]])
+                else:
+                    self.species_network[i][j] = 0
+        print ("abundance marker num:", len(marker_genus))
+        self.pearson_network = self.get_genus_matrix_pearson(marker_genus, id_conver)
+
+    def get_genus_matrix_pearson(self, marker_genus, id_conver):
+        sample_matrix = np.zeros((len(marker_genus), len(self.all_data)))
+        j = 0
+        for sample in self.all_data:
+            for i in range(len(sample.genus_abundance)):
+                sample_matrix[i][j] = sample.genus_abundance[i]
+            j += 1
+        event_array = np.zeros((len(marker_genus), len(marker_genus)))
+        events = list(marker_genus.keys())
+        for i in range(len(events)):
+            for j in range(len(events)):
+                if i == j:
+                    continue
+                x = sample_matrix[i]
+                y = sample_matrix[j]
+                pearson = scipy.stats.pearsonr(x, y)
+
+                if str(pearson[0]) == "nan":
+                    # print (i, j, "no pearson")
+                    continue
+                # if abs(pearson[0]) > 0.3:
+                # if pearson[0] > 0.3:
+                #     event_array[i][j] = 1
+                #     pearson_edges_list.append([id_conver[i], id_conver[j]])
+                if pearson[0] > corr_para:
+                    event_array[i][j] = pearson[0]
+                else:
+                    event_array[i][j] = 0
+                # event_array[i][j] = pearson[0]
+                # pearson_edges_list.append([id_conver[i], id_conver[j]])
+                # else:
+                #     event_array[i][j] = 0
+        print ("###")
+        return event_array
+
+    def complex_data(self, data_usage, select_cohort):
+        data = []
+        label = []
+        for sample in self.sample_dict:
+            info = self.sample_dict[sample]
+            if (info[0] == select_cohort and data_usage == "train"):
+                continue
+            if (info[0] != select_cohort and data_usage == "test"):
+                continue
+            # sample_array_HGT = np.dot(self.revised_HGT_network, self.norm_array(info[1]))
+            # sample_array_genus = np.dot(self.revised_species_network, self.norm_array(info[2]))
+            
+            sample_array_HGT = np.dot(self.revised_HGT_network, info[1])
+            sample_array_genus = np.dot(self.revised_species_network, np.array(info[2])) 
+            sample_array = list(sample_array_HGT) + list(sample_array_genus) #+ proper_list #+ [proper_list[3]]#network_property
+            # print (list(info[1]), list(sample_array_HGT), info[2], list(sample_array_genus))
+            # print (info[2], list(sample_array_genus), list(np.array(info[2])-sample_array_genus))
+            # sample_array = list(info[1]) + list(np.array(info[2]))
+            # sample_array = list(sample.genus_abundance)
+            # sample_array = list(info[1]) +  list(info[2])
+            # sample_array = list(info[1])
+            # sample_array = list(self.norm_array(info[1])) + list(self.norm_array(info[2]))
+            # if group == "Thomas-Abun":
+            #     sample_array = sample.marker_abundance
+            # elif group == "HGT":
+            #     sample_array = list(sample.select_feature_array)
+            # elif group == "Abun":
+            #     sample_array = list(sample.genus_abundance)
+            data.append(sample_array)
+            if info[3] == "control" :
+                label.append(1)
+            if info[3] == "CRC" :
+                label.append(0)            
+        data = np.array(data)
+        label = np.array(label)
+        return data, label
+    
+    def norm_array(self, x):
+        x = np.array(x)
+        norm  =  np.linalg.norm(x)
+        if norm == 0: 
+            return x
+        return x/norm
+    
+    def save_sample_info(self):
+        for sample in self.all_data:
+            self.sample_dict[sample.ID] = [sample.cohort, sample.select_feature_array, sample.genus_abundance, sample.disease]
+
 
 def extract_previous_16_markers(marker_genus, genus_abundance):
     marker_species_dict = get_abd() # previous 16 abundance markers
@@ -1313,14 +1772,32 @@ def find_all_class():
     # print (len(class_dict))
     return class_dict
 
+def normalize_digraph_method1(A):
+    Dl = np.sum(A, 0)  
+    num_node = A.shape[0]
+    Dn = np.zeros((num_node, num_node))
+    for i in range(num_node):
+        if Dl[i] > 0:
+            Dn[i, i] = Dl[i]**(-1) 
+    AD = np.dot(A, Dn)
+    return AD
+
 
 if __name__ == "__main__":
     level = 5
     TREE_NUM = 1000
     LEAF_S = 5
-    common_ratio = 0.06  # 0.06, 150  0.2, 300 0.05, 300     0.1 700
-    alpha, beta, gamma, delta = 2e-5, 0.4, 1e-10, 1e-8  #delta 1e-11 alpha 3e-5      #2e-5, 0.3, 1e-10, 0
-    feature_num = 21   #64 for 0.870  24 for 0.864  10
+    NUM_FEATURE = "sqrt"
+    # delta, zeta, eta, mu  =  1e-8, 2e-5, 0.4, 1e-10    # Genus network
+    # hgt_alpha, hgt_beta, hgt_gamma = 1e-11, 1, 1e-7  # HGT network   before 2023/1/10
+
+    # delta, zeta, eta, mu  =  9e-09, 7e-05, 0.4, 1e-10    # Genus network
+    # hgt_alpha, hgt_beta, hgt_gamma = 2.4e-07, 1, 1e-7  # HGT network   
+    # feature_num = 21   #64 for 0.870  24 for 0.864  10
+    feature_num, TREE_NUM, LEAF_S, NUM_FEATURE = 20,  1000, 5, 2
+    delta, hgt_alpha, hgt_beta, hgt_gamma, eta, zeta, mu = 0, 0, 1, 1e-8, 1, 0.048, 0
+    corr_para = 0.4
+
     group = ""
     auc_data_frame = []
     network_level = 2
@@ -1333,81 +1810,79 @@ if __name__ == "__main__":
     select_m = my_methods[2]
     i=2
 
-    h1, h2, h3 = 1e-11, 1, 1e-7
+    
     result_file = open("random_forest.log", 'w')
 
     prior_a = 20 # prior probability
     given_r = 2 # the cutoff with n reads  4
-
+    
     marker_genus = select_genus()
     sample_abd =  get_genus_abd(marker_genus)   
     phenotype = Phenotype() 
     taxonomy = Taxonomy()
     class_dict = find_all_class()
 
-    # group = "Thomas-Abun"
+    ### test the classifier in the independent CRC cohort and T2D cohort
     group = "Hybrid"
-    # feature_num, group = 0, "Abundance"
-    rf = RF(common_ratio)
-    # rf.Lachnospiraceae()
-    # # # rf.LODO_DNN(feature_num)
+    rf = RF()
     # rf.t2d_validation(feature_num) # independent T2D cohort
     # auc_list, weighted_mean = rf.LODO(feature_num)
-    # auc_list, weighted_mean = rf.validation(feature_num) # independent CRC cohort
-    # print (prior_a,given_r,h1,h2, h3, alpha, beta, gamma, feature_num, max_hgt_num, weighted_mean, np.mean(auc_list))
-    # print (prior_a,given_r,h1,h2, h3, alpha, beta, gamma,feature_num, max_hgt_num, weighted_mean, np.mean(auc_list), file = result_file)
+    # must run python additional_validation.py 
+    auc_list, weighted_mean = rf.validation(feature_num) # independent CRC cohort
 
-    # result_file.close()
 
-    # for group in ["Hybrid", "Thomas-Abun", "HGT", "Abun"]:
+    ### compare the integration of HGT and abundance biomarkers and the previously reported 16 biomarkers
+    # for group in ["Hybrid", "Thomas-Abun"]:  # for main plot
     #     marker_genus = select_genus()
     #     sample_abd =  get_genus_abd(marker_genus)
     #     phenotype = Phenotype()
     #     taxonomy = Taxonomy()
-    #     rf = RF(common_ratio)
+    #     rf = RF()
+    
+    #     auc_list, weighted_mean = rf.LODO(feature_num)
+    #     print (group, auc_list, weighted_mean)
+    #     del rf
+    # df = pd.DataFrame(auc_data_frame, columns = ["AUC", "Cohort", "Group"])
+    # df.to_csv('./for_AUC_plot.csv', sep='\t')
+    # os.system("Rscript plot_auc.R")
+
+
+    ### compare the integration of HGT and abundance biomarkers, the previously reported 16 biomarkers, only HGT, and only our abundance. 
+    # for group in ["Hybrid", "Thomas-Abun", "HGT", "Abun"]:  # for supplementary plot
+    #     marker_genus = select_genus()
+    #     sample_abd =  get_genus_abd(marker_genus)
+    #     phenotype = Phenotype()
+    #     taxonomy = Taxonomy()
+    #     rf = RF()
     
     #     auc_list, weighted_mean = rf.LODO(feature_num)
     #     print (group, auc_list, weighted_mean)
     #     del rf
     # df = pd.DataFrame(auc_data_frame, columns = ["AUC", "Cohort", "Group"])
     # df.to_csv('/mnt/c/Users/user/Desktop/HGT/HGT_R_plot_files//for_AUC_plot.csv', sep='\t')
-    # os.system("Rscript plot_auc.R")
-
-    """
-    result_file = open("random_forest.log", 'w')
-
-    # for pseudo in [0, 1e-10, 1e-5, 1e-2]:
-    #     for svd_num in range(5, 36, 5):
-    #         for i in range(4):
-    select_m = my_methods[i]
-    select_m = "fsdfgdfgdf"
-
-    marker_genus = select_genus()
-    sample_abd =  get_genus_abd(marker_genus)
-    phenotype = Phenotype()
-    taxonomy = Taxonomy()
-    class_dict = find_all_class()
-    rf = RF(common_ratio)
-    # rf.Lachnospiraceae()
-    auc_list, weighted_mean = rf.LODO(feature_num)
-    print (select_m, svd_num, pseudo, weighted_mean, np.mean(auc_list))
-    print (select_m, svd_num, pseudo, weighted_mean, np.mean(auc_list), file = result_file)
-    del rf
-    result_file.close()
 
 
-    # for prior_a in range(1, 25, 1):
-        # for given_r in range(2, 10):
-        #     for max_hgt_num in [2150, 2150000]:
-    # for feature_num in range(9, 30):
-    #     for max_hgt_num in range(2100, 2300, 10):
-    # #         for min_cross in [1e-8, 1e-9, 1e-10, 1e-11]:
-    #         for h1 in [0, 5e-11, 5e-12]:
-    # for beta in [0.35, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 0.9, 1]:
-        # for delta in [1e-7, 1e-8, 1e-9]:
-        # for h3 in [1e-5, 1e-6, 1e-7, 1e-8, 1e-9]:
-    # for h2 in [0.2, 0.4, 0.6, 0.8]:
-    """
+
+    ### for hyper-parameters assessment
+    # marker_genus = select_genus()   
+    # sample_abd =  get_genus_abd(marker_genus) 
+    # # print ("basic run is finished")
+    # # # hgt_alpha, hgt_beta, hgt_gamma = 1e-08, 1, 1e-09  # HGT network
+    # # # delta, zeta, eta, mu =  1e-09, 0.0001, 0.9, 1e-08   # Genus network
+    # result_file = open("random_forest.log", 'w+')
+    # small_values = [ 0, 0.1, 0.05, 0.01, 0.005,  1e-3, 0.0005, 1e-4, 1e-5]
+    
+    # # for feature_num in range(16, 25):
+    # corr_para = 0.4
+    # zeta = 0.048
+    # fast = Fast_RF()
+    # fast.basic_run(feature_num)
+    # auc_list, weighted_mean = fast.repeat_run()
+    # weighted_mean = round(weighted_mean, 4)
+    # print (TREE_NUM, LEAF_S, NUM_FEATURE, "hgt_alpha:%s,hgt_beta:%s,hgt_gamma:%s, delta:%s, zeta:%s, eta:%s, mu:%s"%(hgt_alpha, hgt_beta, hgt_gamma, delta, zeta, eta, mu), weighted_mean )
+    # print ("hgt_alpha:%s,hgt_beta:%s,hgt_gamma:%s, delta:%s, zeta:%s, eta:%s, mu:%s"%(hgt_alpha, hgt_beta, hgt_gamma, delta, zeta, eta, mu), weighted_mean, file=result_file)
+    # result_file.close()
+
     
 
 
@@ -1478,22 +1953,3 @@ if __name__ == "__main__":
     #             data.append([tag, specific_HGT[tag][1]/control_num, "control"])
     #     df = pd.DataFrame(data, columns = ["HGT", "Proportion", "Group"])
     #     df.to_csv('for_Lachnospiraceae.csv', sep='\t')
-
-
-
-
-
-    # for group in ["+HGT", "Abundance"]:
-    #     marker_genus = select_genus()
-    #     sample_abd =  get_genus_abd(marker_genus)
-    #     phenotype = Phenotype()
-    #     taxonomy = Taxonomy()
-    #     rf = RF(common_ratio)
-    
-    #     auc_list, weighted_mean = rf.LODO(25)
-    #     print (group, auc_list, weighted_mean)
-    #     del rf
-    # df = pd.DataFrame(auc_data_frame, columns = ["AUC", "Cohort", "Group"])
-    # df.to_csv('for_AUC_plot.csv', sep='\t')
-    # os.system("Rscript plot_auc.R")
-

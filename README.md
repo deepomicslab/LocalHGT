@@ -1,4 +1,4 @@
-# LocalHGT: an ultrafast HGT detection method from large microbial communities
+# LocalHGT: an ultrafast horizontal gene transfer detection method from large microbial communities
 
 ## Install
 ```
@@ -95,7 +95,7 @@ Users can also prepare the env as follows:
 Python 3.7+
 Python Module: scipy, numpy, pandas, sklearn, pysam, scikit-bio, biopython, pyfaidx
 ```
-Please install samtools and bwa, and add them to system path, the version 
+Please install `samtools` and `bwa`, and add them to system path, the version 
 should be
 ```
 samtools==1.11+
