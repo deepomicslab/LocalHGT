@@ -44,6 +44,7 @@ required arguments:
   -o             <str> Output folder. (default: ./)
 
 optional arguments:
+  -k             <int> kmer size (default: 32)
   -t             <int> number of threads (default: 5)
   --hit_ratio    <float> Minimum approximate kmer match ratio to extract a
                    reference fragment. (default: 0.1)
