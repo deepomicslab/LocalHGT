@@ -51,10 +51,6 @@ optional arguments:
                    reference fragment. (default: 0.08)
   -h, --help
 ```
-Or, with the unzipped paired-end fastq files, run
-```
-bash pipeline.sh reference_database.fasta sample.1.fq sample.2.fq sample_name result_dir/ 0.1 0.08
-```
 A command example:
 ```
 python ./main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
