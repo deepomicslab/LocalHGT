@@ -17,9 +17,10 @@ class Accept_Parameters:
         self.hit_ratio = options.hit_ratio
         self.match_ratio = options.match_ratio
         self.run_order = ''
+        self.k = options.k
 
     def get_order(self):
-        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio}"
+        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.k}"
         print ("Running command:")
         print (self.run_order)
 
@@ -39,7 +40,7 @@ if __name__ == "__main__":
     required.add_argument("-s", type=str, default="sample", help="<str> Sample name.", metavar="\b")
     required.add_argument("-o", type=str, default="./", help="<str> Output folder.", metavar="\b")
 
-    
+    optional.add_argument("-k", type=int, default=32, help="<int> kmer size", metavar="\b")
     optional.add_argument("-t", type=int, default=5, help="<int> number of threads", metavar="\b")
     optional.add_argument("--hit_ratio", type=float, default=0.1, help="<float> Minimum approximate kmer match ratio to extract a reference fragment.", metavar="\b")
     optional.add_argument("--match_ratio", type=float, default=0.08, help="<float> Minimum exact kmer match ratio to extract a reference fragment.", metavar="\b")

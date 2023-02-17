@@ -707,10 +707,10 @@ def main():
     for ref_name in tmp_ref_name_list:
         # if ref_name not in processed_ref_list:
         ref_name_list.append(ref_name)
-    print ("ref_name len:", len(ref_name_list))
+    # print ("ref_name len:", len(ref_name_list))
     i = 0
     while i < len(ref_name_list):
-        print (i)
+        # print (i)
         start_pos = i
         end_pos = min(i + split_num, len(ref_name_list))
         procs = []

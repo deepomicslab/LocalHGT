@@ -19,7 +19,7 @@ if [ ! -d $outdir ]; then
 fi
 
 # :<<!
-$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7 $thread
+$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7 $thread $8
 python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
 
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
