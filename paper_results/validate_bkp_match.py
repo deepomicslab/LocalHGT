@@ -192,6 +192,7 @@ class Map():
                     print (left_flag,mid_flag,right_flag )
 
             total_hgt_event_num += 1
+            final_total += 1
 
 
             # self.genetate_fasta(tmp_ref, merged_seq)
@@ -200,9 +201,11 @@ class Map():
             ins_ref_len = len(self.ref_fasta[hgt_event[0]])
             if verify_flag:
                 print (hgt_event, "HGT event is verified.", delete_len, "genome length", del_ref_len, ins_ref_len)  
+                final_data.append([sample] + hgt_event + ["Yes"])
                 valid_hgt_event_num += 1
+                final_verified += 1
             else:
-
+                final_data.append([sample] + hgt_event + ["No"])
                 print (hgt_event, "HGT event is not verified.", delete_len, "genome length", del_ref_len, ins_ref_len)
             print ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
             # break
@@ -279,6 +282,7 @@ if __name__ == "__main__":
     # result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
     # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
     # tgs_bam_dir = "/mnt/d/HGT/time_lines/tgs_bam_results"
+    # verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
 
     database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
     workdir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/"
@@ -288,7 +292,7 @@ if __name__ == "__main__":
     result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
     identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
     tgs_bam_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/nanopore_alignment/results/"
-
+    verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
 
 
     tmp_bam = workdir + "/tmp.bam"
@@ -298,6 +302,9 @@ if __name__ == "__main__":
 
     hgt_event_dict = read_event()
     ngs_tgs_pair = read_meta()
+    final_data = []
+    final_total = 0
+    final_verified = 0
 
 
     for sample in hgt_event_dict:
@@ -309,3 +316,11 @@ if __name__ == "__main__":
             print (sample)
             ma = Map()
             ma.for_each_sample(sample)
+
+
+
+    print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(final_total, final_verified, final_verified/final_total))
+
+    df = pd.DataFrame(final_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "Verified"])
+    df.to_csv(verified_result, sep=',')
+
