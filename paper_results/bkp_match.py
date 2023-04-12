@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
 import pandas as pd
+import pickle
  
 def read_meta():
     
@@ -248,12 +249,14 @@ class Match():
                     possible_match_num += 1
                     bkp_pair = self.get_bkp_pair_name(bkp1, bkp2)
                     edge_weight_by_sample = 0
+                    edge_weight_by_correlation = 0
                     if bkp_pair in self.edge_weight_sample and self.edge_weight_sample[bkp_pair] > 0:
                         edge_weight_by_sample = 1
+                    # if self.correlation_matrix[bkp_pair] > 0.7:
+                    #     edge_weight_by_correlation = self.correlation_matrix[bkp_pair]
                     gene_length = self.cal_gene_length(bkp1, bkp2) # /bin
-                    # edge_weight = (self.correlation_matrix[bkp_pair] + edge_weight_by_sample)/gene_length/bin_size
-                    edge_weight = (edge_weight_by_sample)/gene_length/bin_size
-
+                    edge_weight = (edge_weight_by_correlation + edge_weight_by_sample)/gene_length/bin_size
+                    # edge_weight = (edge_weight_by_sample)/gene_length/bin_size
                     # print (bkp_pair.split("&"), edge_weight)
                     if edge_weight > 0:
                         G.add_edge(bkp1, bkp2, weight = edge_weight)
@@ -360,8 +363,15 @@ class Match():
                 # print ("multiple pairs", bkp, self.can_match_bkp_info[bkp])
             else:
                 single_match_num += 1
-
+        with open(saved_can_match_bkp, 'wb') as f:
+            pickle.dump(self.can_match_bkp, f)
         print ("%s has one matched, %s has more than one."%(single_match_num, alt_match_num))
+    
+    def load_can_match(self):
+        # open the file in read binary mode
+        with open(saved_can_match_bkp, 'rb') as f:
+            # load the dictionary object from the file using pickle
+            self.can_match_bkp = pickle.load(f)       
 
     def draw(self, G):
         # # Compute the bipartite layout
@@ -378,6 +388,7 @@ if __name__ == "__main__":
     result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
     # hgt_table = "/mnt/d/HGT/time_lines/SRP366030.HGT.table.csv"
     identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    saved_can_match_bkp = "/mnt/d/HGT/time_lines/SRP366030.can_match.pickle"
 
     bin_size = 100
     split_cutoff = 0  #10
@@ -395,9 +406,7 @@ if __name__ == "__main__":
     tim.read_samples()
     print ("load is done.")
     tim.classify_bkp()
-    # tim.get_HGT_table()
-    # tim.get_precise_HGT()
-    
+    # tim.load_can_match()
     tim.check_match_in_sample()
     # tim.get_correlation()
     tim.matching()
