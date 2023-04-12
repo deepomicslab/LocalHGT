@@ -17,6 +17,9 @@ from Bio.Seq import Seq
 import pandas as pd
 
 
+final_total = 0
+final_verified = 0
+
 def read_event():
     hgt_event_dict = {}
 
@@ -303,8 +306,7 @@ if __name__ == "__main__":
     hgt_event_dict = read_event()
     ngs_tgs_pair = read_meta()
     final_data = []
-    final_total = 0
-    final_verified = 0
+
 
 
     for sample in hgt_event_dict:
@@ -316,9 +318,6 @@ if __name__ == "__main__":
             print (sample)
             ma = Map()
             ma.for_each_sample(sample)
-
-
-
     print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(final_total, final_verified, final_verified/final_total))
 
     df = pd.DataFrame(final_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "Verified"])
