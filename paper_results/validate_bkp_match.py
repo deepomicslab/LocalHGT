@@ -98,7 +98,7 @@ def read_meta():
 class Map():
 
     def __init__(self):
-        self.ref = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
+        self.ref = database 
         self.ref_fasta = Fasta(self.ref)
         self.window = 200
         self.max_length = 10000
@@ -271,22 +271,41 @@ def countN(sequence):
 
 if __name__ == "__main__":
 
-    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    data_pair = "/mnt/d/HGT/time_lines/SRP366030.ngs_tgs_pair.csv"
-    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
-    result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    # hgt_table = "/mnt/d/HGT/time_lines/SRP366030.HGT.table.csv"
-    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-    tmp_bam = "/mnt/d/HGT/time_lines/tmp.bam"
-    tmp_fastq = "/mnt/d/HGT/time_lines/tmp.fastq"
-    tmp_ref = "/mnt/d/HGT/time_lines/tmp.fasta"
-    reverse_tmp_ref = "/mnt/d/HGT/time_lines/tmp.rev.fasta"
+    # database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
+    # workdir = "/mnt/d/HGT/time_lines/"
+    # meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    # data_pair = "/mnt/d/HGT/time_lines/SRP366030.ngs_tgs_pair.csv"
+    # design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
+    # result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    # tgs_bam_dir = "/mnt/d/HGT/time_lines/tgs_bam_results"
+
+    database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
+    workdir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/"
+    meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
+    data_pair = "/mnt/disk2_workspace/wangshuai/00.strain/32.BFB/SRP366030.ngs_tgs_pair.csv"
+    design_file = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
+    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
+    tgs_bam_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/nanopore_alignment/results/"
+
+
+
+    tmp_bam = workdir + "/tmp.bam"
+    tmp_fastq = workdir + "/tmp.fastq"
+    tmp_ref = workdir + "/tmp.fasta"
+    reverse_tmp_ref = workdir + "/tmp.rev.fasta"
 
     hgt_event_dict = read_event()
     ngs_tgs_pair = read_meta()
 
-    sample = "SRR18490939"
-    bamfile = "/mnt/d/HGT/time_lines/tgs_bam_results/%s.bam"%(ngs_tgs_pair[sample])
 
-    ma = Map()
-    ma.for_each_sample(sample)
+    for sample in hgt_event_dict:
+    # sample = "SRR18490939"
+        bamfile = tgs_bam_dir + "/%s.bam"%(ngs_tgs_pair[sample])
+        baifile = tgs_bam_dir + "/%s.bam.bai"%(ngs_tgs_pair[sample])
+
+        if os.path.isfile(bamfile) and os.path.isfile(baifile):
+            print (sample)
+            ma = Map()
+            ma.for_each_sample(sample)

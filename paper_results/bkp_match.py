@@ -252,8 +252,8 @@ class Match():
                     edge_weight_by_correlation = 0
                     if bkp_pair in self.edge_weight_sample and self.edge_weight_sample[bkp_pair] > 0:
                         edge_weight_by_sample = 1
-                    # if self.correlation_matrix[bkp_pair] > 0.7:
-                    #     edge_weight_by_correlation = self.correlation_matrix[bkp_pair]
+                    if self.correlation_matrix[bkp_pair] > 0.7:
+                        edge_weight_by_correlation = self.correlation_matrix[bkp_pair]
                     gene_length = self.cal_gene_length(bkp1, bkp2) # /bin
                     edge_weight = (edge_weight_by_correlation + edge_weight_by_sample)/gene_length/bin_size
                     # edge_weight = (edge_weight_by_sample)/gene_length/bin_size
@@ -408,7 +408,7 @@ if __name__ == "__main__":
     tim.classify_bkp()
     # tim.load_can_match()
     tim.check_match_in_sample()
-    # tim.get_correlation()
+    tim.get_correlation()
     tim.matching()
     tim.get_precise_HGT()
 
