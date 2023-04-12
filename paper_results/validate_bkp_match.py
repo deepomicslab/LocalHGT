@@ -17,8 +17,7 @@ from Bio.Seq import Seq
 import pandas as pd
 
 
-final_total = 0
-final_verified = 0
+
 
 def read_event():
     hgt_event_dict = {}
@@ -138,7 +137,7 @@ class Map():
 
         return reads_set
 
-    def for_each_sample(self, sample):
+    def for_each_sample(self, sample, final_total, final_verified):
         if sample not in hgt_event_dict:
             print ("No hgt for sample", sample)
         else:
@@ -213,6 +212,7 @@ class Map():
             print ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
             # break
         print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(total_hgt_event_num, valid_hgt_event_num, valid_hgt_event_num/total_hgt_event_num))
+        return final_total, final_verified
 
     def verify(self, reads_set, merged_seq, rev_merged_seq):
         uniq_dict = {}
@@ -307,6 +307,9 @@ if __name__ == "__main__":
     ngs_tgs_pair = read_meta()
     final_data = []
 
+    final_total = 0
+    final_verified = 0
+
 
 
     for sample in hgt_event_dict:
@@ -317,7 +320,7 @@ if __name__ == "__main__":
         if os.path.isfile(bamfile) and os.path.isfile(baifile):
             print (sample)
             ma = Map()
-            ma.for_each_sample(sample)
+            final_total, final_verified = ma.for_each_sample(sample, final_total, final_verified)
     print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(final_total, final_verified, final_verified/final_total))
 
     df = pd.DataFrame(final_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "Verified"])
