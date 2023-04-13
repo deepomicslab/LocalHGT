@@ -172,10 +172,10 @@ def is_in_intervals(value, intervals):
 
 class Mechanism():
 
-    def __init__(self, bkp_object):
+    def __init__(self, bkp_object, ref_fasta):
         self.bkp = bkp_object
-        self.ref = database_dir + "/UHGG_reference.formate.fna"
-        self.ref_fasta = Fasta(self.ref)
+        # self.ref = database_dir + "/UHGG_reference.formate.fna"
+        self.ref_fasta = ref_fasta 
         self.cutoff = 100
         
 
@@ -300,14 +300,18 @@ class Mechanism():
 
 def read_verified(verified_result):
     verified_HGT_dict = {}
+    record_HGT = {}
     for line in open(verified_result):
         array = line.strip().split(",")
         if array[1] == "sample":
+            continue
+        if array[-1] != "Yes":
             continue
         sample = array[1]
 
         if sample not in verified_HGT_dict:
             verified_HGT_dict[sample] = {}
+            record_HGT[sample] = {}
         insert = array[2] + "&" + array[3]
         delete1 = array[4] + "&" + array[5]
         delete2 = array[4] + "&" + array[6]
@@ -315,7 +319,13 @@ def read_verified(verified_result):
         verified_HGT_dict[sample][delete1] = "del"
         verified_HGT_dict[sample][delete2] = "del"
 
-    return verified_HGT_dict
+        record_HGT[sample][array[2] + "&" + array[3] + "&" + array[4] + "&" + array[5]] = 1
+        record_HGT[sample][array[4] + "&" + array[5] + "&" + array[2] + "&" + array[3]] = 1
+
+        record_HGT[sample][array[2] + "&" + array[3] + "&" + array[4] + "&" + array[6]] = 1
+        record_HGT[sample][array[4] + "&" + array[6] + "&" + array[2] + "&" + array[3]] = 1
+
+    return verified_HGT_dict, record_HGT
 
 
 def extract_insertion(ref_alignment):
@@ -378,23 +388,26 @@ if __name__ == "__main__":
     # bkp_dir = "/mnt/d/HGT/time_lines/SRP366030/"
     # database_dir = "/mnt/d/HGT/UHGG/"
     # verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
+    
 
     result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
     bkp_dir = result_dir
     database_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/"
     verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
 
-    
+    mechanism_result = result_dir + "/mechanism_result.txt"
+    fout = open(mechanism_result, 'w')
 
     tandem_repeat = database_dir + "/UHGG_reference.formate.tandem_repeat.gff"  # Source-version MISA 2.1
     TEI = database_dir + "/TEI_elements.txt" # repeatmasker: LTR, LINE, SINE
     # sample = "SRR18491235"
     tandem_repeat_dict = get_tandem_repeat()
     TEI_dict = get_TEI()
-    verified_HGT_dict = read_verified(verified_result)
+    verified_HGT_dict, record_HGT = read_verified(verified_result)
     mechanism_freq_dict = {}
 
 
+    ref_fasta = Fasta(database_dir + "/UHGG_reference.formate.fna")
     for sample in verified_HGT_dict:
         bam = "%s/%s.unique.bam"%(result_dir, sample)
         bed = "%s/%s.interval.txt.bed"%(result_dir, sample)
@@ -404,15 +417,16 @@ if __name__ == "__main__":
         chr_segments = find_chr_segment_name(bed)
         my_bkps = read_bkp(bkp_file)
         print (sample, "N.O. of bkp:", len(my_bkps))
-        for bkp in my_bkps:
-            mac = Mechanism(bkp)
-            if bkp.from_ref + "&" + str(bkp.from_bkp) in verified_HGT_dict[sample] and bkp.to_ref + "&" + str(bkp.to_bkp) in verified_HGT_dict[sample]:
+        for bkp in my_bkps:          
+            # if bkp.from_ref + "&" + str(bkp.from_bkp) in verified_HGT_dict[sample] and bkp.to_ref + "&" + str(bkp.to_bkp) in verified_HGT_dict[sample]:
+            if bkp.from_ref + "&" + str(bkp.from_bkp) + "&" + bkp.to_ref + "&" + str(bkp.to_bkp) in record_HGT[sample]:
+                # print (bkp.from_ref, bkp.from_bkp)
+                mac = Mechanism(bkp, ref_fasta)
                 from_type = verified_HGT_dict[sample][bkp.from_ref + "&" + str(bkp.from_bkp)]
                 to_type = verified_HGT_dict[sample][bkp.to_ref + "&" + str(bkp.to_bkp)]
-                # mac.compare_seq_ins()
-                # mac.compare_seq_homo()
                 mechanism, bkp_chrom, bkp_pos = mac.main(from_type, to_type)
                 print (sample, bkp_chrom, bkp_pos, mechanism)
+                print (sample, bkp_chrom, bkp_pos, mechanism, file = fout)
                 if mechanism not in mechanism_freq_dict:
                     mechanism_freq_dict[mechanism] = 0
                 mechanism_freq_dict[mechanism] += 1
@@ -420,4 +434,7 @@ if __name__ == "__main__":
 
     total = sum(list(mechanism_freq_dict.values()))
     for mechanism in mechanism_freq_dict:
-        print (mechanism, mechanism_freq_dict[mechanism], mechanism_freq_dict[mechanism]/total)
+        print ("#", mechanism, mechanism_freq_dict[mechanism], mechanism_freq_dict[mechanism]/total, file = fout)
+        print ("#", mechanism, mechanism_freq_dict[mechanism], mechanism_freq_dict[mechanism]/total)
+    
+    fout.close()
