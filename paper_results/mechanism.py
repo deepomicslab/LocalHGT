@@ -174,7 +174,7 @@ class Mechanism():
 
     def __init__(self, bkp_object):
         self.bkp = bkp_object
-        self.ref = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
+        self.ref = database_dir + "/UHGG_reference.formate.fna"
         self.ref_fasta = Fasta(self.ref)
         self.cutoff = 100
         
