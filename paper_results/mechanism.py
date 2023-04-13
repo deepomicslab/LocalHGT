@@ -250,19 +250,72 @@ class Mechanism():
         else:
             return is_in_intervals(pos, TEI_dict[scaffold_name])
 
-    def main(self): 
-        tandem_repeat_flag = self.check_tandem(self.bkp.from_ref, self.bkp.from_bkp) or self.check_tandem(self.bkp.to_ref, self.bkp.to_bkp)
+    def main(self, from_type, to_type): 
+        from_tandem_repeat_flag = self.check_tandem(self.bkp.from_ref, self.bkp.from_bkp)
+        from_TEI_flag = self.check_TEI(self.bkp.from_ref, self.bkp.from_bkp)
+        to_tandem_repeat_flag = self.check_tandem(self.bkp.to_ref, self.bkp.to_bkp)
+        to_TEI_flag = self.check_TEI(self.bkp.to_ref, self.bkp.to_bkp)
+
         from_ins =  self.compare_seq_ins(self.bkp.from_ref, self.bkp.from_bkp, self.bkp.from_strand)
         to_ins =  self.compare_seq_ins(self.bkp.to_ref, self.bkp.to_bkp, self.bkp.to_strand)
-        from_homo = self.compare_seq_homo()
-        print (tandem_repeat_flag, from_ins, to_ins, from_homo)
-    
-    # def classify(self, tandem_repeat_flag, from_ins, to_ins, from_homo):
-    #     mechanism_type = "NHEJ"  
-    #     if tandem_repeat_flag == True
-    #         mechanism_type = "TEI"
-    #     if (from_ins + to_ins) > 0
 
+        homo = self.compare_seq_homo()
+        # print (tandem_repeat_flag, from_ins, to_ins, homo)
+        from_mechanism = self.classify(from_type, from_tandem_repeat_flag, from_TEI_flag, from_ins, homo)
+        to_mechanism = self.classify(to_type, to_tandem_repeat_flag, to_TEI_flag, to_ins, homo)
+
+        if from_type == "del":
+            return from_mechanism, self.bkp.from_ref, self.bkp.from_bkp
+        elif to_type == "del":
+            return to_mechanism, self.bkp.to_ref, self.bkp.to_bkp
+        # print (from_mechanism, to_mechanism)
+    
+    def classify(self, break_type, tandem_repeat_flag, TEI_flag, ins_num, homo_num):
+        if break_type == "ins":
+            if TEI_flag:
+                mechanism_type = "TEI"
+            elif tandem_repeat_flag:
+                mechanism_type = "VNTR"
+            else:
+                mechanism_type = "NA"
+        elif break_type == "del":
+            if TEI_flag:
+                mechanism_type = "TEI"
+            elif tandem_repeat_flag:
+                mechanism_type = "VNTR"
+            else:
+                if ins_num > 0:
+                    if ins_num > 10:
+                        mechanism_type = "FoSTeS/MMBIR"
+                    else:
+                        mechanism_type = "NHEJ"
+                else:
+                    if homo_num > 100:
+                        mechanism_type = "NAHR"
+                    elif homo_num >= 2:
+                         mechanism_type = "alt-EJ"
+                    else:
+                        mechanism_type = "NHEJ"
+        return mechanism_type
+
+def read_verified(verified_result):
+    verified_HGT_dict = {}
+    for line in open(verified_result):
+        array = line.strip().split(",")
+        if array[1] == "sample":
+            continue
+        sample = array[1]
+
+        if sample not in verified_HGT_dict:
+            verified_HGT_dict[sample] = {}
+        insert = array[2] + "&" + array[3]
+        delete1 = array[4] + "&" + array[5]
+        delete2 = array[4] + "&" + array[6]
+        verified_HGT_dict[sample][insert] = "ins"
+        verified_HGT_dict[sample][delete1] = "del"
+        verified_HGT_dict[sample][delete2] = "del"
+
+    return verified_HGT_dict
 
 
 def extract_insertion(ref_alignment):
@@ -321,25 +374,50 @@ if __name__ == "__main__":
     sample_cutoff = 8  # 8
     abun_cutoff = 1e-7  #1e-7
 
-    bkp_file = "/mnt/d/HGT/time_lines/SRP366030/SRR18490938.acc.csv"
-    bam = "/mnt/d/HGT/time_lines/SRR18490938.unique.bam"
-    bed = "/mnt/d/HGT/time_lines/SRR18490938.interval.txt.bed"
-    tandem_repeat = "/mnt/d/HGT/UHGG/UHGG_reference.formate.tandem_repeat.gff"  # Source-version MISA 2.1
-    TEI = "/mnt/d/HGT/UHGG/TEI_elements.txt" # repeatmasker: LTR, LINE, SINE
+    # result_dir = "/mnt/d/HGT/time_lines/"
+    # bkp_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    # database_dir = "/mnt/d/HGT/UHGG/"
+    # verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
 
+    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    bkp_dir = result_dir
+    database_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/"
+    verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
+
+    
+
+    tandem_repeat = database_dir + "/UHGG_reference.formate.tandem_repeat.gff"  # Source-version MISA 2.1
+    TEI = database_dir + "/TEI_elements.txt" # repeatmasker: LTR, LINE, SINE
+    # sample = "SRR18491235"
     tandem_repeat_dict = get_tandem_repeat()
     TEI_dict = get_TEI()
+    verified_HGT_dict = read_verified(verified_result)
+    mechanism_freq_dict = {}
 
 
-    chr_segments = find_chr_segment_name(bed)
-    my_bkps = read_bkp(bkp_file)
-    print ("N.O. of bkp:", len(my_bkps))
-    for bkp in my_bkps:
-        mac = Mechanism(bkp)
-        # mac.compare_seq_ins()
-        # mac.compare_seq_homo()
-        mac.main()
-        # break
+    for sample in verified_HGT_dict:
+        bam = "%s/%s.unique.bam"%(result_dir, sample)
+        bed = "%s/%s.interval.txt.bed"%(result_dir, sample)
+        bkp_file = bkp_dir + "/%s.acc.csv"%(sample)
+        if not (os.path.isfile(bam) and os.path.isfile(bed) and os.path.isfile(bkp_file)):
+            continue
+        chr_segments = find_chr_segment_name(bed)
+        my_bkps = read_bkp(bkp_file)
+        print (sample, "N.O. of bkp:", len(my_bkps))
+        for bkp in my_bkps:
+            mac = Mechanism(bkp)
+            if bkp.from_ref + "&" + str(bkp.from_bkp) in verified_HGT_dict[sample] and bkp.to_ref + "&" + str(bkp.to_bkp) in verified_HGT_dict[sample]:
+                from_type = verified_HGT_dict[sample][bkp.from_ref + "&" + str(bkp.from_bkp)]
+                to_type = verified_HGT_dict[sample][bkp.to_ref + "&" + str(bkp.to_bkp)]
+                # mac.compare_seq_ins()
+                # mac.compare_seq_homo()
+                mechanism, bkp_chrom, bkp_pos = mac.main(from_type, to_type)
+                print (sample, bkp_chrom, bkp_pos, mechanism)
+                if mechanism not in mechanism_freq_dict:
+                    mechanism_freq_dict[mechanism] = 0
+                mechanism_freq_dict[mechanism] += 1
+                # break
 
-
-
+    total = sum(list(mechanism_freq_dict.values()))
+    for mechanism in mechanism_freq_dict:
+        print (mechanism, mechanism_freq_dict[mechanism], mechanism_freq_dict[mechanism]/total)
