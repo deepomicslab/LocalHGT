@@ -383,12 +383,17 @@ class Match():
 
 if __name__ == "__main__":
 
-    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
-    result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    # hgt_table = "/mnt/d/HGT/time_lines/SRP366030.HGT.table.csv"
-    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-    saved_can_match_bkp = "/mnt/d/HGT/time_lines/SRP366030.can_match.pickle"
+    # meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    # design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
+    # result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    # saved_can_match_bkp = "/mnt/d/HGT/time_lines/SRP366030.can_match.pickle"
+
+    meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
+    design_file =  "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
+    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
+    saved_can_match_bkp = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match//SRP366030.can_match.pickle"
 
     bin_size = 100
     split_cutoff = 0  #10
