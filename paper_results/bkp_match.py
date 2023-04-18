@@ -194,7 +194,6 @@ class Match():
                 self.correlation_matrix[bkp_pair] = res.correlation
 
     def get_precise_HGT(self):
-
         data = []
         for sra_id in self.cohort_data:
             sample_dict = {}

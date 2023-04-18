@@ -172,8 +172,8 @@ def is_in_intervals(value, intervals):
 
 class Mechanism():
 
-    def __init__(self, bkp_object, ref_fasta):
-        self.bkp = bkp_object
+    def __init__(self, event, ref_fasta):
+        self.event = event
         # self.ref = database_dir + "/UHGG_reference.formate.fna"
         self.ref_fasta = ref_fasta 
         self.cutoff = 100
@@ -213,12 +213,12 @@ class Mechanism():
         return 0
 
     def compare_seq_homo(self):
-        self.bkp.from_bkp -= 1
-        from_seq = self.extract_ref_seq(self.bkp.from_ref, self.bkp.from_bkp-self.cutoff, self.bkp.from_bkp+self.cutoff)
-        to_seq = self.extract_ref_seq(self.bkp.to_ref, self.bkp.to_bkp-self.cutoff, self.bkp.to_bkp+self.cutoff)
-        if self.bkp.from_strand == "-":
+        self.event["del"][0][1] -= 1
+        from_seq = self.extract_ref_seq(self.event["del"][0][0], self.event["del"][0][1]-self.cutoff, self.event["del"][0][1]+self.cutoff)
+        to_seq = self.extract_ref_seq(self.event["del"][1][0], self.event["del"][1][1]-self.cutoff, self.event["del"][1][1]+self.cutoff)
+        if self.event["del"][0][2] == "-":
             from_seq = self.get_reverse_complement_seq(from_seq)      
-        if self.bkp.to_strand == "-":
+        if self.event["del"][1][2] == "-":
             to_seq = self.get_reverse_complement_seq(to_seq)
         if re.search(">", from_seq) or re.search(">", to_seq) or re.search("N", from_seq) or re.search("N", to_seq):
             return 0
@@ -250,25 +250,41 @@ class Mechanism():
         else:
             return is_in_intervals(pos, TEI_dict[scaffold_name])
 
-    def main(self, from_type, to_type): 
-        from_tandem_repeat_flag = self.check_tandem(self.bkp.from_ref, self.bkp.from_bkp)
-        from_TEI_flag = self.check_TEI(self.bkp.from_ref, self.bkp.from_bkp)
-        to_tandem_repeat_flag = self.check_tandem(self.bkp.to_ref, self.bkp.to_bkp)
-        to_TEI_flag = self.check_TEI(self.bkp.to_ref, self.bkp.to_bkp)
+    def sort_del_end(self):
+        if self.event["del"][0][1] > self.event["del"][1][1]:
+            a = self.event["del"][0][1]
+            self.event["del"][0][1] = self.event["del"][1][1]
+            self.event["del"][1][1] = a
 
-        from_ins =  self.compare_seq_ins(self.bkp.from_ref, self.bkp.from_bkp, self.bkp.from_strand)
-        to_ins =  self.compare_seq_ins(self.bkp.to_ref, self.bkp.to_bkp, self.bkp.to_strand)
+    def main(self): 
+        self.sort_del_end()
+        print (self.event)
+        del_start_tandem_repeat_flag = self.check_tandem(self.event["del"][0][0], self.event["del"][0][1])
+        del_start_TEI_flag = self.check_TEI(self.event["del"][0][0], self.event["del"][0][1])
+        del_start_ins =  self.compare_seq_ins(self.event["del"][0][0], self.event["del"][0][1], self.event["del"][0][2])
 
-        homo = self.compare_seq_homo()
-        # print (tandem_repeat_flag, from_ins, to_ins, homo)
-        from_mechanism = self.classify(from_type, from_tandem_repeat_flag, from_TEI_flag, from_ins, homo)
-        to_mechanism = self.classify(to_type, to_tandem_repeat_flag, to_TEI_flag, to_ins, homo)
+        del_end_tandem_repeat_flag = self.check_tandem(self.event["del"][1][0], self.event["del"][1][1])
+        del_end_TEI_flag = self.check_TEI(self.event["del"][1][0], self.event["del"][1][1])
+        del_end_ins =  self.compare_seq_ins(self.event["del"][1][0], self.event["del"][1][1], self.event["del"][1][2])
 
-        if from_type == "del":
-            return from_mechanism, self.bkp.from_ref, self.bkp.from_bkp
-        elif to_type == "del":
-            return to_mechanism, self.bkp.to_ref, self.bkp.to_bkp
-        # print (from_mechanism, to_mechanism)
+        del_homo = self.compare_seq_homo()
+
+        del_tandem_flag = del_start_tandem_repeat_flag or del_end_tandem_repeat_flag
+        del_TEI_flag = del_start_TEI_flag or del_end_TEI_flag
+        del_ins = max([del_start_ins, del_end_ins])
+
+
+        del_mechanism = self.classify("del", del_tandem_flag, del_TEI_flag, del_ins, del_homo)
+        print (del_start_tandem_repeat_flag,del_start_TEI_flag, del_start_ins, del_end_tandem_repeat_flag, del_end_TEI_flag, del_end_ins, del_homo)
+        print (del_mechanism)
+
+
+        ins_tandem_repeat_flag = self.check_tandem(self.event["ins"][0][0], self.event["ins"][0][1])
+        ins_TEI_flag = self.check_TEI(self.event["ins"][0][0], self.event["ins"][0][1])
+        ins_mechanism = self.classify("ins", ins_tandem_repeat_flag, ins_TEI_flag, 0, 0)
+        print (ins_tandem_repeat_flag, ins_TEI_flag, ins_mechanism)
+
+        return del_mechanism, ins_mechanism
     
     def classify(self, break_type, tandem_repeat_flag, TEI_flag, ins_num, homo_num):
         if break_type == "ins":
@@ -301,6 +317,7 @@ class Mechanism():
 def read_verified(verified_result):
     verified_HGT_dict = {}
     record_HGT = {}
+    index = 0
     for line in open(verified_result):
         array = line.strip().split(",")
         if array[1] == "sample":
@@ -312,18 +329,26 @@ def read_verified(verified_result):
         if sample not in verified_HGT_dict:
             verified_HGT_dict[sample] = {}
             record_HGT[sample] = {}
-        insert = array[2] + "&" + array[3]
-        delete1 = array[4] + "&" + array[5]
-        delete2 = array[4] + "&" + array[6]
+
+        array[3] = int(array[3])
+        array[5] = int(array[5])
+        array[6] = int(array[6])
+
+        insert = array[2] + "&" + str(int(array[3]/bin_size))
+        delete1 = array[4] + "&" + str(int(array[5]/bin_size))
+        delete2 = array[4] + "&" + str(int(array[6]/bin_size))
+
         verified_HGT_dict[sample][insert] = "ins"
         verified_HGT_dict[sample][delete1] = "del"
         verified_HGT_dict[sample][delete2] = "del"
 
-        record_HGT[sample][array[2] + "&" + array[3] + "&" + array[4] + "&" + array[5]] = 1
-        record_HGT[sample][array[4] + "&" + array[5] + "&" + array[2] + "&" + array[3]] = 1
+        record_HGT[sample][array[2] + "&" + str(int(array[3]/bin_size)) + "&" + array[4] + "&" + str(int(array[5]/bin_size))] = index
+        record_HGT[sample][array[4] + "&" + str(int(array[5]/bin_size)) + "&" + array[2] + "&" + str(int(array[3]/bin_size))] = index
 
-        record_HGT[sample][array[2] + "&" + array[3] + "&" + array[4] + "&" + array[6]] = 1
-        record_HGT[sample][array[4] + "&" + array[6] + "&" + array[2] + "&" + array[3]] = 1
+        record_HGT[sample][array[2] + "&" + str(int(array[3]/bin_size)) + "&" + array[4] + "&" + str(int(array[6]/bin_size))] = index
+        record_HGT[sample][array[4] + "&" + str(int(array[6]/bin_size)) + "&" + array[2] + "&" + str(int(array[3]/bin_size))] = index
+
+        index += 1
 
     return verified_HGT_dict, record_HGT
 
@@ -379,7 +404,7 @@ def extract_homology(alignment):
     
     
 if __name__ == "__main__":
-    bin_size = 500
+    bin_size = 100
     split_cutoff = 0  #10
     sample_cutoff = 8  # 8
     abun_cutoff = 1e-7  #1e-7
@@ -405,6 +430,7 @@ if __name__ == "__main__":
     TEI_dict = get_TEI()
     verified_HGT_dict, record_HGT = read_verified(verified_result)
     mechanism_freq_dict = {}
+    ins_mechanism_freq_dict = {}
 
 
     ref_fasta = Fasta(database_dir + "/UHGG_reference.formate.fna")
@@ -417,24 +443,44 @@ if __name__ == "__main__":
         chr_segments = find_chr_segment_name(bed)
         my_bkps = read_bkp(bkp_file)
         print (sample, "N.O. of bkp:", len(my_bkps))
+        # print (record_HGT[sample])
+        event_dict = {}
         for bkp in my_bkps:          
-            # if bkp.from_ref + "&" + str(bkp.from_bkp) in verified_HGT_dict[sample] and bkp.to_ref + "&" + str(bkp.to_bkp) in verified_HGT_dict[sample]:
-            if bkp.from_ref + "&" + str(bkp.from_bkp) + "&" + bkp.to_ref + "&" + str(bkp.to_bkp) in record_HGT[sample]:
+            if bkp.hgt_tag in record_HGT[sample]:
                 # print (bkp.from_ref, bkp.from_bkp)
-                mac = Mechanism(bkp, ref_fasta)
-                from_type = verified_HGT_dict[sample][bkp.from_ref + "&" + str(bkp.from_bkp)]
-                to_type = verified_HGT_dict[sample][bkp.to_ref + "&" + str(bkp.to_bkp)]
-                mechanism, bkp_chrom, bkp_pos = mac.main(from_type, to_type)
-                print (sample, bkp_chrom, bkp_pos, mechanism)
-                print (sample, bkp_chrom, bkp_pos, mechanism, file = fout)
-                if mechanism not in mechanism_freq_dict:
-                    mechanism_freq_dict[mechanism] = 0
-                mechanism_freq_dict[mechanism] += 1
-                # break
+                event_index = record_HGT[sample][bkp.hgt_tag]
+                from_type = verified_HGT_dict[sample][bkp.from_ref + "&" + str(int(bkp.from_bkp/bin_size))]
+                to_type = verified_HGT_dict[sample][bkp.to_ref + "&" + str(int(bkp.to_bkp/bin_size))]
+
+                if event_index not in event_dict:
+                    event_dict[event_index] = {"del":[], "ins":[]}
+                event_dict[event_index][from_type].append([bkp.from_ref, bkp.from_bkp, bkp.from_strand])
+                event_dict[event_index][to_type].append([bkp.to_ref, bkp.to_bkp, bkp.to_strand])
+        # print (event_dict)   
+        for event_index in event_dict:
+            event = event_dict[event_index]
+            mac = Mechanism(event, ref_fasta)
+
+            del_mechanism, ins_mechanism = mac.main()
+            # print (sample, bkp_chrom, bkp_pos, mechanism)
+            # print (sample, bkp_chrom, bkp_pos, mechanism, file = fout)
+            if del_mechanism not in mechanism_freq_dict:
+                mechanism_freq_dict[del_mechanism] = 0
+            mechanism_freq_dict[del_mechanism] += 1
+
+            if ins_mechanism not in ins_mechanism_freq_dict:
+                ins_mechanism_freq_dict[ins_mechanism] = 0
+            ins_mechanism_freq_dict[ins_mechanism] += 1
+            # break
 
     total = sum(list(mechanism_freq_dict.values()))
     for mechanism in mechanism_freq_dict:
-        print ("#", mechanism, mechanism_freq_dict[mechanism], mechanism_freq_dict[mechanism]/total, file = fout)
-        print ("#", mechanism, mechanism_freq_dict[mechanism], mechanism_freq_dict[mechanism]/total)
+        print ("#del", mechanism, mechanism_freq_dict[mechanism], mechanism_freq_dict[mechanism]/total, file = fout)
+        print ("#del", mechanism, mechanism_freq_dict[mechanism], mechanism_freq_dict[mechanism]/total)
+
+    total = sum(list(ins_mechanism_freq_dict.values()))
+    for mechanism in ins_mechanism_freq_dict:
+        print ("#ins", mechanism, ins_mechanism_freq_dict[mechanism], ins_mechanism_freq_dict[mechanism]/total, file = fout)
+        print ("#ins", mechanism, ins_mechanism_freq_dict[mechanism], ins_mechanism_freq_dict[mechanism]/total)
     
     fout.close()
