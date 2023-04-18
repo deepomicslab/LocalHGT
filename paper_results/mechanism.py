@@ -438,8 +438,8 @@ if __name__ == "__main__":
     ref_fasta = Fasta(database_dir + "/UHGG_reference.formate.fna")
     for sample in verified_HGT_dict:
 
-        if sample != "SRR18491253":
-            continue
+        # if sample != "SRR18491253":
+        #     continue
 
         bam = "%s/%s.unique.bam"%(result_dir, sample)
         bed = "%s/%s.interval.txt.bed"%(result_dir, sample)
