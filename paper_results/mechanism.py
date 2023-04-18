@@ -409,16 +409,16 @@ if __name__ == "__main__":
     sample_cutoff = 8  # 8
     abun_cutoff = 1e-7  #1e-7
 
-    result_dir = "/mnt/d/HGT/time_lines/"
-    bkp_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    database_dir = "/mnt/d/HGT/UHGG/"
-    verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
+    # result_dir = "/mnt/d/HGT/time_lines/"
+    # bkp_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    # database_dir = "/mnt/d/HGT/UHGG/"
+    # verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
     
 
-    # result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
-    # bkp_dir = result_dir
-    # database_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/"
-    # verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
+    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    bkp_dir = result_dir
+    database_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/"
+    verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
 
     mechanism_result = result_dir + "/mechanism_result.txt"
     fout = open(mechanism_result, 'w')
