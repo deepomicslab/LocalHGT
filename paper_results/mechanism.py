@@ -338,9 +338,11 @@ def read_verified(verified_result):
         delete1 = array[4] + "&" + str(int(array[5]/bin_size))
         delete2 = array[4] + "&" + str(int(array[6]/bin_size))
 
-        verified_HGT_dict[sample][insert] = "ins"
-        verified_HGT_dict[sample][delete1] = "del"
-        verified_HGT_dict[sample][delete2] = "del"
+        verified_HGT_dict[sample][index] = {}
+
+        verified_HGT_dict[sample][index][insert] = "ins"
+        verified_HGT_dict[sample][index][delete1] = "del"
+        verified_HGT_dict[sample][index][delete2] = "del"
 
         record_HGT[sample][array[2] + "&" + str(int(array[3]/bin_size)) + "&" + array[4] + "&" + str(int(array[5]/bin_size))] = index
         record_HGT[sample][array[4] + "&" + str(int(array[5]/bin_size)) + "&" + array[2] + "&" + str(int(array[3]/bin_size))] = index
@@ -435,6 +437,10 @@ if __name__ == "__main__":
 
     ref_fasta = Fasta(database_dir + "/UHGG_reference.formate.fna")
     for sample in verified_HGT_dict:
+
+        if sample != "SRR18491253":
+            continue
+
         bam = "%s/%s.unique.bam"%(result_dir, sample)
         bed = "%s/%s.interval.txt.bed"%(result_dir, sample)
         bkp_file = bkp_dir + "/%s.acc.csv"%(sample)
@@ -449,8 +455,8 @@ if __name__ == "__main__":
             if bkp.hgt_tag in record_HGT[sample]:
                 # print (bkp.from_ref, bkp.from_bkp)
                 event_index = record_HGT[sample][bkp.hgt_tag]
-                from_type = verified_HGT_dict[sample][bkp.from_ref + "&" + str(int(bkp.from_bkp/bin_size))]
-                to_type = verified_HGT_dict[sample][bkp.to_ref + "&" + str(int(bkp.to_bkp/bin_size))]
+                from_type = verified_HGT_dict[sample][event_index][bkp.from_ref + "&" + str(int(bkp.from_bkp/bin_size))]
+                to_type = verified_HGT_dict[sample][event_index][bkp.to_ref + "&" + str(int(bkp.to_bkp/bin_size))]
 
                 if event_index not in event_dict:
                     event_dict[event_index] = {"del":[], "ins":[]}
