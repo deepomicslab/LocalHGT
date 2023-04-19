@@ -252,46 +252,6 @@ class Micro_homo():
             # break
         print ("hit rate:", hit_num/index)
 
-    def check_overlap(self, start_end_positions):
-        flag = False
-        # if start_end_positions[0][0] >= start_end_positions[1][0] and start_end_positions[0][0] <= start_end_positions[1][1]:
-        #     flag = True
-        # elif start_end_positions[0][1] >= start_end_positions[1][0] and start_end_positions[0][1] <= start_end_positions[1][1]:
-        #     flag = True
-
-        pos_diff = abs(start_end_positions[0][0] - start_end_positions[1][0])
-        if pos_diff <= self.tole_diff: 
-            flag = True
-        return flag
-
-    def get_mic_homo(self, seq1, seq2):
-        seq1 = DNA(seq1)
-        seq2 = DNA(seq2)
-        # if seq1.frequencies("N")["N"] > 0 or seq2.frequencies("N")["N"] > 0:
-        if seq1.frequencies("N")["N"] == len(seq1) or seq2.frequencies("N")["N"] == len(seq2):
-            return -1
-        elif len(seq1) != len(seq2):
-            return -1
-        alignment, score, start_end_positions = local_pairwise_align_ssw(seq1, seq2, gap_open_penalty=10, mismatch_score=-10)
-        array = str(alignment).split("\n")
-        match_seq1 = array[-2]
-        match_seq2 = array[-1]
-        
-        score = len(match_seq1) # use match length as score
-        vis_seq_1 = self.visulaize(start_end_positions[0], match_seq1)
-        vis_seq_2 = self.visulaize(start_end_positions[1], match_seq2)
-        # print (seq1)
-        # print (seq2)
-        # print (vis_seq_1)
-        # print (vis_seq_2)
-
-        if score >= self.min_score and self.check_overlap(start_end_positions):
-
-
-            return score
-        else:
-            return 0
-
     def for_each_bkp(self, bkp):
         bkp.from_bkp -= 1
         from_seq = self.extract_ref_seq(bkp.from_ref, bkp.from_bkp-self.cutoff, bkp.from_bkp+self.cutoff)

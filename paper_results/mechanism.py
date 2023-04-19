@@ -14,6 +14,22 @@ import re
 from Bio import pairwise2
 from Bio.Seq import Seq
 
+def countN(sequence):
+    # initialize a counter variable
+    count = 0
+
+    # loop through the sequence and count the number of "N" characters
+    for char in sequence:
+        if char.upper() == 'N':
+            count += 1
+    return count
+
+
+def get_reverse_complement_seq(sequence):
+    sequence = sequence[::-1]
+    trantab = str.maketrans('ACGTacgtRYMKrymkVBHDvbhd', 'TGCAtgcaYRKMyrkmBVDHbvdh')
+    string = sequence.translate(trantab)
+    return string
 
 class Acc_Bkp(object):
 
@@ -143,7 +159,7 @@ def get_tandem_repeat():
             tandem_repeat_dict[chrom] = []
         tandem_repeat_dict[chrom].append([repeat_start, repeat_end])
     f.close()
-    # print (len(tandem_repeat_dict))
+    # print (len(tandem_repeat_dict), tandem_repeat_dict)
     return tandem_repeat_dict
 
 def get_TEI():
@@ -212,8 +228,9 @@ class Mechanism():
                 return max(insertion_list)
         return 0
 
+
     def compare_seq_homo(self):
-        self.event["del"][0][1] -= 1
+        # self.event["del"][0][1] -= 1
         from_seq = self.extract_ref_seq(self.event["del"][0][0], self.event["del"][0][1]-self.cutoff, self.event["del"][0][1]+self.cutoff)
         to_seq = self.extract_ref_seq(self.event["del"][1][0], self.event["del"][1][1]-self.cutoff, self.event["del"][1][1]+self.cutoff)
         if self.event["del"][0][2] == "-":
@@ -284,7 +301,7 @@ class Mechanism():
         ins_mechanism = self.classify("ins", ins_tandem_repeat_flag, ins_TEI_flag, 0, 0)
         print (ins_tandem_repeat_flag, ins_TEI_flag, ins_mechanism)
 
-        return del_mechanism, ins_mechanism
+        return del_mechanism, ins_mechanism, del_homo
     
     def classify(self, break_type, tandem_repeat_flag, TEI_flag, ins_num, homo_num):
         if break_type == "ins":
@@ -313,6 +330,28 @@ class Mechanism():
                     else:
                         mechanism_type = "NHEJ"
         return mechanism_type
+
+    def get_micro_homo(self, seq1, seq2):
+        from_seq = DNA(seq1)
+        to_seq = DNA(seq2)
+        alignment, score, start_end_positions = global_pairwise_align_nucleotide(from_seq, to_seq) #, mismatch_score = -1000
+
+        max_homology_len = extract_homology(alignment)
+        return max_homology_len
+
+    def for_each_bkp(self, bkp):
+        bkp.from_bkp -= 1
+        from_seq = self.extract_ref_seq(bkp.from_ref, bkp.from_bkp-self.cutoff, bkp.from_bkp+self.cutoff)
+        to_seq = self.extract_ref_seq(bkp.to_ref, bkp.to_bkp-self.cutoff, bkp.to_bkp+self.cutoff)
+        if bkp.from_strand == "-":
+            from_seq = get_reverse_complement_seq(from_seq)      
+        if bkp.to_strand == "-":
+            to_seq = get_reverse_complement_seq(to_seq)
+        if re.search(">", from_seq) or re.search(">", to_seq):
+            return -1
+        if countN(from_seq) > 0 or countN(to_seq) > 0:
+            return -1
+        return self.get_micro_homo(from_seq, to_seq)
 
 def read_verified(verified_result):
     verified_HGT_dict = {}
@@ -402,7 +441,9 @@ def extract_homology(alignment):
         return max(homology_len_list)
     else:
         return 0
-    
+
+
+
     
     
 if __name__ == "__main__":
@@ -411,18 +452,19 @@ if __name__ == "__main__":
     sample_cutoff = 8  # 8
     abun_cutoff = 1e-7  #1e-7
 
-    # result_dir = "/mnt/d/HGT/time_lines/"
-    # bkp_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    # database_dir = "/mnt/d/HGT/UHGG/"
-    # verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
+    result_dir = "/mnt/d/HGT/time_lines/"
+    bkp_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    database_dir = "/mnt/d/HGT/UHGG/"
+    verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
     
 
-    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
-    bkp_dir = result_dir
-    database_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/"
-    verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
+    # result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    # bkp_dir = result_dir
+    # database_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/"
+    # verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
 
     mechanism_result = result_dir + "/mechanism_result.txt"
+    print (mechanism_result)
     fout = open(mechanism_result, 'w')
 
     tandem_repeat = database_dir + "/UHGG_reference.formate.tandem_repeat.gff"  # Source-version MISA 2.1
@@ -440,7 +482,7 @@ if __name__ == "__main__":
 
         # if sample != "SRR18491253":
         #     continue
-
+        sample_mechanism_freq_dict = {"NHEJ":0, "alt-EJ":0, "TEI":0, "VNTR":0, "NAHR":0, "FoSTeS/MMBIR":0}
         bam = "%s/%s.unique.bam"%(result_dir, sample)
         bed = "%s/%s.interval.txt.bed"%(result_dir, sample)
         bkp_file = bkp_dir + "/%s.acc.csv"%(sample)
@@ -451,6 +493,7 @@ if __name__ == "__main__":
         print (sample, "N.O. of bkp:", len(my_bkps))
         # print (record_HGT[sample])
         event_dict = {}
+        bkp_dict = {}
         for bkp in my_bkps:          
             if bkp.hgt_tag in record_HGT[sample]:
                 # print (bkp.from_ref, bkp.from_bkp)
@@ -462,22 +505,40 @@ if __name__ == "__main__":
                     event_dict[event_index] = {"del":[], "ins":[]}
                 event_dict[event_index][from_type].append([bkp.from_ref, bkp.from_bkp, bkp.from_strand])
                 event_dict[event_index][to_type].append([bkp.to_ref, bkp.to_bkp, bkp.to_strand])
+
+                if  event_index not in bkp_dict:                  
+                    bkp_dict[event_index] = []
+                bkp_dict[event_index].append(bkp)
         # print (event_dict)   
         for event_index in event_dict:
             event = event_dict[event_index]
             mac = Mechanism(event, ref_fasta)
 
-            del_mechanism, ins_mechanism = mac.main()
-            # print (sample, bkp_chrom, bkp_pos, mechanism)
-            # print (sample, bkp_chrom, bkp_pos, mechanism, file = fout)
+            del_mechanism, ins_mechanism, del_homo = mac.main()
+            print ("event", sample, event["del"][0][0], event["del"][0][1], event["del"][1][0], event["del"][1][1], del_mechanism,\
+                event["ins"][0][0], event["ins"][0][1], ins_mechanism )
+            print ("event", sample, event["del"][0][0], event["del"][0][1], event["del"][1][0], event["del"][1][1], del_mechanism,\
+                event["ins"][0][0], event["ins"][0][1], ins_mechanism, file = fout )
             if del_mechanism not in mechanism_freq_dict:
                 mechanism_freq_dict[del_mechanism] = 0
             mechanism_freq_dict[del_mechanism] += 1
+
+            sample_mechanism_freq_dict[del_mechanism] += 1
 
             if ins_mechanism not in ins_mechanism_freq_dict:
                 ins_mechanism_freq_dict[ins_mechanism] = 0
             ins_mechanism_freq_dict[ins_mechanism] += 1
             # break
+
+            a = list(sample_mechanism_freq_dict.values())
+            del_mecha_freq = np.array(a)/sum(a)
+
+            bkp1_homo = mac.for_each_bkp(bkp_dict[event_index][0])
+            bkp2_homo = mac.for_each_bkp(bkp_dict[event_index][1])
+            print (bkp1_homo, bkp2_homo, del_homo)
+
+        print ("sample_freq", sample, del_mecha_freq[0], del_mecha_freq[1], del_mecha_freq[2], del_mecha_freq[3], del_mecha_freq[4])
+        print ("sample_freq", sample, del_mecha_freq[0], del_mecha_freq[1], del_mecha_freq[2], del_mecha_freq[3], del_mecha_freq[4], file = fout)
 
     total = sum(list(mechanism_freq_dict.values()))
     for mechanism in mechanism_freq_dict:
