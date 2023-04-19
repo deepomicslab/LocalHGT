@@ -452,16 +452,16 @@ if __name__ == "__main__":
     sample_cutoff = 8  # 8
     abun_cutoff = 1e-7  #1e-7
 
-    # result_dir = "/mnt/d/HGT/time_lines/"
-    # bkp_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    # database_dir = "/mnt/d/HGT/UHGG/"
-    # verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
+    result_dir = "/mnt/d/HGT/time_lines/"
+    bkp_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    database_dir = "/mnt/d/HGT/UHGG/"
+    verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
     
 
-    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
-    bkp_dir = result_dir
-    database_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/"
-    verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
+    # result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    # bkp_dir = result_dir
+    # database_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/"
+    # verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
 
     mechanism_result = result_dir + "/mechanism_result.txt"
     print (mechanism_result)
@@ -476,6 +476,8 @@ if __name__ == "__main__":
     mechanism_freq_dict = {}
     ins_mechanism_freq_dict = {}
 
+    cross_species_homo_list = []
+    del_homo_list = []
 
     ref_fasta = Fasta(database_dir + "/UHGG_reference.formate.fna")
     for sample in verified_HGT_dict:
@@ -537,6 +539,9 @@ if __name__ == "__main__":
             bkp2_homo = mac.for_each_bkp(bkp_dict[event_index][1])
             print (bkp1_homo, bkp2_homo, del_homo)
 
+            cross_species_homo_list += [bkp1_homo, bkp2_homo]
+            del_homo_list += [del_homo]
+
         print ("sample_freq", sample, del_mecha_freq[0], del_mecha_freq[1], del_mecha_freq[2], del_mecha_freq[3], del_mecha_freq[4])
         print ("sample_freq", sample, del_mecha_freq[0], del_mecha_freq[1], del_mecha_freq[2], del_mecha_freq[3], del_mecha_freq[4], file = fout)
 
@@ -550,4 +555,10 @@ if __name__ == "__main__":
         print ("#ins", mechanism, ins_mechanism_freq_dict[mechanism], ins_mechanism_freq_dict[mechanism]/total, file = fout)
         print ("#ins", mechanism, ins_mechanism_freq_dict[mechanism], ins_mechanism_freq_dict[mechanism]/total)
     
+    
+
+    U1, p = mannwhitneyu(cross_species_homo_list, del_homo_list)
+    print (np.mean(cross_species_homo_list), np.mean(del_homo_list), p)
+    print ("#com_homo", np.mean(cross_species_homo_list), np.mean(del_homo_list), p, file = fout)
+
     fout.close()
