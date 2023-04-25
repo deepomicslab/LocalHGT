@@ -5,6 +5,7 @@ from scipy.stats import mannwhitneyu
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from mechanism_taxonomy import Taxonomy
  
 def read_meta():
     
@@ -38,7 +39,6 @@ def read_design():
             sample_time_point[sample_id] = int(array[4])
     return sample_individual_dict, sample_time_point
 
-
 class Acc_Bkp(object):
 
     def __init__(self, list):
@@ -70,8 +70,6 @@ class Acc_Bkp(object):
         self.split_abundance = None
 
         self.read = None
-
-
 
 class Time_Lines():
 
@@ -123,10 +121,10 @@ class Time_Lines():
                 eb.abundance = eb.cross_split_reads/reads_num
                 if eb.from_ref_genome == eb.to_ref_genome:
                     continue
-                if eb.cross_split_reads < split_cutoff:
-                    continue
                 if eb.abundance < abun_cutoff:
                     continue
+                # if self.get_genome_taxa(eb.from_ref_genome) == self.get_genome_taxa(eb.to_ref_genome): # classify intra-genus and inter-genus HGTs
+                #     continue
                 total_HGT_split_num += eb.cross_split_reads
                 # if eb.hgt_tag not in self.all_hgt:
                 sample_dict[eb.hgt_tag] = 1
@@ -139,6 +137,11 @@ class Time_Lines():
                 self.hgt_count[hgt_tag] = 0
             self.hgt_count[hgt_tag] += 1
         return my_bkps
+
+    def get_genome_taxa(self, genome):
+        # g1 = get_pure_genome(genome)
+        taxa = taxonomy.taxonomy_dict[genome].split(";")[5]
+        return taxa
 
     def filter_hgt(self):
 
@@ -278,6 +281,7 @@ class Time_Lines():
             print ("individual:", individual, "HGT count at different time:", individual_hgt_num[individual])
 
     def find_conserve_HGT(self):
+        
         individual_hgt_dict = {}
         for sra_id in self.sample_array_dict:
             individual = sample_individual_dict[sra_sample_dict[sra_id]]
@@ -291,11 +295,223 @@ class Time_Lines():
                     individual_hgt_dict[individual][hgt_tag] = 0
                 individual_hgt_dict[individual][hgt_tag] += 1
 
+        record_conseve_species = {}
+        converve_hgt_count = []
         for individual in individual_hgt_dict:
+            record_conseve_species[individual] = {}
+            num = 0
             for hgt_tag in individual_hgt_dict[individual]:
                 if individual_hgt_dict[individual][hgt_tag] == 10:
-                    print ("individual:", individual, "conserved HGT:", hgt_tag)
+                    num += 1
+                    # print ("individual:", individual, "conserved HGT:", hgt_tag)
+                    hgt_array = hgt_tag.split("&")
+                    g1 = get_pure_genome(hgt_array[0])
+                    g2 = get_pure_genome(hgt_array[2])
+                    s1 = taxonomy.taxonomy_dict[g1].split(";")[6]
+                    s2 = taxonomy.taxonomy_dict[g2].split(";")[6]
+                    # print ("individual:", individual, s1, s2)
+
+                    record_conseve_species[individual][s1] = 1
+                    record_conseve_species[individual][s2] = 1
+            converve_hgt_count.append(num)
+            print (list(record_conseve_species[individual].keys()))
+        print ("conserve HGT count distribution", np.mean(converve_hgt_count), sorted(converve_hgt_count) )
+        # get the conserve species that are common cross individuals
+        species_dict = {}
+        for individual in record_conseve_species:
+            for species in record_conseve_species[individual]:
+                if species not in species_dict:
+                    species_dict[species] = 0
+                species_dict[species] += 1
+        sorted_dict = sorted(species_dict.items(), key=lambda item: item[1], reverse = True)
+
+        common_species = 0
+        uniq_species = 0
+        for e in sorted_dict:
+            print (e[0], e[1])
+            if e[1] > 5:
+                common_species += 1
+            if e[1] == 1:
+                uniq_species += 1
+        species_num = len(species_dict) - 1
+        print (species_num, common_species/species_num , uniq_species/species_num, uniq_species)
+ 
+    def find_diff_HGT(self):
+        # find the species with significant diff HGT 
+        taxonomy = Taxonomy()
+        ind_time_dict = {}
+
+        for sra_id in self.sample_array_dict:
+            individual = sample_individual_dict[sra_sample_dict[sra_id]]
+            time_point = sample_time_point[sra_sample_dict[sra_id]]
+
+            if individual not in ind_time_dict:
+                ind_time_dict[individual] = {}
+            if not (time_point == 1 or time_point == 10):
+                continue
+            ind_time_dict[individual][time_point] = self.sample_array_dict[sra_id]
+
+        diff_dict = {} # record the genus pair that show diff in at least one sample
+        for individual in ind_time_dict:
+            diff = np.array(ind_time_dict[individual][1]) - np.array(ind_time_dict[individual][10])
+            species_array = {}
+            for i in range(len(diff)):
+                hgt_tag = self.HGT_list[i]
+                hgt_array = hgt_tag.split("&")
+                g1 = get_pure_genome(hgt_array[0])
+                g2 = get_pure_genome(hgt_array[2])
+                s1 = taxonomy.taxonomy_dict[g1].split(";")[5]
+                s2 = taxonomy.taxonomy_dict[g2].split(";")[5]
+                species_tag = "&".join(sorted([s1, s2]))
+
+                if s1 == 'g__' or  s2 == 'g__':
+                    continue
+
+                if ind_time_dict[individual][1][i] == 1 or ind_time_dict[individual][10][i] == 1:
+                    if species_tag not in species_array:
+                        species_array[species_tag] = [[], []]
+                    species_array[species_tag][0].append(ind_time_dict[individual][1][i])
+                    species_array[species_tag][1].append(ind_time_dict[individual][10][i])
+
+            p_species = {}
+            for species in species_array:
+                U1, p = mannwhitneyu(species_array[species][0], species_array[species][1])
+                p_species[species] = p
+                if p < 0.01:
+                    if species not in diff_dict:
+                        diff_dict[species] = []
+                    diff_dict[species].append(p)
+            sorted_dict = sorted(p_species.items(), key=lambda item: item[1])
+            # print (list(diff_species.keys()))
+            # print (individual, sorted_dict[:10])
+        for genus_pair in diff_dict:
+            if len(diff_dict[genus_pair]) < 3:
+                continue
+            print (genus_pair, len(diff_dict[genus_pair]), np.mean(diff_dict[genus_pair]))
+        print (len(diff_dict))
+
+    def intra_inter_genus_HGT(self, level):
+        # find the difference between intra and inter-taxa HGTs 
+        # not significant
+        taxonomy = Taxonomy()
+        ind_time_dict = {}
+
+        for sra_id in self.sample_array_dict:
+            individual = sample_individual_dict[sra_sample_dict[sra_id]]
+            time_point = sample_time_point[sra_sample_dict[sra_id]]
+
+            if individual not in ind_time_dict:
+                ind_time_dict[individual] = {}
+            if not (time_point == 1 or time_point == 10):
+                continue
+            ind_time_dict[individual][time_point] = self.sample_array_dict[sra_id]
+
+        inter_list = []
+        intra_list = []
         
+        for individual in ind_time_dict:
+            diff = np.array(ind_time_dict[individual][1]) - np.array(ind_time_dict[individual][10])
+            inter, intra  = 0, 0
+            all_inter, all_intra = 0, 0
+            species_dict = {}
+            for i in range(len(diff)):
+                hgt_tag = self.HGT_list[i]
+                hgt_array = hgt_tag.split("&")
+                g1 = get_pure_genome(hgt_array[0])
+                g2 = get_pure_genome(hgt_array[2])
+                s1 = taxonomy.taxonomy_dict[g1].split(";")[level]
+                s2 = taxonomy.taxonomy_dict[g2].split(";")[level]
+                species_tag = "&".join(sorted([s1, s2]))
+
+                if s1[1:] == '__' or  s2[1:] == '__':
+                    continue
+                if s1 not in species_dict:
+                    species_dict[s1] = [0, 0, 0, 0] # all intra, all inter, intra, inter
+                if s2 not in species_dict:
+                    species_dict[s2] = [0, 0, 0, 0]
+
+                if abs(ind_time_dict[individual][1][i] - ind_time_dict[individual][10][i]) == 1:
+                    if s1 != s2:
+                        species_dict[s1][3] += 1
+                        species_dict[s2][3] += 1
+                        inter += 1
+                    else:
+                        species_dict[s1][2] += 1
+                        species_dict[s2][2] += 1
+                        intra += 1
+
+                if ind_time_dict[individual][1][i] == 1 or ind_time_dict[individual][10][i] == 1:
+                    if s1 != s2:
+                        species_dict[s1][1] += 1
+                        species_dict[s2][1] += 1
+                        all_inter += 1
+                    else:
+                        species_dict[s1][0] += 1
+                        species_dict[s2][0] += 1
+                        all_intra += 1
+
+            for s in species_dict:
+                if species_dict[s][1] > 0:
+                    inter_list.append(species_dict[s][3]/species_dict[s][1])
+                if species_dict[s][0] > 0:
+                    intra_list.append(species_dict[s][2]/species_dict[s][0])
+            # inter_list.append(inter/all_inter)
+            # intra_list.append(intra/all_intra)
+            # intra_list.append()
+
+
+        U1, inter_p = mannwhitneyu(inter_list, intra_list)
+        print (level, inter_p, np.median(inter_list), np.median(intra_list))
+
+    def comprare_intra_genus(self):
+        # check whether intra-genus HGTs showed higher variabiligy than inter-genus HGTs
+        # find the species with significant diff HGT 
+        taxonomy = Taxonomy()
+        ind_time_dict = {}
+
+        for sra_id in self.sample_array_dict:
+            individual = sample_individual_dict[sra_sample_dict[sra_id]]
+            time_point = sample_time_point[sra_sample_dict[sra_id]]
+
+            if individual not in ind_time_dict:
+                ind_time_dict[individual] = {}
+            if not (time_point == 1 or time_point == 10):
+                continue
+            ind_time_dict[individual][time_point] = self.sample_array_dict[sra_id]
+
+        diff_dict = {} # record the genus pair that show diff in at least one sample
+        for individual in ind_time_dict:
+            diff = np.array(ind_time_dict[individual][1]) - np.array(ind_time_dict[individual][10])
+            species_array = {}
+            genus_HGT_types = [[], []]
+            for i in range(len(diff)):
+                hgt_tag = self.HGT_list[i]
+                hgt_array = hgt_tag.split("&")
+                g1 = get_pure_genome(hgt_array[0])
+                g2 = get_pure_genome(hgt_array[2])
+                s1 = taxonomy.taxonomy_dict[g1].split(";")[5]
+                s2 = taxonomy.taxonomy_dict[g2].split(";")[5]
+
+                if s1 == 'g__' or  s2 == 'g__':
+                    continue
+
+                if (ind_time_dict[individual][1][i] == 1 or ind_time_dict[individual][10][i] == 1) :
+
+                    if s1 != s2:
+                        genus_HGT_types[0].append(ind_time_dict[individual][1][i])
+                        genus_HGT_types[1].append(ind_time_dict[individual][10][i])
+
+
+            U1, p = mannwhitneyu(genus_HGT_types[0], genus_HGT_types[1])
+            print (individual, p)
+
+
+
+
+
+def get_pure_genome(del_genome):
+    return "_".join(del_genome.split("_")[:-1])
+
 if __name__ == "__main__":
     meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
     design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
@@ -303,11 +519,10 @@ if __name__ == "__main__":
     hgt_table = "/mnt/d/HGT/time_lines/SRP366030.HGT.table.csv"
 
     bin_size = 500
-    split_cutoff = 0  #10
     sample_cutoff = 8  # 8
     abun_cutoff = 1e-7  #1e-7
 
-
+    taxonomy = Taxonomy()
     # for bin_size in [100, 200, 500, 1000]:
     #     for split_cutoff in range(6, 20, 2):
     #         for sample_cutoff in range(2, 11, 2):
@@ -320,7 +535,11 @@ if __name__ == "__main__":
     tim.get_HGT_table()
     tim.get_pearson()
     print (len(tim.cohort_data), len(tim.all_hgt))
-    print (bin_size, split_cutoff, sample_cutoff)
+    print (bin_size, sample_cutoff)
     # tim.print_table()
     # tim.get_distribution()
     # tim.find_conserve_HGT()
+    # tim.find_diff_HGT()
+    # tim.comprare_intra_genus()
+    # for level in range(1, 6):
+    #     tim.intra_inter_genus_HGT(level)

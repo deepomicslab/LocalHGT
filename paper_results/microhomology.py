@@ -513,7 +513,6 @@ if __name__ == "__main__":
         if length in random_hgt_freq:
             data.append([length, random_hgt_freq[length]/mic.sam_number, "Random"])   
     df = pd.DataFrame(data, columns = ["length", "frequency", "group"])
-    # print (df)
     df.to_csv('/mnt/d/breakpoints/script/analysis/microhomo_freq.csv', sep='\t')  
 
     cutoff = 5
