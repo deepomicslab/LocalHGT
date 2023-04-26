@@ -10,11 +10,20 @@ import networkx as nx
 from scipy.stats import mannwhitneyu
 from scipy import stats
 import scipy 
-
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import make_classification
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import cross_val_score
+from sklearn.decomposition import PCA
+from random import shuffle
+import sklearn
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
 
 from mechanism_taxonomy import Taxonomy
 
 level_list = ["phylum", "class", "order", "family", "genus", "species", "genome"]
+bin_size = 100
 
 
 class Acc_Bkp(object):
@@ -47,6 +56,15 @@ class Acc_Bkp(object):
 
         self.from_ref_lineage = taxonomy.taxonomy_dict[self.from_ref_genome]
         self.to_ref_lineage = taxonomy.taxonomy_dict[self.to_ref_genome]
+
+        taxa1 = self.from_ref_lineage.split(";")[level]
+        taxa2 = self.to_ref_lineage.split(";")[level]
+        if taxa1[1:] == "__" or taxa2[1:] == "__":
+            self.hgt_tag = "NA"
+        else:
+            self.hgt_tag = "&".join(sorted([taxa1, taxa2]))
+        # self.hgt_tag = self.from_ref + "&" + str(int(self.from_bkp/bin_size)) + "&" + self.to_ref + "&" + str(int(self.to_bkp/bin_size))
+        
 
 def get_genome_taxa(genome, level):
     # g1 = get_pure_genome(genome)
@@ -204,127 +222,6 @@ class Data_load():
         f.close()
         return my_bkps
 
-class Network():
-
-    def __init__(self, all_data):
-        self.data = all_data
-
-    def compare_network(self):
-        group1 = "CRC"
-        group2 = "IBD"
-        properties = ['density', 'transitivity', 'algebraic_connectivity', 'assortativity', 'Node', "Edge"]
-        data = []
-        num_count = [{}, {}]
-        edge_num_list = [10, 12, 20, 30, 40, 50]
-        for level in range(1, 7):
-            edge_num = edge_num_list[level-1]
-            cohort_sam_num = {}
-            cohort_base = {}
-            properties_dict = {}
-            for pro in properties:
-                properties_dict[pro] = [[],[]]
-            for sample in self.data:
-
-                if sample.disease ==  group1 or group1 in sample.full_disease:
-                    index = 0
-                    num_count[0][sample.ID] = 1
-                elif sample.disease == group2 or group2 in sample.full_disease:
-                    index = 1
-                    num_count[1][sample.ID] = 1
-                else:
-                    continue
-
-                pro_list, total_edge_num = sample.get_network_properties(level, edge_num)
-                if total_edge_num < edge_num:
-                    continue
-                for i in range(len(properties)):
-                    value = pro_list[i]#/sample.bases
-                    origin = pro_list[i]
-                    properties_dict[properties[i]][index].append(value)
-                    data.append([properties[i], value, sample.disease, sample.cohort, level_list[level-1], origin])
-            for i in range(len(properties)):
-                # U1, p = mannwhitneyu(properties_dict[properties[i]][0], properties_dict[properties[i]][1])
-                U1, p = scipy.stats.ranksums(properties_dict[properties[i]][0], properties_dict[properties[i]][1])
-                print (len(properties_dict[properties[i]][0]), len(properties_dict[properties[i]][1]), level_list[level-1], properties[i], p)#, np.mean(properties_dict[properties[i]][0]), np.mean(properties_dict[properties[i]][1]), sep = "\t")
-        df = pd.DataFrame(data, columns = ["Property", "Value", "Group", "Cohort", "Level", "Origin"])
-        df.to_csv('/mnt/d/R_script_files/network_comparison_normalized.csv', sep=',')
-        print ("%s num is %s, %s num is %s."%(group1, len(num_count[0]), group2, len(num_count[1])))
-
-    def compare_network_mul_group(self):        
-        # properties = ['density', 'transitivity', 'algebraic_connectivity', 'assortativity', 'Node', "Edge"]
-        properties = ['transitivity', 'algebraic_connectivity', 'assortativity']
-        data = []
-        num_count = [{}, {}, {}, {}]
-        edge_num_list = [10, 12, 20, 30, 40, 50]
-        for level in range(1, 2):
-            group_dict = {}
-            group_pro_dict = {}
-            edge_num = edge_num_list[level-1]
-            for sample in self.data:
-
-                if len(sample.full_disease) != 1:
-                    continue
-                if sample.disease == '':
-                    continue
-                if sample.disease == "control" and sample.full_disease[0] != "healthy":
-                    continue
-
-                pro_list, total_edge_num = sample.get_network_properties(level, edge_num)
-                if total_edge_num < edge_num:
-                    continue
-                if sample.disease not in group_dict:
-                    group_dict[sample.disease] = 0
-                    group_pro_dict[sample.disease] = {}
-                group_dict[sample.disease] += 1
-                for i in range(len(properties)):
-                    value = pro_list[i]#/sample.bases
-                    origin = pro_list[i]
-                    data.append([properties[i], value, sample.disease, sample.cohort, level_list[level-1], origin])
-
-                    if properties[i] not in group_pro_dict[sample.disease]:
-                        group_pro_dict[sample.disease][properties[i]] = []
-                    group_pro_dict[sample.disease][properties[i]].append(value)
-
-            print (level, group_dict)
-            for proper in group_pro_dict["control"]:
-                for group in group_pro_dict:
-                    if group == "control":
-                        continue
-                    # U1, p = mannwhitneyu(group_pro_dict[group][proper], group_pro_dict["control"][proper])
-                    U1, p = scipy.stats.ranksums(group_pro_dict[group][proper], group_pro_dict["control"][proper])
-                    print (proper, group, p)
-                print ("<<<<<<<<<<<<<<<<")
-        df = pd.DataFrame(data, columns = ["Property", "Value", "Group", "Cohort", "Level", "Origin"])
-        df.to_csv('/mnt/d/R_script_files/network_comparison_normalized.csv', sep=',')
-        
-
-
-    def infer_sale(self):
-        # detect scale free
-        data = []
-        # edge_num_list = [10, 10, 30, 40, 100, 120]
-        f = open("scale_free_count.txt", 'w')
-        edge_num_list = [17, 24, 21, 63, 88, 460]
-        for level in range(1, 7):
-            edge_num = edge_num_list[level-1]
-            network_num = 0
-            scale_free_num = 0
-            for sample in self.data:
-                p1, p2, p3, total_edge_num = sample.judge_scale_free(level, edge_num)
-                if total_edge_num < edge_num:
-                    continue
-                level_name = level_list[level-1]
-                data.append([p1, "lognormal_positive", sample.disease, sample.cohort, level_name])
-                data.append([p2, "exponential", sample.disease, sample.cohort, level_name])
-                data.append([p3, "Weibull", sample.disease, sample.cohort, level_name])
-                network_num += 1
-                if p1 >0 and p2>0 and p3>0:
-                    scale_free_num += 1
-            print (level, level_list[level-1], scale_free_num, network_num, scale_free_num/network_num, file = f)
-        f.close()
-        df = pd.DataFrame(data, columns = ["ratio", "Comparison", "Group", "Cohort", "Level"])
-        df.to_csv('/mnt/c/Users/user/Desktop/HGT/HGT_R_plot_files//scale_free.csv', sep=',')
-
 def read_phenotype():
     phenotype_dict = {}
     pheno_result = "/mnt/d/HGT/association/phenotype.csv"
@@ -337,12 +234,155 @@ def read_phenotype():
         phenotype_dict[ID] = pheno
     return phenotype_dict
 
+class Marker():
+
+    def __init__(self, group1, group2):
+        self.group1 = group1
+        self.group2 = group2
+        self.all_HGTs = {}
+        self.sample_count = {self.group1:0, self.group2:0}
+        self.marker_num = marker_num
+        self.markers = {}
+
+    def extract_HGT(self, sample_obj_list):
+
+        for sample in sample_obj_list:
+
+            if len(sample.full_disease) != 1:
+                continue
+            if sample.disease == "control" and sample.full_disease[0] != "healthy":
+                continue
+            if sample.disease == '':
+                continue
+            if sample.disease ==  self.group1 or self.group1 in sample.full_disease:
+                index = 0
+            elif sample.disease ==self.group2 or self.group2 in sample.full_disease:
+                index = 1
+            else:
+                continue
+            if sample.disease not in self.sample_count:
+                print (sample.ID, sample.disease, self.sample_count, sample.disease, sample.full_disease)
+            self.sample_count[sample.disease] += 1
+
+            sample_dict = {}
+            for bkp in sample.bkps:
+                if bkp.hgt_tag == "NA":
+                    continue
+                if bkp.hgt_tag in sample_dict:
+                    continue
+                if bkp.hgt_tag not in self.all_HGTs:
+                    self.all_HGTs[bkp.hgt_tag] = {self.group1:0, self.group2:0}
+                sample_dict[bkp.hgt_tag] = 1
+                self.all_HGTs[bkp.hgt_tag][sample.disease] += 1
+        filtered_HGT = {}
+        print ("Bkp num in the two groups", len(self.all_HGTs))
+        for hgt_tag in self.all_HGTs:
+            if (self.all_HGTs[hgt_tag][self.group1] + self.all_HGTs[hgt_tag][self.group2])/(self.sample_count[self.group1]+self.sample_count[self.group2]) < cutoff:
+                pass
+            else:
+                filtered_HGT[hgt_tag] = self.all_HGTs[hgt_tag]
+        self.all_HGTs = filtered_HGT
+        print ("Filtered bkp num in the two groups", len(self.all_HGTs))
+        print ("%s num: %s, %s num %s."%(self.group1, self.sample_count[self.group1],self.group2, self.sample_count[self.group2]))
+
+    def select_diff_HGT(self):
+        hgt_p_value_dict = {}
+        for hgt_tag in self.all_HGTs:
+            g1_array = self.all_HGTs[hgt_tag][self.group1] * [1] + [0] * (self.sample_count[self.group1] - self.all_HGTs[hgt_tag][self.group1])
+            g2_array = self.all_HGTs[hgt_tag][self.group2] * [1] + [0] * (self.sample_count[self.group2] - self.all_HGTs[hgt_tag][self.group2])
+            U1, p = mannwhitneyu(g1_array, g2_array)
+            hgt_p_value_dict[hgt_tag] = p
+            # print (hgt_tag, p)
+        sorted_hgt_p_value = sorted(hgt_p_value_dict.items(), key=lambda item: item[1], reverse = False)
+        for i in range(self.marker_num):
+            marker = sorted_hgt_p_value[i][0]
+            p = sorted_hgt_p_value[i][1]
+            self.markers[marker] = i
+            # print ("marker", marker, p)
+
+    def training(self, sample_obj_list):
+        data, label = [], []
+        for sample in sample_obj_list:
+            if len(sample.full_disease) != 1:
+                continue
+            if sample.disease == '':
+                continue
+            if sample.disease ==  self.group1 or self.group1 in sample.full_disease:
+                index = 0
+            elif sample.disease ==self.group2 or self.group2 in sample.full_disease:
+                index = 1
+            else:
+                continue
+            
+            marker_value = [0] * self.marker_num
+            for bkp in sample.bkps:
+                if bkp.hgt_tag in self.markers:
+                    marker_value[self.markers[bkp.hgt_tag]] = 1
+            data.append(marker_value)
+            label.append(index)
+
+        print ("before", len(label))
+        #### Apply oversampling to balance the input data
+        # oversample = SMOTE()
+        # data, label = oversample.fit_resample(data, label)
+        
+        rus = RandomUnderSampler(random_state=42)
+        data, label = rus.fit_resample(data, label)
+
+        print ("after", len(label))
+
+
+        rfc = RandomForestClassifier(class_weight='balanced', n_estimators=100)
+        auc_scores = cross_val_score(rfc, data, label, cv=5, scoring='roc_auc')
+        # Print the mean accuracy of the model across all folds
+        print(self.group1, self.group2, auc_scores, "Mean AUC-ROC score:", auc_scores.mean())
+        print ("<<<<<<<<<<<<<\n")
+        return auc_scores.mean()
+
+
+
+
 if __name__ == "__main__":
+
     abun_cutoff = 1e-7  #1e-7
+    cutoff = 0.1
+    level = 5
+    marker_num = 20
+    replication = 1
+
     hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
     phenotype_dict = read_phenotype()
     taxonomy = Taxonomy()
     dat = Data_load()
     dat.read_samples()
-    net = Network(dat.sample_obj_list)
-    net.compare_network_mul_group()
+
+    group1 = "control"
+    group2 = "IBD"
+
+    data = []
+    for marker_num in range(5, 100, 5):
+        group_auc = []
+        group_list = ["control", "CRC", "T2D",  "IBD"]
+        # group_list = ["control", "CRC", "adenoma", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
+        for i in range(len(group_list)):
+            for j in range(i+1, len(group_list)):
+                replicate_result = []
+                for z in range(replication):
+                    group1 = group_list[i]
+                    group2 = group_list[j]
+
+                    mar = Marker(group1, group2)
+                    shuffle(dat.sample_obj_list)
+                    mar.extract_HGT(dat.sample_obj_list)
+                    mar.select_diff_HGT()
+                    mean_auc = mar.training(dat.sample_obj_list)
+                    replicate_result.append(mean_auc)
+                    data.append([marker_num, mean_auc])
+                group_auc.append(np.mean(replicate_result))
+        print ("#########", marker_num, np.mean(group_auc))
+        data.append([marker_num, np.mean(group_auc)])
+        print ("---------------\n")
+
+    df = pd.DataFrame(data, columns = ["Feature_number", "AUC"])
+    df.to_csv('/mnt/d/R_script_files/classifier_feature_num.csv', sep=',')
+
