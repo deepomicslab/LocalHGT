@@ -211,9 +211,7 @@ def get_ID_name():
     ID_name = find_sample_name_for_sra(ID_name, "/mnt/d/breakpoints/HGT/CRC/t2d.csv")
     return ID_name
 
-
-
-def get_samples():
+def get_samples(hgt_result_dir):
     ID_dict = {}
     files = os.listdir(hgt_result_dir)
     for acc_file in files:
@@ -259,15 +257,96 @@ def get_pheno(ID_dict):
             print ("not found", ID)
     print (len(ID_dict), num, found_cohort)
 
+
+#### read tgs phenotype
+def read_meta_tgs():
+    
+    sra_sample_dict = {}
+
+    for line in open(tgs_meta):
+        if line.strip() == '':
+            continue
+        array = line.strip().split(',')
+        if array[0] != 'Run':
+            sra_id = array[0]
+            sample_id = array[-2]
+            if re.search("_", sample_id):
+                sample_id = sample_id.split("_")[1]
+            sra_sample_dict[sra_id] = sample_id
+    return sra_sample_dict
+
+def get_pheno_for_tgs(tgs_dir):
+    sra_sample_dict = read_meta_tgs()
+    add_data = []
+    files = os.listdir(tgs_dir)
+    for acc_file in files:
+        if not re.search("acc.csv", acc_file):
+            continue
+        ID = acc_file.split(".")[0]
+        if sra_sample_dict[ID][:2] == "TD":
+            cohort = "Time-series"
+        elif sra_sample_dict[ID][:2] == "CD":
+            cohort = "Cross-sectional"
+        else:
+            print ("!!!!!!!!wrong")
+        add_data.append([ID, cohort, "control", "healthy", "NA", "NA","NA","NA"])
+    return add_data
+
+### read wenkui CRC phenotype
+
+def read_meta_wenkui(meta_file):
+    status_dict = {}
+
+    status_conversion = {"Colorectal Neoplasms":"CRC", "Health":"control" } #, "Irritable Bowel Syndrome":"IBS"
+    f = open(meta_file)
+    for line in f:
+        array = line.strip().split("\t")
+        if array[0] != "SRP128485":
+            continue
+        sample_name = array[4]
+        ID = array[5]
+        status = array[8]
+        if status not in status_conversion:
+            continue
+        status = status_conversion[status]
+        # print (ID, status)
+        status_dict[ID] = status
+    return status_dict
+
+
+def get_pheno_for_wenkui_CRC(wenkui_dir):
+    status_dict = read_meta_wenkui(wenkui_meta_file)
+    add_data = []
+    files = os.listdir(wenkui_dir)
+    cohort = "Yang_2020"
+    for acc_file in files:
+        if not re.search("acc.csv", acc_file):
+            continue
+        ID = acc_file.split(".")[0]
+        if ID not in status_dict:
+            continue
+        disease = status_dict[ID]
+        if disease == "control":
+            full_disease = "healthy"
+        else:
+            full_disease = "CRC"
+        add_data.append([ID, cohort, disease, full_disease, "NA", "NA","NA","NA"])
+    return add_data
+
 if __name__ == "__main__":
 
     pheno_file = "/mnt/d/breakpoints/script/analysis/allmetadata.xlsx"
     hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
+    
     pheno_result = "/mnt/d/HGT/association/phenotype.csv"
+    tgs_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    tgs_meta = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    wenkui_dir = "/mnt/d/breakpoints/HGT/CRC/wenkui/"
+    wenkui_meta_file = "/mnt/d/breakpoints/script/analysis/validation/last_gutmeta_sample.tsv"
 
     data = []
     found_cohort = {}
-    ID_dict = get_samples()
+    ID_dict = get_samples(hgt_result_dir)
     phenotype = Phenotype()
     num = 0
     for ID in ID_dict:   
@@ -279,6 +358,10 @@ if __name__ == "__main__":
                 found_cohort[sample.cohort] = 1
     print (num, len(found_cohort), found_cohort)
 
+    add_data = get_pheno_for_tgs(tgs_dir)
+    data += add_data
+    add_data_2 = get_pheno_for_wenkui_CRC(wenkui_dir)
+    data += add_data_2
     df = pd.DataFrame(data, columns = ["sample", "cohort", "disease", "full_disease", "bases", "age", "gender",  "BMI"])
     df.to_csv(pheno_result, sep=',')
 

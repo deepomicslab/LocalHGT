@@ -45,6 +45,7 @@ np.set_printoptions(threshold=sys.maxsize)
 import scipy.special as sc
 from scipy.special import comb
 
+
 class Acc_Bkp(object):
 
     def __init__(self, list):
@@ -107,7 +108,7 @@ def read_bkp(bkp_file, filtered_file):
         if row[0][0] == "#":
             reads_num = int(row[0].split(";")[0].split(":")[1])
             min_split_num, p = get_split_reads_cutoff(reads_num)
-            print (bkp_file, reads_num, "cutoff", min_split_num)
+            # print (bkp_file, reads_num, "cutoff", min_split_num)
         elif row[0] == "from_ref":
             pass
         else:
@@ -125,19 +126,33 @@ def read_bkp(bkp_file, filtered_file):
     if final_row_num == 0:
         os.system("rm %s"%(filtered_file))
 
-def main():
-    files = os.listdir(hgt_result_dir)
+def main(result_dir, sample_num):
+    files = os.listdir(result_dir)
+    # print (len(files))
     for acc_file in files:
         if not re.search("acc.csv", acc_file):
+            continue
+        if re.search("repeat.acc.csv", acc_file):
             continue
         # if hgt_result_dir + acc_file != "/mnt/d/breakpoints/script/analysis/hgt_results/CCIS98832363ST-4-0.acc.csv":
         #     continue
         # print (hgt_result_dir + acc_file)
-        read_bkp(hgt_result_dir + acc_file, filter_hgt_result_dir + acc_file)
+        read_bkp(result_dir + acc_file, filter_hgt_result_dir + acc_file)
+        sample_num += 1
         # break
+    return sample_num
 
 
 if __name__ == "__main__":
     hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
+    tgs_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    wenkui_dir = "/mnt/d/breakpoints/HGT/CRC/wenkui/"
+
     filter_hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
-    main()
+    sample_num = 0
+    sample_num = main(tgs_dir, sample_num)
+    sample_num = main(wenkui_dir, sample_num)
+    sample_num = main(hgt_result_dir, sample_num)
+
+
+    print (sample_num)

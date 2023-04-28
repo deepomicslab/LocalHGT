@@ -236,17 +236,116 @@ def read_phenotype():
 
 class Marker():
 
-    def __init__(self, group1, group2):
+    def __init__(self, group1, group2, sample_obj_list):
         self.group1 = group1
         self.group2 = group2
         self.all_HGTs = {}
-        self.sample_count = {self.group1:0, self.group2:0}
+        self.sample_count = None 
         self.marker_num = marker_num
         self.markers = {}
+        self.split_data_dict = {}
+        self.sample_obj_list = sample_obj_list
 
-    def extract_HGT(self, sample_obj_list):
+    def extract_HGT(self):
+        self.sample_count = {self.group1:0, self.group2:0}
+        for sample in self.sample_obj_list:
+            if sample.ID not in  self.split_data_dict:
+                continue
+            elif self.split_data_dict[sample.ID] == "validation": #  Feature ranking was performed internally to each training fold to avoid overfitting.
+                continue
 
-        for sample in sample_obj_list:
+            self.sample_count[sample.disease] += 1
+            sample_dict = {}
+            for bkp in sample.bkps:
+                if bkp.hgt_tag == "NA":
+                    continue
+                if bkp.hgt_tag in sample_dict:
+                    continue
+                if bkp.hgt_tag not in self.all_HGTs:
+                    self.all_HGTs[bkp.hgt_tag] = {self.group1:0, self.group2:0}
+                sample_dict[bkp.hgt_tag] = 1
+                self.all_HGTs[bkp.hgt_tag][sample.disease] += 1
+        filtered_HGT = {}
+        # print ("Bkp num in the two groups", len(self.all_HGTs))
+        for hgt_tag in self.all_HGTs:
+            if (self.all_HGTs[hgt_tag][self.group1] + self.all_HGTs[hgt_tag][self.group2])/(self.sample_count[self.group1]+self.sample_count[self.group2]) < cutoff:
+                pass
+            else:
+                filtered_HGT[hgt_tag] = self.all_HGTs[hgt_tag]
+        self.all_HGTs = filtered_HGT
+        # print ("Filtered bkp num in the two groups", len(self.all_HGTs))
+        # print ("%s num: %s, %s num %s."%(self.group1, self.sample_count[self.group1],self.group2, self.sample_count[self.group2]))
+
+    def select_diff_HGT(self):
+        hgt_p_value_dict = {}
+        for hgt_tag in self.all_HGTs:
+            g1_array = self.all_HGTs[hgt_tag][self.group1] * [1] + [0] * (self.sample_count[self.group1] - self.all_HGTs[hgt_tag][self.group1])
+            g2_array = self.all_HGTs[hgt_tag][self.group2] * [1] + [0] * (self.sample_count[self.group2] - self.all_HGTs[hgt_tag][self.group2])
+            U1, p = mannwhitneyu(g1_array, g2_array)
+            # if p < 0.01:
+            hgt_p_value_dict[hgt_tag] = p
+            # print (hgt_tag, p)
+        sorted_hgt_p_value = sorted(hgt_p_value_dict.items(), key=lambda item: item[1], reverse = False)
+        if len(hgt_p_value_dict) < self.marker_num:
+            self.marker_num = len(hgt_p_value_dict)
+            print ("***only has %s features."%(self.marker_num))
+        for i in range(self.marker_num):
+            marker = sorted_hgt_p_value[i][0]
+            p = sorted_hgt_p_value[i][1]
+            self.markers[marker] = i
+            # print ("marker", marker, p)
+
+    def training(self):
+        data, label = [], []
+        train_x, train_y = [], []
+        val_x, val_y = [], []
+        for sample in self.sample_obj_list:
+
+            
+            if sample.ID not in  self.split_data_dict:
+                continue
+            if sample.disease ==  self.group1 or self.group1 in sample.full_disease:
+                index = 0
+            elif sample.disease ==self.group2 or self.group2 in sample.full_disease:
+                index = 1
+            
+            marker_value = [0] * self.marker_num
+            for bkp in sample.bkps:
+                if bkp.hgt_tag in self.markers:
+                    marker_value[self.markers[bkp.hgt_tag]] = 1
+            if self.split_data_dict[sample.ID] == "validation":
+                val_x.append(marker_value)
+                val_y.append(index)
+            else:
+                train_x.append(marker_value)
+                train_y.append(index)              
+
+
+        #### Apply oversampling to balance the input data
+        # oversample = SMOTE()
+        # data, label = oversample.fit_resample(data, label)
+        
+        rus = RandomUnderSampler(random_state=42)
+        train_x, train_y = rus.fit_resample(train_x, train_y)
+
+        rfc = RandomForestClassifier(n_estimators=100)
+        rfc.fit(train_x, train_y)
+
+        # Use the model to make predictions on the testing data
+        y_pred_prob = rfc.predict_proba(val_x)[:, 1]
+
+        # Calculate the AUC score
+        auc_score = roc_auc_score(val_y, y_pred_prob)
+        # auc_scores = cross_val_score(rfc, data, label, cv=5, scoring='roc_auc')
+        # # Print the mean accuracy of the model across all folds
+        # print(self.group1, self.group2, auc_scores, "Mean AUC-ROC score:", auc_scores.mean())
+        
+        # return auc_scores.mean()
+        return auc_score
+
+    def select_sample(self):
+        selected_samples = []
+        for sample in self.sample_obj_list:
 
             if len(sample.full_disease) != 1:
                 continue
@@ -259,86 +358,35 @@ class Marker():
             elif sample.disease ==self.group2 or self.group2 in sample.full_disease:
                 index = 1
             else:
-                continue
-            if sample.disease not in self.sample_count:
-                print (sample.ID, sample.disease, self.sample_count, sample.disease, sample.full_disease)
-            self.sample_count[sample.disease] += 1
+                continue 
+            selected_samples.append(sample.ID)
+        shuffle(selected_samples)    
+        return selected_samples
 
-            sample_dict = {}
-            for bkp in sample.bkps:
-                if bkp.hgt_tag == "NA":
-                    continue
-                if bkp.hgt_tag in sample_dict:
-                    continue
-                if bkp.hgt_tag not in self.all_HGTs:
-                    self.all_HGTs[bkp.hgt_tag] = {self.group1:0, self.group2:0}
-                sample_dict[bkp.hgt_tag] = 1
-                self.all_HGTs[bkp.hgt_tag][sample.disease] += 1
-        filtered_HGT = {}
-        print ("Bkp num in the two groups", len(self.all_HGTs))
-        for hgt_tag in self.all_HGTs:
-            if (self.all_HGTs[hgt_tag][self.group1] + self.all_HGTs[hgt_tag][self.group2])/(self.sample_count[self.group1]+self.sample_count[self.group2]) < cutoff:
-                pass
+
+    def split_data(self):
+        selected_samples = self.select_sample()
+        cv = 5
+        batch_num = int(len(selected_samples)/cv)
+        auc_list = []
+        for i in range(cv):
+            start_index = i * batch_num
+            end_index = (i+1) * batch_num
+            self.mark_data(selected_samples, start_index, end_index)
+            self.extract_HGT()
+            self.select_diff_HGT()
+            auc_score = self.training()
+            auc_list.append(auc_score)
+        # print (self.group1, self.group2, self.marker_num, np.mean(auc_score), "<<<<<<<<<<<<<\n")
+        return np.mean(auc_score)
+
+
+    def mark_data(self, selected_samples, start_index, end_index):
+        for i in range(len(selected_samples)):
+            if i >= start_index and i < end_index:
+                self.split_data_dict[selected_samples[i]] = "validation"
             else:
-                filtered_HGT[hgt_tag] = self.all_HGTs[hgt_tag]
-        self.all_HGTs = filtered_HGT
-        print ("Filtered bkp num in the two groups", len(self.all_HGTs))
-        print ("%s num: %s, %s num %s."%(self.group1, self.sample_count[self.group1],self.group2, self.sample_count[self.group2]))
-
-    def select_diff_HGT(self):
-        hgt_p_value_dict = {}
-        for hgt_tag in self.all_HGTs:
-            g1_array = self.all_HGTs[hgt_tag][self.group1] * [1] + [0] * (self.sample_count[self.group1] - self.all_HGTs[hgt_tag][self.group1])
-            g2_array = self.all_HGTs[hgt_tag][self.group2] * [1] + [0] * (self.sample_count[self.group2] - self.all_HGTs[hgt_tag][self.group2])
-            U1, p = mannwhitneyu(g1_array, g2_array)
-            hgt_p_value_dict[hgt_tag] = p
-            # print (hgt_tag, p)
-        sorted_hgt_p_value = sorted(hgt_p_value_dict.items(), key=lambda item: item[1], reverse = False)
-        for i in range(self.marker_num):
-            marker = sorted_hgt_p_value[i][0]
-            p = sorted_hgt_p_value[i][1]
-            self.markers[marker] = i
-            # print ("marker", marker, p)
-
-    def training(self, sample_obj_list):
-        data, label = [], []
-        for sample in sample_obj_list:
-            if len(sample.full_disease) != 1:
-                continue
-            if sample.disease == '':
-                continue
-            if sample.disease ==  self.group1 or self.group1 in sample.full_disease:
-                index = 0
-            elif sample.disease ==self.group2 or self.group2 in sample.full_disease:
-                index = 1
-            else:
-                continue
-            
-            marker_value = [0] * self.marker_num
-            for bkp in sample.bkps:
-                if bkp.hgt_tag in self.markers:
-                    marker_value[self.markers[bkp.hgt_tag]] = 1
-            data.append(marker_value)
-            label.append(index)
-
-        print ("before", len(label))
-        #### Apply oversampling to balance the input data
-        # oversample = SMOTE()
-        # data, label = oversample.fit_resample(data, label)
-        
-        rus = RandomUnderSampler(random_state=42)
-        data, label = rus.fit_resample(data, label)
-
-        print ("after", len(label))
-
-
-        rfc = RandomForestClassifier(class_weight='balanced', n_estimators=100)
-        auc_scores = cross_val_score(rfc, data, label, cv=5, scoring='roc_auc')
-        # Print the mean accuracy of the model across all folds
-        print(self.group1, self.group2, auc_scores, "Mean AUC-ROC score:", auc_scores.mean())
-        print ("<<<<<<<<<<<<<\n")
-        return auc_scores.mean()
-
+                self.split_data_dict[selected_samples[i]] = "train"
 
 
 
@@ -348,41 +396,53 @@ if __name__ == "__main__":
     cutoff = 0.1
     level = 5
     marker_num = 20
-    replication = 1
+    replication = 10
 
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
     phenotype_dict = read_phenotype()
     taxonomy = Taxonomy()
     dat = Data_load()
     dat.read_samples()
 
     group1 = "control"
-    group2 = "IBD"
+    group2 = "CRC"
+    shuffle(dat.sample_obj_list)
 
+    # for marker_num in range(5, 100, 5):
+    #     mar = Marker(group1, group2, dat.sample_obj_list)
+    #     mar.split_data()
+
+    combination_dict = {}
     data = []
-    for marker_num in range(5, 100, 5):
-        group_auc = []
-        group_list = ["control", "CRC", "T2D",  "IBD"]
-        # group_list = ["control", "CRC", "adenoma", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
+    group_auc = []
+    group_list = ["control", "CRC", "T2D",  "IBD"]
+    # group_list = ["control", "CRC", "adenoma", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
+    for marker_num in range(5, 101, 5):
         for i in range(len(group_list)):
             for j in range(i+1, len(group_list)):
                 replicate_result = []
-                for z in range(replication):
-                    group1 = group_list[i]
-                    group2 = group_list[j]
+                group1 = group_list[i]
+                group2 = group_list[j]
+                combination = group1 + " vs. " + group2
 
-                    mar = Marker(group1, group2)
-                    shuffle(dat.sample_obj_list)
-                    mar.extract_HGT(dat.sample_obj_list)
-                    mar.select_diff_HGT()
-                    mean_auc = mar.training(dat.sample_obj_list)
+                for z in range(replication):
+                    mar = Marker(group1, group2, dat.sample_obj_list)
+                    mean_auc = mar.split_data()
                     replicate_result.append(mean_auc)
-                    data.append([marker_num, mean_auc])
+
+                data.append([marker_num, np.mean(replicate_result), combination])
+                print (marker_num, np.mean(replicate_result), combination)
                 group_auc.append(np.mean(replicate_result))
+                if combination not in combination_dict:
+                    combination_dict[combination] = []
+                combination_dict[combination].append(np.mean(replicate_result))
         print ("#########", marker_num, np.mean(group_auc))
-        data.append([marker_num, np.mean(group_auc)])
         print ("---------------\n")
 
-    df = pd.DataFrame(data, columns = ["Feature_number", "AUC"])
+    df = pd.DataFrame(data, columns = ["Feature_number", "AUC", "Classification"])
     df.to_csv('/mnt/d/R_script_files/classifier_feature_num.csv', sep=',')
+
+    for combination in combination_dict:
+        print ("average AUC across feature numbers:", combination, np.mean(combination_dict[combination]))
+
 

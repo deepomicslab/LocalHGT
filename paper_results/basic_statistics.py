@@ -6,8 +6,10 @@ from scipy.stats import mannwhitneyu
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from mechanism_taxonomy import Taxonomy
 import pandas as pd
+
+from mechanism_taxonomy import Taxonomy
+from HGT_network import read_phenotype
 
 level_list = ["phylum", "class", "order", "family", "genus", "species", "genome"]
 
@@ -49,11 +51,12 @@ class Basic_count():
         self.cohort_data = {}
         
     def read_samples(self):
-
+        cohort_count = {}
         all_acc_file = hgt_result_dir + "/acc.list"
         os.system(f"ls {hgt_result_dir}/*acc.csv |grep -v repeat >{all_acc_file}")
-        os.system(f"ls {tgs_dir}/*acc.csv |grep -v repeat >>{all_acc_file}")
-        os.system(f"ls {wenkui_dir}/*acc.csv |grep -v repeat >>{all_acc_file}")
+
+        # os.system(f"ls {tgs_dir}/*acc.csv |grep -v repeat >>{all_acc_file}")
+        # os.system(f"ls {wenkui_dir}/*acc.csv |grep -v repeat >>{all_acc_file}")
         
         for line in open(all_acc_file):
             acc_file = line.strip()
@@ -61,7 +64,15 @@ class Basic_count():
             my_bkps = self.read_bkp(acc_file)
             if len(my_bkps) > 0:
                 self.cohort_data[sra_id] = my_bkps
-        print ("data loaded")
+                if sra_id not in phenotype_dict:
+                    os.system("rm %s"%(acc_file))
+                    continue
+                cohort = phenotype_dict[sra_id][0]
+                if cohort not in cohort_count:
+                    cohort_count[cohort] = 0
+                cohort_count[cohort] += 1
+        print ("data loaded", cohort_count, sum(list(cohort_count.values())))
+
         
     def read_bkp(self, bkp_file):
         my_bkps = []
@@ -99,19 +110,23 @@ class Basic_count():
         f.close()
         return my_bkps
 
-
     def count(self):
         # bkp number distribution across all the samples
         # count mean and median value of a sample
+        data  = []
         bkp_count_list = []
         for sample in self.cohort_data:
             sample_bkp_list = self.cohort_data[sample]
             bkp_count_list.append(len(sample_bkp_list))
+            data.append([sample, len(sample_bkp_list)])
         sorted_bkp_count_list = sorted(bkp_count_list)
         print ("sample num is %s, mean bkp count is %s, median bkp count is %s, minimum bkp count is %s,\
          max bkp count is %s."%(len(self.cohort_data), np.mean(bkp_count_list), np.median(bkp_count_list),\
           sorted_bkp_count_list[0], sorted_bkp_count_list[-1]))
-    
+
+        df = pd.DataFrame(data, columns = ["Sample", "Bkp_count"])
+        df.to_csv('/mnt/d/R_script_files/basic_stasitcis_count.csv', sep=',')
+      
     def compare_intra_inter(self, level):
         # count the intra-taxa HGT frequency in each sample
         inter_freq = []
@@ -128,8 +143,11 @@ class Basic_count():
                     intra_num += 1
                 else:
                     inter_num += 1
+            if intra_num + inter_num == 0:
+                print (sample.ID)
             inter_freq.append(inter_num/(intra_num + inter_num))
             intra_freq.append(intra_num/(intra_num + inter_num))
+            intra_freq_data.append([intra_num/(intra_num + inter_num), level_list[level-1]])
         U1, p = mannwhitneyu(inter_freq, intra_freq)
         print (level, p, np.mean(intra_freq), np.median(intra_freq))
 
@@ -220,8 +238,7 @@ def count_mean_freq(raw_dict, sample_num):
         mean_freq_dict[taxa] = np.mean(raw_dict[taxa])
     sorted_dict = sorted(mean_freq_dict.items(), key=lambda item: item[1], reverse = True)
     print ("<<<<<<<<<<<<<<<<", len(sorted_dict))
-    for i in range(10):
-        print (i, sorted_dict[i][0], sorted_dict[i][1])
+
     return sorted_dict
     
 
@@ -230,16 +247,44 @@ if __name__ == "__main__":
     abun_cutoff = 1e-7  #1e-7
 
     taxonomy = Taxonomy()
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
-    # hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
-    tgs_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    wenkui_dir = "/mnt/d/breakpoints/HGT/CRC/wenkui/"
+    phenotype_dict = read_phenotype()
+
+
+    # hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
+    # tgs_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    # wenkui_dir = "/mnt/d/breakpoints/HGT/CRC/wenkui/"
+
+
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
+
     ba = Basic_count()
     ba.read_samples()
-    # ba.count()
-    ba.count_inter_taxa_HGT()
+    # ba.count()  
+    # ba.count_inter_taxa_HGT()
+
+
+    # ######## just sort taxa by HGT freq
+    taxa_sort_data = []
     # for level in range(1, 7):
-    #     # ba.compare_intra_inter(level)
-    #     # ba.sort_taxa_by_freq(level)
-    #     ba.sort_inter_taxa_by_freq(level)
+    #     sorted_dict = ba.sort_taxa_by_freq(level)
+        # for i in range(10):
+        #     print (i, sorted_dict[i][0], sorted_dict[i][1])
+        #     taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level])
+
+    # df = pd.DataFrame(taxa_sort_data, columns = ["Order", "The Number of HGT", "Level"])
+    # df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')
+
+    # ######## get intra-taxa HGT freq
+    # intra_freq_data = []
+    # for level in range(1, 6):
+    #     ba.compare_intra_inter(level)
+    # #     ba.sort_inter_taxa_by_freq(level)
+
+    # df = pd.DataFrame(intra_freq_data, columns = ["Frequency", "Level"])
+    # df.to_csv('/mnt/d/R_script_files/intra_freq.csv', sep=',')
+
+
+    ######## get inter-taxa HGT count
+    ba.count_inter_taxa_HGT()
+
     

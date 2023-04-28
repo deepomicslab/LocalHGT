@@ -226,6 +226,7 @@ class Mechanism():
                 return 0
             else:
                 return max(insertion_list)
+                
         return 0
 
 
@@ -479,6 +480,8 @@ if __name__ == "__main__":
     cross_species_homo_list = []
     del_homo_list = []
 
+    plot_data = []
+
     ref_fasta = Fasta(database_dir + "/UHGG_reference.formate.fna")
     for sample in verified_HGT_dict:
 
@@ -545,6 +548,8 @@ if __name__ == "__main__":
         print ("sample_freq", sample, del_mecha_freq[0], del_mecha_freq[1], del_mecha_freq[2], del_mecha_freq[3], del_mecha_freq[4])
         print ("sample_freq", sample, del_mecha_freq[0], del_mecha_freq[1], del_mecha_freq[2], del_mecha_freq[3], del_mecha_freq[4], file = fout)
 
+        plot_data.append([sample, del_mecha_freq[0], del_mecha_freq[1], del_mecha_freq[2]])
+
     total = sum(list(mechanism_freq_dict.values()))
     for mechanism in mechanism_freq_dict:
         print ("#del", mechanism, mechanism_freq_dict[mechanism], mechanism_freq_dict[mechanism]/total, file = fout)
@@ -562,3 +567,6 @@ if __name__ == "__main__":
     print ("#com_homo", np.mean(cross_species_homo_list), np.mean(del_homo_list), p, file = fout)
 
     fout.close()
+
+    df = pd.DataFrame(data, columns = ["sample", "NHEJ", "alt-EJ", "TEI"])
+    df.to_csv(result_dir + '/mechanism_freq.csv', sep=',')  

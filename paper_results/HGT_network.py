@@ -169,6 +169,14 @@ class Data_load():
                 sample = Sample(my_bkps, sra_id, phenotype_dict[sra_id])
                 self.sample_obj_list.append(sample)
         print ("data is loaded.")
+
+    def get_cohort_num(self):
+        cohort_dict = {}
+        for sample in self.sample_obj_list:
+            if sample.cohort not in cohort_dict:
+                cohort_dict[sample.cohort] = 0
+            cohort_dict[sample.cohort] += 1
+        print (cohort_dict, "total num", sum(list(cohort_dict.values())))
         
     def read_bkp(self, bkp_file):
         my_bkps = []
@@ -252,8 +260,10 @@ class Network():
 
     def compare_network_mul_group(self):        
         # properties = ['density', 'transitivity', 'algebraic_connectivity', 'assortativity', 'Node', "Edge"]
-        properties = ['transitivity', 'algebraic_connectivity', 'assortativity']
+        properties = ['assortativity', 'transitivity', 'algebraic_connectivity', 'density' ]
+        # properties = ['transitivity']
         data = []
+        
         num_count = [{}, {}, {}, {}]
         edge_num_list = [10, 12, 20, 30, 40, 50]
         for level in range(1, 2):
@@ -286,16 +296,36 @@ class Network():
                     group_pro_dict[sample.disease][properties[i]].append(value)
 
             print (level, group_dict)
+            group_list = list(group_pro_dict.keys())
             for proper in group_pro_dict["control"]:
-                for group in group_pro_dict:
-                    if group == "control":
-                        continue
-                    # U1, p = mannwhitneyu(group_pro_dict[group][proper], group_pro_dict["control"][proper])
-                    U1, p = scipy.stats.ranksums(group_pro_dict[group][proper], group_pro_dict["control"][proper])
-                    print (proper, group, p)
+                matrix_dat = []
+                for i in range(len(group_list)):
+                    row = [group_list[i]]
+                    for j in range(0, len(group_list)):
+                        group1 = group_list[i]
+                        group2 = group_list[j]
+                        # U1, p = mannwhitneyu(group_pro_dict[group][proper], group_pro_dict["control"][proper])
+                        U1, p = scipy.stats.ranksums(group_pro_dict[group1][proper], group_pro_dict[group2][proper])
+                        p = '{:.1e}'.format(p)
+                        if i >= j:
+                            row.append(p)
+                        else:
+                            row.append("NA")
+                        # if i > j:
+                        #     matrix_dat.append([proper, group1, group2, p])
+                        # else:
+                        #     matrix_dat.append([proper, group1, group2, "NA"])
+                        print (proper, group1, group2, p)
+                    matrix_dat.append(row)
+                df = pd.DataFrame(matrix_dat, columns = ["group"] + group_list)
+                df.to_csv('/mnt/d/R_script_files/network_comparison_matrix_%s.csv'%(proper), sep=',')
+                        
                 print ("<<<<<<<<<<<<<<<<")
         df = pd.DataFrame(data, columns = ["Property", "Value", "Group", "Cohort", "Level", "Origin"])
         df.to_csv('/mnt/d/R_script_files/network_comparison_normalized.csv', sep=',')
+
+
+
         
 
 
@@ -339,10 +369,11 @@ def read_phenotype():
 
 if __name__ == "__main__":
     abun_cutoff = 1e-7  #1e-7
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
     phenotype_dict = read_phenotype()
     taxonomy = Taxonomy()
     dat = Data_load()
     dat.read_samples()
+    # dat.get_cohort_num()
     net = Network(dat.sample_obj_list)
     net.compare_network_mul_group()

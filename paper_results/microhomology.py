@@ -505,15 +505,22 @@ if __name__ == "__main__":
     print (U1, p)
     print ("-----------------------")
 
+    # data = []
+    # max_len = max(list(hgt_freq.keys()))
+    # for length in range(max_len + 1):
+    #     if length in hgt_freq:
+    #         data.append([length, hgt_freq[length]/mic.sam_number, "HGT"])
+    #     if length in random_hgt_freq:
+    #         data.append([length, random_hgt_freq[length]/mic.sam_number, "Random"])   
+    # df = pd.DataFrame(data, columns = ["length", "frequency", "group"])
+    # df.to_csv('/mnt/d/breakpoints/script/analysis/microhomo_freq.csv', sep='\t')  
+
     data = []
-    max_len = max(list(hgt_freq.keys()))
-    for length in range(max_len + 1):
-        if length in hgt_freq:
-            data.append([length, hgt_freq[length]/mic.sam_number, "HGT"])
-        if length in random_hgt_freq:
-            data.append([length, random_hgt_freq[length]/mic.sam_number, "Random"])   
-    df = pd.DataFrame(data, columns = ["length", "frequency", "group"])
-    df.to_csv('/mnt/d/breakpoints/script/analysis/microhomo_freq.csv', sep='\t')  
+    for i in range(mic.sam_number):
+        data.append([hgt_homo[i], "HGT_Junction"])
+        data.append([random_homo[i], "Expected"])
+    df = pd.DataFrame(data, columns = ["Microhomology", "Group"])
+    df.to_csv('/mnt/d/R_script_files//microhomology_length.csv', sep=',')  
 
     cutoff = 5
     cut_hgt_homo, hgt_ratio = length_cutoff_count(hgt_homo, cutoff)
