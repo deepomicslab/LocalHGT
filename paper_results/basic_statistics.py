@@ -179,8 +179,11 @@ class Basic_count():
         return sorted_dict
 
     def count_inter_taxa_HGT(self):
-        select_num = 5
+        select_num = 10
+
         for level in range(1, 7):
+            # if level >= 4:
+            #     select_num = 20
             sorted_count = self.sort_taxa_by_freq(level)
             class_list = [x[0] for x in sorted_count][:select_num] + ['Others']     #list(count_dict.keys())
             index_dict = {}
@@ -199,6 +202,9 @@ class Basic_count():
                         from_tax = get_genome_taxa(bkp.from_ref_genome, level)
                         to_tax = get_genome_taxa(bkp.to_ref_genome, level)
 
+                        # if from_tax[1:] == '__' or  to_tax[1:] == '__':
+                        #     continue
+
                         if from_tax not in index_dict:
                             index_dict[from_tax] = len(class_list)-1
                         if to_tax not in index_dict:
@@ -213,6 +219,8 @@ class Basic_count():
                             if j < i:
                                 one_class[j] += 1
                 data.append(one_class)
+            for j in range(len(head_name)):
+                head_name[j] = "_".join(head_name[j].split())
             df = pd.DataFrame(data, columns = head_name)
             df.index = head_name
             df.to_csv('/mnt/d/R_script_files/inter_taxa_files/inter_taxa_%s.csv'%(level_list[level-1]), sep='\t')

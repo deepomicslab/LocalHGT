@@ -13,6 +13,7 @@ from skbio import DNA
 import re
 from Bio import pairwise2
 from Bio.Seq import Seq
+import pandas as pd
 
 def countN(sequence):
     # initialize a counter variable
@@ -560,8 +561,6 @@ if __name__ == "__main__":
         print ("#ins", mechanism, ins_mechanism_freq_dict[mechanism], ins_mechanism_freq_dict[mechanism]/total, file = fout)
         print ("#ins", mechanism, ins_mechanism_freq_dict[mechanism], ins_mechanism_freq_dict[mechanism]/total)
     
-    
-
     U1, p = mannwhitneyu(cross_species_homo_list, del_homo_list)
     print (np.mean(cross_species_homo_list), np.mean(del_homo_list), p)
     print ("#com_homo", np.mean(cross_species_homo_list), np.mean(del_homo_list), p, file = fout)
