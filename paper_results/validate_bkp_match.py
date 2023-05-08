@@ -15,6 +15,7 @@ import re
 from Bio import pairwise2
 from Bio.Seq import Seq
 import pandas as pd
+import subprocess
 
 
 
@@ -102,7 +103,7 @@ class Map():
     def __init__(self):
         self.ref = database 
         self.ref_fasta = Fasta(self.ref)
-        self.window = 200
+        self.window = window
         self.max_length = 10000
 
     def extract_ref_seq(self, scaffold_name, start, end):
@@ -137,7 +138,7 @@ class Map():
 
         return reads_set
 
-    def for_each_sample(self, sample, final_total, final_verified):
+    def for_each_sample_bk(self, sample, final_total, final_verified):
         if sample not in hgt_event_dict:
             print ("No hgt for sample", sample)
         else:
@@ -214,7 +215,53 @@ class Map():
         print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(total_hgt_event_num, valid_hgt_event_num, valid_hgt_event_num/total_hgt_event_num))
         return final_total, final_verified
 
-    def verify(self, reads_set, merged_seq, rev_merged_seq):
+    def for_each_sample(self, sample, final_total, final_verified):
+        if sample not in hgt_event_dict:
+            print ("No hgt for sample", sample)
+        else:
+            print ("Detect hgt for sample", sample)
+
+        total_hgt_event_num = 0
+        valid_hgt_event_num = 0
+
+        for hgt_event in sorted(list(hgt_event_dict[sample])):
+            # if hgt_event[0] != "GUT_GENOME001659_1":
+            #     continue
+            # if 'GUT_GENOME156655_37' not in hgt_event:
+            #     continue
+            verify_flag = False
+            reads_set = self.get_reads(hgt_event)
+
+            delete_len = hgt_event[4] - hgt_event[3]
+            
+            insert_left = self.extract_ref_seq(hgt_event[0], hgt_event[1] - self.window, hgt_event[1])
+            insert_right = self.extract_ref_seq(hgt_event[0], hgt_event[1], hgt_event[1] + self.window)
+            delete_seq = self.extract_ref_seq(hgt_event[2], hgt_event[3], hgt_event[4])
+            reverse_delete_seq = self.get_reverse_complement_seq(delete_seq)
+            merged_seq = insert_left + delete_seq + insert_right
+            rev_merged_seq = insert_left + reverse_delete_seq + insert_right
+            reverse_flag = hgt_event[5]
+            verify_flag = self.verify(reads_set, merged_seq, rev_merged_seq, reverse_flag)
+
+            total_hgt_event_num += 1
+            final_total += 1
+
+            del_ref_len = len(self.ref_fasta[hgt_event[2]])
+            ins_ref_len = len(self.ref_fasta[hgt_event[0]])
+            if verify_flag:
+                print (hgt_event, "HGT event is verified.", delete_len, "genome length", del_ref_len, ins_ref_len)  
+                final_data.append([sample] + hgt_event + ["Yes"])
+                valid_hgt_event_num += 1
+                final_verified += 1
+            else:
+                final_data.append([sample] + hgt_event + ["No"])
+                print (hgt_event, "HGT event is not verified.", delete_len, "genome length", del_ref_len, ins_ref_len)
+            print ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
+            # break
+        print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(total_hgt_event_num, valid_hgt_event_num, valid_hgt_event_num/total_hgt_event_num))
+        return final_total, final_verified
+
+    def verify_bk(self, reads_set, merged_seq, rev_merged_seq):
         uniq_dict = {}
         max_align_length = 0
         for read in reads_set:
@@ -235,7 +282,7 @@ class Map():
             # print ("to", alignment[1])
             uniq_dict[read.query_name] = 1
 
-            if len(merged_seq) - max_align_length < self.window/2:
+            if len(merged_seq) - max_align_length < self.window/2 and max_align_length > self.window:
                 break
         print ("aligned len", len(merged_seq), max_align_length)
         if len(merged_seq) - max_align_length < self.window/2 and max_align_length > self.window: 
@@ -246,19 +293,68 @@ class Map():
     def align(self, merged_seq, rev_merged_seq, read_seq):
         from_seq = DNA(merged_seq)
         to_seq = DNA(read_seq)
+        print ("1", merged_seq)
+        print ("2", read_seq)
         # print (from_seq)
         # print (to_seq)
-        alignment, score, start_end_positions = local_pairwise_align_ssw(from_seq, to_seq)
+        alignment, score, start_end_positions = local_pairwise_align_ssw(from_seq, to_seq, gap_open_penalty=3, gap_extend_penalty=2,mismatch_score=-3 )
         align_length = start_end_positions[0][1] - start_end_positions[0][0]
         # print ("for", start_end_positions, len(merged_seq))
+        # print ("for del",alignment)
 
         from_seq = DNA(rev_merged_seq)
-        alignment, score, start_end_positions = local_pairwise_align_ssw(from_seq, to_seq)
+        alignment, score, start_end_positions = local_pairwise_align_ssw(from_seq, to_seq, gap_open_penalty=3, gap_extend_penalty=2,mismatch_score=-3)
         rev_align_length = start_end_positions[0][1] - start_end_positions[0][0]
         # print ("rev", start_end_positions, len(merged_seq))
+        # print ("rev del",alignment)
+    
+        from_seq = DNA(merged_seq)
+        to_seq = DNA(self.get_reverse_complement_seq(read_seq))
+        alignment, score, start_end_positions = local_pairwise_align_ssw(from_seq, to_seq, gap_open_penalty=3, gap_extend_penalty=2,mismatch_score=-3)
+        rev_read_align_length = start_end_positions[0][1] - start_end_positions[0][0]
+        # print ("for", start_end_positions, len(merged_seq))
+        # print ("for del, for read",alignment)
 
-        return max([align_length, rev_align_length])
+        from_seq = DNA(rev_merged_seq)
+        alignment, score, start_end_positions = local_pairwise_align_ssw(from_seq, to_seq, gap_open_penalty=3, gap_extend_penalty=2,mismatch_score=-3)
+        rev_read_rev_align_length = start_end_positions[0][1] - start_end_positions[0][0]
+        # print ("rev", start_end_positions, len(merged_seq))
+        # print ("rev del, rev read",alignment)
 
+        # return max([align_length, rev_align_length])
+        return max([align_length, rev_align_length, rev_read_align_length, rev_read_rev_align_length])
+
+    def verify(self, reads_set, merged_seq, rev_merged_seq, reverse_flag):
+        uniq_dict = {}
+        max_align_length = 0
+        verify = False
+        all_start_flag = False
+        all_end_flag = False
+
+        for read in reads_set:
+            if read.query_sequence == None:
+                continue
+            if len(read.query_sequence) < self.window:
+                continue
+            if read.query_name in uniq_dict:
+                continue
+            if countN(merged_seq)/len(merged_seq) > 0.4:
+                continue
+
+            if reverse_flag == "True":
+                start_flag, end_flag = minimap2_align(rev_merged_seq, read.query_sequence)
+            else:
+                start_flag, end_flag = minimap2_align(merged_seq, read.query_sequence)
+            all_start_flag = all_start_flag or  start_flag
+            all_end_flag = all_end_flag or end_flag
+            if all_start_flag and all_end_flag:
+                verify = True
+            if verify:
+                break
+
+            uniq_dict[read.query_name] = 1
+
+        return verify  
 
     def genetate_fasta(self, file, seq):
         f = open(file, 'w')
@@ -274,6 +370,56 @@ def countN(sequence):
         if char.upper() == 'N':
             count += 1
     return count
+
+def write_fasta_file(filename, seq_name, sequence):
+    """Write a sequence to a FASTA file"""
+    with open(filename, "w") as f:
+        f.write(f">{seq_name}\n{sequence}\n")
+
+def minimap2_align(seq1, seq2):
+    # Example sequences
+    seq1_file = workdir + "/seq1.fasta"
+    seq2_file = workdir + "/seq2.fasta"
+    standard_output = workdir + "/minimap2.log"
+    paf = workdir + "/minimap2.paf"
+
+    # Write sequences to FASTA files
+    write_fasta_file(seq1_file, "seq1", seq1)
+    write_fasta_file(seq2_file, "seq2", seq2)
+    # sam = "/mnt/d/HGT/time_lines/minimap2.sam"
+    
+
+    # cmd = f"minimap2 {seq1_file} {seq2_file} -a -o {sam}"
+    cmd = f"minimap2 -t 10 -x map-ont {seq2_file} {seq1_file} -o {paf} 2> {standard_output}"
+    os.system(cmd)
+    # os.system(f"cat {paf}|cut -f 1-4")
+    return parse_paf(paf)
+
+
+def parse_paf(paf_file):
+    """Parse a PAF file and extract the Target start and end positions"""
+    map_flag = False
+    start_flag = False
+    end_flag = False
+    with open(paf_file) as f:
+        for line in f:
+            fields = line.strip().split("\t")
+            target_start = int(fields[2])
+            target_end = int(fields[3])
+            target_len = int(fields[1])
+            start_junc = [window/2, 1.5*window] 
+            end_junc = [target_len - 1.5*window, target_len-window/2]
+            if start_junc[0] >= target_start and start_junc[1] <= target_end:
+                start_flag = True
+            if end_junc[0] >= target_start and end_junc[1] <= target_end:
+                end_flag = True
+            if start_flag and end_flag:
+                map_flag = True
+            if map_flag:
+                break
+    # print (start_flag, end_flag)
+    return start_flag, end_flag
+
 
 if __name__ == "__main__":
 
@@ -309,8 +455,9 @@ if __name__ == "__main__":
 
     final_total = 0
     final_verified = 0
+    window = 200
 
-
+    # minimap2_align()
 
     for sample in hgt_event_dict:
     # sample = "SRR18490939"
@@ -323,6 +470,6 @@ if __name__ == "__main__":
             final_total, final_verified = ma.for_each_sample(sample, final_total, final_verified)
     print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(final_total, final_verified, final_verified/final_total))
 
-    df = pd.DataFrame(final_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "Verified"])
+    df = pd.DataFrame(final_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "reverse_flag", "Verified"])
     df.to_csv(verified_result, sep=',')
 

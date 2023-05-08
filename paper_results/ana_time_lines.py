@@ -211,11 +211,9 @@ class Time_Lines():
                     if diff_time not in diff_time_points:
                         diff_time_points[diff_time] = []
                     diff_time_points[diff_time].append(correlation)
-
                     if ind_1 not in individual_diff_time_points:
                         individual_diff_time_points[ind_1] = [[],[],[],[],[],[],[],[],[]]
                     individual_diff_time_points[ind_1][diff_time-1] += [correlation]
-
                 else:
                     diff_individual.append(correlation)
             # print (ind_1, single_dict, len(single_dict))

@@ -10,6 +10,7 @@ import networkx as nx
 from scipy.stats import mannwhitneyu
 from scipy import stats
 import scipy 
+from statsmodels.stats.multitest import multipletests
 
 
 from mechanism_taxonomy import Taxonomy
@@ -299,6 +300,7 @@ class Network():
             group_list = list(group_pro_dict.keys())
             for proper in group_pro_dict["control"]:
                 matrix_dat = []
+                p_values = []
                 for i in range(len(group_list)):
                     row = [group_list[i]]
                     for j in range(0, len(group_list)):
@@ -306,9 +308,10 @@ class Network():
                         group2 = group_list[j]
                         # U1, p = mannwhitneyu(group_pro_dict[group][proper], group_pro_dict["control"][proper])
                         U1, p = scipy.stats.ranksums(group_pro_dict[group1][proper], group_pro_dict[group2][proper])
-                        p = '{:.1e}'.format(p)
+                        # p = '{:.1e}'.format(p)
                         if i >= j:
                             row.append(p)
+                            p_values.append(float(p))
                         else:
                             row.append("NA")
                         # if i > j:
@@ -317,6 +320,22 @@ class Network():
                         #     matrix_dat.append([proper, group1, group2, "NA"])
                         print (proper, group1, group2, p)
                     matrix_dat.append(row)
+
+                # p_values is a list/array of unadjusted p-values
+                print (p_values)
+                rejected, adjusted_pvalues, _, _ = multipletests(p_values, method='fdr_bh')
+                print (adjusted_pvalues)
+                z = 0
+                new_matrix_dat = []
+                for row in matrix_dat:
+                    for e in range(1, len(row)):
+                        if row[e] != "NA":
+                            new_p = adjusted_pvalues[z]
+                            row[e] = '{:.1e}'.format(new_p)
+                            z += 1
+                    new_matrix_dat.append(row)
+                matrix_dat = new_matrix_dat
+
                 df = pd.DataFrame(matrix_dat, columns = ["group"] + group_list)
                 df.to_csv('/mnt/d/R_script_files/network_comparison_matrix_%s.csv'%(proper), sep=',')
                         

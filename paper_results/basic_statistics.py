@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+from ete3 import Tree
 
 from mechanism_taxonomy import Taxonomy
 from HGT_network import read_phenotype
@@ -202,8 +203,8 @@ class Basic_count():
                         from_tax = get_genome_taxa(bkp.from_ref_genome, level)
                         to_tax = get_genome_taxa(bkp.to_ref_genome, level)
 
-                        # if from_tax[1:] == '__' or  to_tax[1:] == '__':
-                        #     continue
+                        if from_tax[1:] == '__' or  to_tax[1:] == '__':
+                            continue
 
                         if from_tax not in index_dict:
                             index_dict[from_tax] = len(class_list)-1
@@ -227,9 +228,12 @@ class Basic_count():
             print (level_list[level-1], "done")       
             
 def get_genome_taxa(genome, level):
-    # g1 = get_pure_genome(genome)
-    taxa = taxonomy.taxonomy_dict[genome].split(";")[level]
-    return taxa
+    if level < 7:
+        # g1 = get_pure_genome(genome)
+        taxa = taxonomy.taxonomy_dict[genome].split(";")[level]
+        return taxa
+    else:
+        return genome
 
 def get_freq(count_dict):
     total_count = sum(list(count_dict.values()))
@@ -248,7 +252,52 @@ def count_mean_freq(raw_dict, sample_num):
     print ("<<<<<<<<<<<<<<<<", len(sorted_dict))
 
     return sorted_dict
-    
+
+def prepare_tree():
+    sorted_dict = ba.sort_taxa_by_freq(8) # 8 means genome level
+    extracted_genome = []
+    freq_dict = {}
+    for i in range(300):
+        extracted_genome.append(sorted_dict[i][0])
+        freq_dict[sorted_dict[i][0]] = float(sorted_dict[i][1])
+    # Load a tree structure from a newick file.
+    f = open("/mnt/d/HGT/time_lines/distribution/hgt_tree.nwk", 'w')
+    a = open("/mnt/d/HGT/time_lines/distribution/tree_annotation.txt", 'w')
+    b = open("/mnt/d/HGT/time_lines/distribution/bar_annotation.txt", 'w')
+    t = Tree("/mnt/d/HGT/time_lines/distribution/bac120_iqtree.nwk")
+    t.prune(extracted_genome) # only keep the nodes with top HGT freq
+    dark2=['#1B9E77', '#D95F02', '#7570B3', '#E7298A', '#66A61E', '#E6AB02', '#A6761D']
+    set1=['#E41A1C', '#377EB8', '#4DAF4A', '#984EA3', '#FF7F00', '#FFFF33', '#A65628', '#F781BF', '#999999']
+    color_palette = dark2 + set1
+    phylum_dict = {}
+    index_dict = {'Firmicutes_A': 0, 'Bacteroidota': 1, 'Firmicutes': 2, 'Proteobacteria': 3, 'Actinobacteriota': 4, 'Firmicutes_C': 5, 'Verrucomicrobiota': 6}
+    print ("TREE_COLORS\nSEPARATOR SPACE\nDATA\n", file = a)
+    print ("DATASET_SIMPLEBAR\nSEPARATOR COMMA\nDATASET_LABEL,my_data\nCOLOR,#45818e\nDATA\n", file = b)
+
+
+    for node in t.traverse("postorder"):
+        print (node.name)
+        if node.name == '':
+            continue
+        genome_name = node.name
+        species = get_genome_taxa(node.name, 6)
+        phylum = get_genome_taxa(node.name, 1)[3:]
+        if phylum not in phylum_dict:
+            phylum_dict[phylum] = len(phylum_dict)
+        if species[1:] == '__':
+            species = node.name
+        else:
+            species = species[3:]
+            species = "_".join(species.split())
+        node.name = species
+        print (f"{species} range {color_palette[index_dict[phylum]]} {phylum}", file = a)
+        print (f"{node.name},{freq_dict[genome_name]},label1", file = b)
+    # print (t)
+    print (t.write(), file = f)
+    f.close()
+    a.close()
+    b.close()
+    print (phylum_dict)
 
 if __name__ == "__main__":
     bin_size = 100
@@ -272,7 +321,7 @@ if __name__ == "__main__":
 
 
     # ######## just sort taxa by HGT freq
-    taxa_sort_data = []
+    # taxa_sort_data = []
     # for level in range(1, 7):
     #     sorted_dict = ba.sort_taxa_by_freq(level)
         # for i in range(10):
@@ -281,6 +330,9 @@ if __name__ == "__main__":
 
     # df = pd.DataFrame(taxa_sort_data, columns = ["Order", "The Number of HGT", "Level"])
     # df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')
+
+    #### prepare count tree
+    prepare_tree()
 
     # ######## get intra-taxa HGT freq
     # intra_freq_data = []
@@ -293,6 +345,6 @@ if __name__ == "__main__":
 
 
     ######## get inter-taxa HGT count
-    ba.count_inter_taxa_HGT()
+    # ba.count_inter_taxa_HGT()
 
     
