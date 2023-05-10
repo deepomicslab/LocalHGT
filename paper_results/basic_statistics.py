@@ -73,8 +73,7 @@ class Basic_count():
                     cohort_count[cohort] = 0
                 cohort_count[cohort] += 1
         print ("data loaded", cohort_count, sum(list(cohort_count.values())))
-
-        
+    
     def read_bkp(self, bkp_file):
         my_bkps = []
         f = open(bkp_file)
@@ -253,8 +252,9 @@ def count_mean_freq(raw_dict, sample_num):
 
     return sorted_dict
 
-def prepare_tree():
+def prepare_tree_bk(): # rename genome to species name
     sorted_dict = ba.sort_taxa_by_freq(8) # 8 means genome level
+    print ("total genome number is", len(sorted_dict))
     extracted_genome = []
     freq_dict = {}
     for i in range(300):
@@ -264,6 +264,7 @@ def prepare_tree():
     f = open("/mnt/d/HGT/time_lines/distribution/hgt_tree.nwk", 'w')
     a = open("/mnt/d/HGT/time_lines/distribution/tree_annotation.txt", 'w')
     b = open("/mnt/d/HGT/time_lines/distribution/bar_annotation.txt", 'w')
+    c = open("/mnt/d/HGT/time_lines/distribution/connection.txt", 'w')
     t = Tree("/mnt/d/HGT/time_lines/distribution/bac120_iqtree.nwk")
     t.prune(extracted_genome) # only keep the nodes with top HGT freq
     dark2=['#1B9E77', '#D95F02', '#7570B3', '#E7298A', '#66A61E', '#E6AB02', '#A6761D']
@@ -273,7 +274,7 @@ def prepare_tree():
     index_dict = {'Firmicutes_A': 0, 'Bacteroidota': 1, 'Firmicutes': 2, 'Proteobacteria': 3, 'Actinobacteriota': 4, 'Firmicutes_C': 5, 'Verrucomicrobiota': 6}
     print ("TREE_COLORS\nSEPARATOR SPACE\nDATA\n", file = a)
     print ("DATASET_SIMPLEBAR\nSEPARATOR COMMA\nDATASET_LABEL,my_data\nCOLOR,#45818e\nDATA\n", file = b)
-
+    node_name_dict = {}
 
     for node in t.traverse("postorder"):
         print (node.name)
@@ -290,6 +291,7 @@ def prepare_tree():
             species = species[3:]
             species = "_".join(species.split())
         node.name = species
+        node_name_dict[genome_name] = node.name
         print (f"{species} range {color_palette[index_dict[phylum]]} {phylum}", file = a)
         print (f"{node.name},{freq_dict[genome_name]},label1", file = b)
     # print (t)
@@ -297,7 +299,91 @@ def prepare_tree():
     f.close()
     a.close()
     b.close()
+    c.close()
     print (phylum_dict)
+
+def read_file_to_string(file_path):
+    with open(file_path, 'r') as f:
+        file_contents = f.read()
+    return file_contents
+
+def prepare_tree(): # just use genome name
+    sorted_dict = ba.sort_taxa_by_freq(8) # 8 means genome level
+    print ("total genome number is", len(sorted_dict))
+    extracted_genome = []
+    extracted_genome_dict = {}
+    freq_dict = {}
+    for i in range(300): # choose node number
+        extracted_genome.append(sorted_dict[i][0])
+        extracted_genome_dict[sorted_dict[i][0]] = 1
+        freq_dict[sorted_dict[i][0]] = float(sorted_dict[i][1])
+
+    gradient_template = "/mnt/d/HGT/time_lines/distribution/dataset_gradient_template.txt"
+    # Load a tree structure from a newick file.
+    f = open("/mnt/d/HGT/time_lines/distribution/hgt_tree.nwk", 'w')
+    a = open("/mnt/d/HGT/time_lines/distribution/tree_annotation.txt", 'w')
+    b = open("/mnt/d/HGT/time_lines/distribution/bar_annotation.txt", 'w')
+    c = open("/mnt/d/HGT/time_lines/distribution/connection.txt", 'w')
+    g = open("/mnt/d/HGT/time_lines/distribution/gradient_annotation.txt", 'w')
+    t = Tree("/mnt/d/HGT/time_lines/distribution/bac120_iqtree.nwk")
+    t.prune(extracted_genome) # only keep the nodes with top HGT freq
+    dark2=['#1B9E77', '#D95F02', '#7570B3', '#E7298A', '#66A61E', '#E6AB02', '#A6761D']
+    set1=['#E41A1C', '#377EB8', '#4DAF4A', '#984EA3', '#FF7F00', '#FFFF33', '#A65628', '#F781BF', '#999999']
+    color_palette = dark2 + set1
+    phylum_dict = {}
+    index_dict = {'Firmicutes_A': 0, 'Bacteroidota': 1, 'Firmicutes': 2, 'Proteobacteria': 3, 'Actinobacteriota': 4, 'Firmicutes_C': 5, 'Verrucomicrobiota': 6}
+    print ("TREE_COLORS\nSEPARATOR SPACE\nDATA\n", file = a)
+    print ("DATASET_SIMPLEBAR\nSEPARATOR COMMA\nDATASET_LABEL,my_data\nCOLOR,#45818e\nDATA\n", file = b)
+    print (read_file_to_string(gradient_template), file = g)
+    node_name_dict = {}
+
+    print (extracted_genome[:10])
+    for node in t.traverse("postorder"):
+        # print (node.name)
+        if node.name == '':
+            continue
+        genome_name = node.name
+        phylum = get_genome_taxa(node.name, 1)[3:]
+        if phylum not in phylum_dict:
+            phylum_dict[phylum] = len(phylum_dict)
+        print (f"{genome_name} range {color_palette[index_dict[phylum]]} {phylum}", file = a)
+        print (f"{node.name},{freq_dict[genome_name]},label1", file = b)
+        print (f"{node.name} {freq_dict[genome_name]}", file = g)
+    # print (t)
+    print (t.write(), file = f)
+    count_pair(ba.cohort_data, extracted_genome_dict, c)
+
+    f.close()
+    a.close()
+    b.close()
+    c.close()
+    g.close()
+    print (phylum_dict)
+    
+
+def count_pair(cohort_data, extracted_genome_dict, connection_flag):
+    print ("DATASET_CONNECTION\nSEPARATOR COMMA\nDATASET_LABEL,example connections\nCOLOR,#ff0ff0\nDRAW_ARROWS,0\nARROW_SIZE,20\nLOOP_SIZE,100\nMAXIMUM_LINE_WIDTH,10\nCURVE_ANGLE,0\nCENTER_CURVES,1\nALIGN_TO_LABELS,1\nDATA\n", file =connection_flag )
+    pair_dict = {}
+    for sample in cohort_data:
+        for bkp in cohort_data[sample]:
+            from_tax = get_genome_taxa(bkp.from_ref_genome, 8)
+            to_tax = get_genome_taxa(bkp.to_ref_genome, 8)
+            if from_tax not in extracted_genome_dict or to_tax not in extracted_genome_dict:
+                continue
+            pair_name = "&".join(sorted([from_tax, to_tax]))
+            if pair_name not in pair_dict:
+                pair_dict[pair_name] = 0
+            pair_dict[pair_name] += 1
+    for pair_name in pair_dict:
+        array = pair_name.split("&")
+        g1 = array[0]
+        g2 = array[1]
+        phylum1 = get_genome_taxa(g1, 1)[3:]
+        phylum2 = get_genome_taxa(g2, 1)[3:]
+        if phylum1 == phylum2:
+            print (f"{g1},{g2},{pair_dict[pair_name]},red,normal,", file = connection_flag)
+        else:
+            print (f"{g1},{g2},{pair_dict[pair_name]},blue,normal,", file = connection_flag)
 
 if __name__ == "__main__":
     bin_size = 100

@@ -43,9 +43,13 @@ def get_support_reads(bam, chr, pos):
     read_list = []
     # # Create a new BAM file for the supporting reads
     # out_bamfile = pysam.AlignmentFile("supporting_reads.bam", "wb", template=bamfile)
+    start = pos - window
+    end = pos + window
+    if start < 0:
+        start = 1
 
     # Iterate over the reads in the BAM file
-    for read in bamfile.fetch(chr, pos-1, pos+1):
+    for read in bamfile.fetch(chr, start, end):
 
         if read.is_unmapped:
             continue
@@ -63,6 +67,30 @@ def get_support_reads(bam, chr, pos):
     # out_bamfile.close()
     return read_list
 
+def extract_read_seq(bam):
+    # Open the BAM file
+    bamfile = pysam.AlignmentFile(bam, 'rb')
+
+    # Create an empty dictionary to store the read sequences
+    read_seqs = {}
+
+    # Iterate over each read in the BAM file
+    for read in bamfile:
+        # Check if the read is mapped and primary
+        if not read.is_unmapped and not read.is_secondary:
+            # Get the read ID and sequence
+            read_id = read.query_name
+            read_seq = read.query_sequence
+            # Add the sequence to the dictionary using the read ID as the key
+            if read_id not in read_seqs:
+                read_seqs[read_id] = read_seq
+            else:
+                if len(read_seq) > len(read_seqs[read_id]):
+                    read_seqs[read_id]  = read_seq
+
+    # Close the BAM file
+    bamfile.close()
+    return read_seqs
 
 def read_meta():
     
@@ -96,7 +124,7 @@ def read_meta():
     # df.to_csv(data_pair, sep=',')
 
     return ngs_tgs_pair       
-        
+   
 
 class Map():
 
@@ -104,7 +132,7 @@ class Map():
         self.ref = database 
         self.ref_fasta = Fasta(self.ref)
         self.window = window
-        self.max_length = 10000
+        self.max_length = 8000
 
     def extract_ref_seq(self, scaffold_name, start, end):
         # self.ref_fasta = Fasta(self.ref)
@@ -215,7 +243,7 @@ class Map():
         print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(total_hgt_event_num, valid_hgt_event_num, valid_hgt_event_num/total_hgt_event_num))
         return final_total, final_verified
 
-    def for_each_sample(self, sample, final_total, final_verified):
+    def for_each_sample(self, sample, final_total, final_verified, best_verified):
         if sample not in hgt_event_dict:
             print ("No hgt for sample", sample)
         else:
@@ -225,7 +253,7 @@ class Map():
         valid_hgt_event_num = 0
 
         for hgt_event in sorted(list(hgt_event_dict[sample])):
-            # if hgt_event[0] != "GUT_GENOME001659_1":
+            # if hgt_event[0] != "GUT_GENOME147854_18":
             #     continue
             # if 'GUT_GENOME156655_37' not in hgt_event:
             #     continue
@@ -241,7 +269,7 @@ class Map():
             merged_seq = insert_left + delete_seq + insert_right
             rev_merged_seq = insert_left + reverse_delete_seq + insert_right
             reverse_flag = hgt_event[5]
-            verify_flag = self.verify(reads_set, merged_seq, rev_merged_seq, reverse_flag)
+            verify_flag, best_flag = self.verify(reads_set, merged_seq, rev_merged_seq, reverse_flag)
 
             total_hgt_event_num += 1
             final_total += 1
@@ -249,17 +277,19 @@ class Map():
             del_ref_len = len(self.ref_fasta[hgt_event[2]])
             ins_ref_len = len(self.ref_fasta[hgt_event[0]])
             if verify_flag:
-                print (hgt_event, "HGT event is verified.", delete_len, "genome length", del_ref_len, ins_ref_len)  
+                print (hgt_event, "HGT event is verified. delete length:", delete_len, "long read num", len(reads_set), "if totally coverred:", best_flag)  
                 final_data.append([sample] + hgt_event + ["Yes"])
                 valid_hgt_event_num += 1
                 final_verified += 1
             else:
                 final_data.append([sample] + hgt_event + ["No"])
-                print (hgt_event, "HGT event is not verified.", delete_len, "genome length", del_ref_len, ins_ref_len)
+                print (hgt_event, "HGT event is not verified. delete length:", delete_len, "long read num", len(reads_set), "if totally coverred:", best_flag)
+            if best_flag:
+                best_verified += 1
             print ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
             # break
         print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(total_hgt_event_num, valid_hgt_event_num, valid_hgt_event_num/total_hgt_event_num))
-        return final_total, final_verified
+        return final_total, final_verified, best_verified
 
     def verify_bk(self, reads_set, merged_seq, rev_merged_seq):
         uniq_dict = {}
@@ -328,10 +358,13 @@ class Map():
         uniq_dict = {}
         max_align_length = 0
         verify = False
+        best_flag = False
         all_start_flag = False
         all_end_flag = False
 
         for read in reads_set:
+            read.query_sequence = read_seqs[read.query_name]
+            # print (read.query_name, read.query_sequence)
             if read.query_sequence == None:
                 continue
             if len(read.query_sequence) < self.window:
@@ -340,21 +373,24 @@ class Map():
                 continue
             if countN(merged_seq)/len(merged_seq) > 0.4:
                 continue
-
+            
             if reverse_flag == "True":
-                start_flag, end_flag = minimap2_align(rev_merged_seq, read.query_sequence)
+                start_flag, end_flag, best_flag = minimap2_align(rev_merged_seq, read.query_sequence)
             else:
-                start_flag, end_flag = minimap2_align(merged_seq, read.query_sequence)
+                start_flag, end_flag, best_flag = minimap2_align(merged_seq, read.query_sequence)
             all_start_flag = all_start_flag or  start_flag
             all_end_flag = all_end_flag or end_flag
             if all_start_flag and all_end_flag:
                 verify = True
-            if verify:
+            if best_flag:
                 break
 
             uniq_dict[read.query_name] = 1
 
-        return verify  
+        if len(merged_seq) < self.max_length: # check the whole inserted segment if short
+            verify = best_flag
+
+        return verify, best_flag 
 
     def genetate_fasta(self, file, seq):
         f = open(file, 'w')
@@ -395,53 +431,67 @@ def minimap2_align(seq1, seq2):
     # os.system(f"cat {paf}|cut -f 1-4")
     return parse_paf(paf)
 
-
 def parse_paf(paf_file):
     """Parse a PAF file and extract the Target start and end positions"""
     map_flag = False
     start_flag = False
     end_flag = False
+    best_flag = False
     with open(paf_file) as f:
         for line in f:
             fields = line.strip().split("\t")
             target_start = int(fields[2])
             target_end = int(fields[3])
             target_len = int(fields[1])
-            start_junc = [window/2, 1.5*window] 
-            end_junc = [target_len - 1.5*window, target_len-window/2]
+            read_len = int(fields[6])
+            # start_junc = [window/2, 1.5*window] 
+            # end_junc = [target_len - 1.5*window, target_len-window/2]
+            start_junc = [window/2, target_len/2] 
+            if start_junc[1] - start_junc[0] > max_seg:
+                start_junc[1] = start_junc[0] + max_seg
+            end_junc = [target_len/2, target_len-window/2]
+            if end_junc[1] - end_junc[0] > max_seg:
+                end_junc[0] = end_junc[1] - max_seg
+
             if start_junc[0] >= target_start and start_junc[1] <= target_end:
                 start_flag = True
             if end_junc[0] >= target_start and end_junc[1] <= target_end:
                 end_flag = True
             if start_flag and end_flag:
                 map_flag = True
-            if map_flag:
+            # if map_flag:
+            #     break
+            # print (read_len, target_start, target_end, "|", fields[7], fields[8], start_junc, end_junc, sep = "\t")
+            if start_junc[0] >= target_start and end_junc[1] <= target_end:
+                best_flag = True
+            if best_flag:
                 break
     # print (start_flag, end_flag)
-    return start_flag, end_flag
+    # print ("<<<<<<<<<<<<<<<<<<<<<<")
+    return start_flag, end_flag, best_flag
 
 
 if __name__ == "__main__":
 
-    # database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
-    # workdir = "/mnt/d/HGT/time_lines/"
-    # meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    # data_pair = "/mnt/d/HGT/time_lines/SRP366030.ngs_tgs_pair.csv"
-    # design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
-    # result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-    # tgs_bam_dir = "/mnt/d/HGT/time_lines/tgs_bam_results"
-    # verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
+    database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
+    workdir = "/mnt/d/HGT/time_lines/"
+    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    data_pair = "/mnt/d/HGT/time_lines/SRP366030.ngs_tgs_pair.csv"
+    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
+    result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    tgs_bam_dir = "/mnt/d/HGT/time_lines/tgs_bam_results"
+    verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
 
-    database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
-    workdir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/"
-    meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
-    data_pair = "/mnt/disk2_workspace/wangshuai/00.strain/32.BFB/SRP366030.ngs_tgs_pair.csv"
-    design_file = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
-    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
-    identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
-    tgs_bam_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/nanopore_alignment/results/"
-    verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
+    # database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
+    # workdir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/"
+    # meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
+    # data_pair = "/mnt/disk2_workspace/wangshuai/00.strain/32.BFB/SRP366030.ngs_tgs_pair.csv"
+    # design_file = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
+    # result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    # identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
+    # tgs_bam_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/nanopore_alignment/results/"
+    # verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
 
 
     tmp_bam = workdir + "/tmp.bam"
@@ -455,20 +505,24 @@ if __name__ == "__main__":
 
     final_total = 0
     final_verified = 0
+    best_verified = 0
     window = 200
+    max_seg = 5000
 
     # minimap2_align()
 
     for sample in hgt_event_dict:
-    # sample = "SRR18490939"
+        # if sample != "SRR18491328":
+        #     continue
         bamfile = tgs_bam_dir + "/%s.bam"%(ngs_tgs_pair[sample])
         baifile = tgs_bam_dir + "/%s.bam.bai"%(ngs_tgs_pair[sample])
 
         if os.path.isfile(bamfile) and os.path.isfile(baifile):
             print (sample)
+            read_seqs = extract_read_seq(bamfile)
             ma = Map()
-            final_total, final_verified = ma.for_each_sample(sample, final_total, final_verified)
-    print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(final_total, final_verified, final_verified/final_total))
+            final_total, final_verified, best_verified = ma.for_each_sample(sample, final_total, final_verified, best_verified)
+    print ("Total HGT num is %s; valid one is %s; valid ratio is %s, best valid ratio is %s."%(final_total, final_verified, final_verified/final_total, best_verified/final_total))
 
     df = pd.DataFrame(final_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "reverse_flag", "Verified"])
     df.to_csv(verified_result, sep=',')

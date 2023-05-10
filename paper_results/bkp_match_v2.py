@@ -69,6 +69,8 @@ class Acc_Bkp(object):
         self.score = float(list[11])
 
         self.hgt_tag = self.from_ref + "&" + str(int(self.from_bkp/bin_size)) + "&" + self.to_ref + "&" + str(int(self.to_bkp/bin_size))
+        self.bk_1_tag = self.from_ref + "&" + str(int(self.from_bkp/bin_size))
+        self.bk_2_tag = self.to_ref + "&" + str(int(self.to_bkp/bin_size))
         self.abundance = None
         self.split_abundance = None
 
@@ -93,6 +95,7 @@ class Match():
         self.correlation_matrix = {} # edge weigth by correlation in all samples
         self.matched_bkp_pairs = set()
         self.ref_fasta = Fasta(database)
+        self.pair_dict = {}
         
     def read_samples(self):
 
@@ -349,10 +352,15 @@ class Match():
                 flag = True and dir_flag
 
         flag = flag and bkp_obj_1.if_reverse == bkp_obj_2.if_reverse
+        # if flag:
+        #     if len(self.pair_dict[donor+ "&" + str(int(delete_start/bin_size))]) >1 and len(self.pair_dict[donor+ "&" + str(int(delete_end/bin_size))]) >1:
+        #         flag = False
+        if flag: 
+            if delete_end - delete_start < min_hgt_len:
+                flag = False
         if flag:
             event_data = [ID, receptor,insert_pos,donor,delete_start,delete_end, bkp_obj_1.if_reverse]
-            
-            
+
             match_num = self.remove_ambiguity(event_data)
             print (ID, receptor,insert_pos,donor,delete_start,delete_end, match_num)
             if match_num == 2:
@@ -488,6 +496,8 @@ class Match():
     def match_each_sample(self, ID):
         possible_match_num = 0
         sample_bkps = self.cohort_data[ID]
+        self.pair_dict = self.count_pair(sample_bkps)
+
         for i in range(len(sample_bkps)):
             for j in range(i+1, len(sample_bkps)):
                 if sample_bkps[i].abundance < abun_cutoff or sample_bkps[j].abundance < abun_cutoff:
@@ -502,22 +512,33 @@ class Match():
                     possible_match_num += 1
         print (possible_match_num)
 
+    def count_pair(self, sample_bkps): # count_pair_num_for_each_breakpoint
+        pair_dict = {}
+        for bkp in sample_bkps:
+            if bkp.bk_1_tag not in pair_dict:
+                pair_dict[bkp.bk_1_tag] = {}
+            pair_dict[bkp.bk_1_tag][bkp.bk_2_tag] = 1
+            if bkp.bk_2_tag not in pair_dict:
+                pair_dict[bkp.bk_2_tag] = {}
+            pair_dict[bkp.bk_2_tag][bkp.bk_1_tag] = 1
+        return pair_dict
+
 
 if __name__ == "__main__":
 
-    # meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    # design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
-    # result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-    # saved_can_match_bkp = "/mnt/d/HGT/time_lines/SRP366030.can_match.pickle"
-    # database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
+    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
+    result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    saved_can_match_bkp = "/mnt/d/HGT/time_lines/SRP366030.can_match.pickle"
+    database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
 
-    meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
-    design_file =  "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
-    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
-    identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
-    saved_can_match_bkp = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match//SRP366030.can_match.pickle"
-    database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
+    # meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
+    # design_file =  "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
+    # result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    # identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
+    # saved_can_match_bkp = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match//SRP366030.can_match.pickle"
+    # database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
 
     bin_size = 100
     window = 200
@@ -525,7 +546,8 @@ if __name__ == "__main__":
     sample_cutoff = 0  # 8
     abun_cutoff =  1e-7 #1e-7  5e-8
     result_data = []
-    max_diff = 50
+    max_diff = 20
+    min_hgt_len = 500
 
 
     # for bin_size in [100, 200, 500, 1000]:
@@ -538,10 +560,11 @@ if __name__ == "__main__":
     tim.read_samples()
     print ("load is done.")
     sample_list = list(tim.cohort_data.keys())
+    sample_list = ["SRR18491248", "SRR18490939", "SRR18491317", "SRR18491328"]
     print (sample_list)
     for sample in sample_list:
         tim.match_each_sample(sample)
-    # tim.match_each_sample('SRR18490939')
+    # tim.match_each_sample('SRR18491328')
 
 
     df = pd.DataFrame(result_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "reverse_flag"])
