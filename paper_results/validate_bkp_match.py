@@ -362,6 +362,9 @@ class Map():
         all_start_flag = False
         all_end_flag = False
 
+        start_interval = [float("inf"), 0] # the mapped region of the reads mapped to start junctions
+        end_interval = [float("inf"), 0] # the mapped region of the reads mapped to end junctions
+
         for read in reads_set:
             read.query_sequence = read_seqs[read.query_name]
             # print (read.query_name, read.query_sequence)
@@ -375,20 +378,42 @@ class Map():
                 continue
             
             if reverse_flag == "True":
-                start_flag, end_flag, best_flag = minimap2_align(rev_merged_seq, read.query_sequence)
+                start_flag, end_flag, best_flag, start_match_interval, end_match_interval = minimap2_align(rev_merged_seq, read.query_sequence)
             else:
-                start_flag, end_flag, best_flag = minimap2_align(merged_seq, read.query_sequence)
+                start_flag, end_flag, best_flag, start_match_interval, end_match_interval = minimap2_align(merged_seq, read.query_sequence)
+
+
             all_start_flag = all_start_flag or  start_flag
             all_end_flag = all_end_flag or end_flag
-            if all_start_flag and all_end_flag:
+
+            if start_flag and end_flag:
                 verify = True
+
+            if start_flag:
+                if start_match_interval < start_interval[0]:
+                    start_interval[0] = start_match_interval
+                if end_match_interval > start_interval[1]:
+                    start_interval[1] = end_match_interval
+            if end_flag:
+                if start_match_interval < end_interval[0]:
+                    end_interval[0] = start_match_interval
+                if end_match_interval > end_interval[1]:
+                    end_interval[1] = end_match_interval
+
+            if len(merged_seq) > self.max_length:
+                if all_start_flag and all_end_flag:
+                    if end_interval[0] < start_interval[1]:
+                        verify = True
+            # print ("<<<<<<<<<<<<<", start_interval, end_interval, start_flag, end_flag)
+            # else:
+
             if best_flag:
                 break
 
             uniq_dict[read.query_name] = 1
 
-        if len(merged_seq) < self.max_length: # check the whole inserted segment if short
-            verify = best_flag
+        # if len(merged_seq) < self.max_length: # check the whole inserted segment if short
+        #     verify = best_flag
 
         return verify, best_flag 
 
@@ -437,6 +462,8 @@ def parse_paf(paf_file):
     start_flag = False
     end_flag = False
     best_flag = False
+    start_match_interval = float('inf') # the mapped interval of the reads 
+    end_match_interval = 0 # the mapped interval of the reads 
     with open(paf_file) as f:
         for line in f:
             fields = line.strip().split("\t")
@@ -444,14 +471,16 @@ def parse_paf(paf_file):
             target_end = int(fields[3])
             target_len = int(fields[1])
             read_len = int(fields[6])
-            # start_junc = [window/2, 1.5*window] 
-            # end_junc = [target_len - 1.5*window, target_len-window/2]
-            start_junc = [window/2, target_len/2] 
-            if start_junc[1] - start_junc[0] > max_seg:
-                start_junc[1] = start_junc[0] + max_seg
-            end_junc = [target_len/2, target_len-window/2]
-            if end_junc[1] - end_junc[0] > max_seg:
-                end_junc[0] = end_junc[1] - max_seg
+
+            start_junc = [window/2, 1.5*window] 
+            end_junc = [target_len - 1.5*window, target_len-window/2]
+            
+            # start_junc = [window/2, target_len/2] 
+            # if start_junc[1] - start_junc[0] > max_seg:
+            #     start_junc[1] = start_junc[0] + max_seg
+            # end_junc = [target_len/2, target_len-window/2]
+            # if end_junc[1] - end_junc[0] > max_seg:
+            #     end_junc[0] = end_junc[1] - max_seg
 
             if start_junc[0] >= target_start and start_junc[1] <= target_end:
                 start_flag = True
@@ -459,6 +488,10 @@ def parse_paf(paf_file):
                 end_flag = True
             if start_flag and end_flag:
                 map_flag = True
+            if target_start < start_match_interval:
+                start_match_interval = target_start
+            if target_end > end_match_interval:
+                end_match_interval = target_end
             # if map_flag:
             #     break
             # print (read_len, target_start, target_end, "|", fields[7], fields[8], start_junc, end_junc, sep = "\t")
@@ -468,30 +501,30 @@ def parse_paf(paf_file):
                 break
     # print (start_flag, end_flag)
     # print ("<<<<<<<<<<<<<<<<<<<<<<")
-    return start_flag, end_flag, best_flag
+    return start_flag, end_flag, best_flag, start_match_interval, end_match_interval
 
 
 if __name__ == "__main__":
 
-    database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
-    workdir = "/mnt/d/HGT/time_lines/"
-    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    data_pair = "/mnt/d/HGT/time_lines/SRP366030.ngs_tgs_pair.csv"
-    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
-    result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-    tgs_bam_dir = "/mnt/d/HGT/time_lines/tgs_bam_results"
-    verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
+    # database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
+    # workdir = "/mnt/d/HGT/time_lines/"
+    # meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    # data_pair = "/mnt/d/HGT/time_lines/SRP366030.ngs_tgs_pair.csv"
+    # design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
+    # result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    # tgs_bam_dir = "/mnt/d/HGT/time_lines/tgs_bam_results"
+    # verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
 
-    # database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
-    # workdir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/"
-    # meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
-    # data_pair = "/mnt/disk2_workspace/wangshuai/00.strain/32.BFB/SRP366030.ngs_tgs_pair.csv"
-    # design_file = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
-    # result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
-    # identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
-    # tgs_bam_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/nanopore_alignment/results/"
-    # verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
+    database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
+    workdir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/"
+    meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
+    data_pair = "/mnt/disk2_workspace/wangshuai/00.strain/32.BFB/SRP366030.ngs_tgs_pair.csv"
+    design_file = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
+    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
+    tgs_bam_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/nanopore_alignment/results/"
+    verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
 
 
     tmp_bam = workdir + "/tmp.bam"
