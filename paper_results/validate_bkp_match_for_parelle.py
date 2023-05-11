@@ -296,7 +296,8 @@ class Map():
                 best_verified += 1
             print ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
             # break
-        print ("#Sample %s, Total HGT num is %s; valid one is %s; valid ratio is %s; skip num is %s."%(sample, total_hgt_event_num, valid_hgt_event_num, valid_hgt_event_num/total_hgt_event_num, skip_hgt_event_num))
+        if total_hgt_event_num > 0:
+            print ("#Sample %s, Total HGT num is %s; valid one is %s; valid ratio is %s; skip num is %s."%(sample, total_hgt_event_num, valid_hgt_event_num, valid_hgt_event_num/total_hgt_event_num, skip_hgt_event_num))
         return final_total, final_verified, best_verified
 
     def verify_bk(self, reads_set, merged_seq, rev_merged_seq):
@@ -589,25 +590,25 @@ def parse_paf(paf_file):
 
 if __name__ == "__main__":
 
-    database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
-    workdir = "/mnt/d/HGT/time_lines/"
-    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    data_pair = "/mnt/d/HGT/time_lines/SRP366030.ngs_tgs_pair.csv"
-    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
-    result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-    tgs_bam_dir = "/mnt/d/HGT/time_lines/tgs_bam_results"
-    verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
+    # database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
+    # workdir = "/mnt/d/HGT/time_lines/"
+    # meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    # data_pair = "/mnt/d/HGT/time_lines/SRP366030.ngs_tgs_pair.csv"
+    # design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
+    # result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    # tgs_bam_dir = "/mnt/d/HGT/time_lines/tgs_bam_results"
+    # verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
 
-    # database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
-    # workdir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/"
-    # meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
-    # data_pair = "/mnt/disk2_workspace/wangshuai/00.strain/32.BFB/SRP366030.ngs_tgs_pair.csv"
-    # design_file = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
-    # result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
-    # identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
-    # tgs_bam_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/nanopore_alignment/results/"
-    # verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
+    database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
+    workdir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/"
+    meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
+    data_pair = "/mnt/disk2_workspace/wangshuai/00.strain/32.BFB/SRP366030.ngs_tgs_pair.csv"
+    design_file = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
+    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
+    tgs_bam_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/nanopore_alignment/results/"
+    verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
 
 
     tmp_bam = workdir + "/tmp.bam"
@@ -629,20 +630,21 @@ if __name__ == "__main__":
     max_seg = 5000
 
     # minimap2_align()
-
-    for sample in hgt_event_dict:
+    sample = sys.argv[1]
+    # for sample in hgt_event_dict:
         # if sample != "SRR18491328":
         #     continue
-        bamfile = tgs_bam_dir + "/%s.bam"%(ngs_tgs_pair[sample])
-        baifile = tgs_bam_dir + "/%s.bam.bai"%(ngs_tgs_pair[sample])
+    bamfile = tgs_bam_dir + "/%s.bam"%(ngs_tgs_pair[sample])
+    baifile = tgs_bam_dir + "/%s.bam.bai"%(ngs_tgs_pair[sample])
 
-        if os.path.isfile(bamfile) and os.path.isfile(baifile):
-            print (sample)
-            read_seqs = extract_read_seq(bamfile)
-            ma = Map()
-            final_total, final_verified, best_verified = ma.for_each_sample(sample, final_total, final_verified, best_verified)
-    print ("Total HGT num is %s; valid one is %s; valid ratio is %s, best valid ratio is %s."%(final_total, final_verified, final_verified/final_total, best_verified/final_total))
+    if os.path.isfile(bamfile) and os.path.isfile(baifile):
+        print (sample)
+        read_seqs = extract_read_seq(bamfile)
+        ma = Map()
+        final_total, final_verified, best_verified = ma.for_each_sample(sample, final_total, final_verified, best_verified)
+    if final_total > 0:
+        print ("Total HGT num is %s; valid one is %s; valid ratio is %s, best valid ratio is %s."%(final_total, final_verified, final_verified/final_total, best_verified/final_total))
 
     df = pd.DataFrame(final_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "reverse_flag", "Verified"])
-    df.to_csv(verified_result, sep=',')
+    df.to_csv(verified_result + "_" + sample, sep=',')
 

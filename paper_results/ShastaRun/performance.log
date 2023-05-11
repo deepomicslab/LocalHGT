@@ -1,0 +1,113 @@
+2023-May-11 15:35:30.729349 Assembly begins.
+2023-May-11 15:35:30.732661 Begin loading reads from 1 files.
+2023-May-11 15:35:30.732685 Loading reads from /mnt/d/HGT/time_lines/tmp.fasta
+File size: 3023097 bytes.
+Buffer allocate time: 0.0023591 s.
+Read time: 0.0041659 s.
+Read rate: 7.25677e+08 bytes/s.
+Time to process this file:
+Allocate buffer + read: 0.0065715 s.
+Parse: 0.0075007 s.
+Store: 0.0022752 s.
+Total: 0.0163474 s.
+2023-May-11 15:35:30.769125 Done loading reads from 1 files.
+Read loading took 0.0364437s.
+2023-May-11 15:35:45.224688 Finding markers in 127 reads.
+2023-May-11 15:35:45.263901 Finding markers completed in 0.0391525 s.
+2023-May-11 15:35:45.264414 Finding palindromic reads.
+2023-May-11 15:35:45.273110 LowHash0 begins.
+2023-May-11 15:35:45.273186 Creating kmer ids for oriented reads.
+2023-May-11 15:35:45.274385 LowHash0 iteration 0 begins.
+2023-May-11 15:35:45.277992 LowHash0 iteration 1 begins.
+2023-May-11 15:35:45.280337 LowHash0 iteration 2 begins.
+2023-May-11 15:35:45.282776 LowHash0 iteration 3 begins.
+2023-May-11 15:35:45.285003 LowHash0 iteration 4 begins.
+2023-May-11 15:35:45.287384 LowHash0 iteration 5 begins.
+2023-May-11 15:35:45.289898 LowHash0 iteration 6 begins.
+2023-May-11 15:35:45.292256 LowHash0 iteration 7 begins.
+2023-May-11 15:35:45.294584 LowHash0 iteration 8 begins.
+2023-May-11 15:35:45.296909 LowHash0 iteration 9 begins.
+2023-May-11 15:35:45.299394 Storing candidate alignments.
+2023-May-11 15:35:45.300159 LowHash0 completed in 0.0270345 s.
+2023-May-11 15:35:45.313152 Suppressing alignment candidates.
+2023-May-11 15:35:45.314074 Done suppressing alignment candidates.
+2023-May-11 15:35:45.315542 Begin computing alignments for 558 alignment candidates.
+2023-May-11 15:35:45.315561 Alignment computation begins.
+2023-May-11 15:35:45.315719 Working on alignment 0 of 558
+2023-May-11 15:35:45.341553 Alignment computation completed.
+2023-May-11 15:35:45.341619 Storing the alignment found by each thread.
+2023-May-11 15:35:45.342496 Creating alignment table.
+2023-May-11 15:35:45.342593 Computation of alignments completed in 0.027051 s.
+2023-May-11 15:35:45.342639 2023-May-11 15:35:45.367354 Begin flagCrossStrandReadGraphEdges.
+2023-May-11 15:35:45.368822 End flagCrossStrandReadGraphEdges.
+2023-May-11 15:35:45.368840 Begin flagging chimeric reads.
+2023-May-11 15:35:45.369881 Done flagging chimeric reads.
+2023-May-11 15:35:45.369969 Computing connected components of the read graph.
+2023-May-11 15:35:45.370038 Done computing connected components of the read graph.
+2023-May-11 15:35:45.375107 Begin computing marker graph vertices.
+2023-May-11 15:35:45.377529 Disjoint set computation begins.
+2023-May-11 15:35:45.379587 Disjoint set computation completed.
+    2023-May-11 15:35:45.379602  Iteration  1
+    2023-May-11 15:35:45.380278  Updated parent of - 1544 entries.
+    2023-May-11 15:35:45.380301  Iteration  2
+    2023-May-11 15:35:45.380804  Updated parent of - 0 entries.
+2023-May-11 15:35:45.380814 Verifying convergence of parent information.
+2023-May-11 15:35:45.381418 Done verifying convergence of parent information.
+2023-May-11 15:35:45.381430 Compacting the Disjoint Set data-structure.
+2023-May-11 15:35:45.381663 Done compacting the Disjoint Set data-structure.
+2023-May-11 15:35:45.381676 Counting the number of markers in each disjoint set.
+2023-May-11 15:35:45.391748 Renumbering the disjoint sets.
+2023-May-11 15:35:45.392017 Assigning vertices to renumbered disjoint sets.
+2023-May-11 15:35:45.392402 Gathering markers in disjoint sets, pass1.
+2023-May-11 15:35:45.392454 Processing 236644 oriented markers.
+2023-May-11 15:35:45.393111 Gathering markers in disjoint sets, pass2.
+2023-May-11 15:35:45.393414 Processing 236644 oriented markers.
+2023-May-11 15:35:45.394023 Sorting the markers in each disjoint set.
+2023-May-11 15:35:45.394599 Flagging bad disjoint sets.
+2023-May-11 15:35:45.395806 Renumbering disjoint sets to remove the bad ones.
+2023-May-11 15:35:45.395859 Assigning vertex ids to markers.
+2023-May-11 15:35:45.396932 Gathering the markers of each vertex of the marker graph.
+2023-May-11 15:35:45.397946 Computation of global marker graph vertices completed in 0.0228388 s.
+2023-May-11 15:35:45.397987 Begin findMarkerGraphReverseComplementVertices.
+2023-May-11 15:35:45.399384 End findMarkerGraphReverseComplementVertices.
+2023-May-11 15:35:45.399401 createMarkerGraphEdges begins.
+2023-May-11 15:35:45.399410 Processing 6744 marker graph vertices.
+2023-May-11 15:35:45.403203 Combining the edges found by each thread.
+2023-May-11 15:35:45.406433 createMarkerGraphEdges ends.
+2023-May-11 15:35:45.406449 Begin findMarkerGraphReverseComplementEdges.
+2023-May-11 15:35:45.407786 End findMarkerGraphReverseComplementEdges.
+2023-May-11 15:35:45.407799 Transitive reduction of the marker graph begins.
+2023-May-11 15:35:45.409393 Transitive reduction of the marker graph ends.
+2023-May-11 15:35:45.409426 Begin prune iteration 0
+2023-May-11 15:35:45.409766 Begin prune iteration 1
+2023-May-11 15:35:45.410102 Begin prune iteration 2
+2023-May-11 15:35:45.410432 Begin prune iteration 3
+2023-May-11 15:35:45.410775 Begin prune iteration 4
+2023-May-11 15:35:45.411112 Begin prune iteration 5
+2023-May-11 15:35:45.422730 Begin simplifyMarkerGraph iteration 0
+2023-May-11 15:35:45.427843 Begin simplifyMarkerGraph iteration 1
+2023-May-11 15:35:45.432880 Begin simplifyMarkerGraph iteration 2
+2023-May-11 15:35:45.437802 Begin simplifyMarkerGraph iteration 3
+2023-May-11 15:35:45.442682 Begin simplifyMarkerGraph iteration 4
+2023-May-11 15:35:45.451098 Filling in oriented reads.
+2023-May-11 15:35:45.451662 Creating the tangles.
+2023-May-11 15:35:45.453402 assembleMarkerGraphVertices begins.
+2023-May-11 15:35:45.492684 assembleMarkerGraphVertices ends.
+2023-May-11 15:35:45.492723 assembleMarkerGraphEdges begins.
+2023-May-11 15:35:45.498529 assembleMarkerGraphEdges ends.
+2023-May-11 15:35:45.508428 writeGfa1 begins
+2023-May-11 15:35:45.509284 writeGfa1 ends
+2023-May-11 15:35:45.517944 writeGfa1BothStrands begins
+2023-May-11 15:35:45.519507 writeGfa1BothStrands ends
+2023-May-11 15:35:45.534284 writeFasta begins
+2023-May-11 15:35:45.535121 writeFasta ends
+2023-May-11 15:35:45.543107 writeReadsSummary begins.
+2023-May-11 15:35:45.544614 writeReadsSummary ends.
+2023-May-11 15:35:46.198046 
+Assembly time statistics:
+    Elapsed seconds: 14.811
+    Elapsed minutes: 0.24685
+    Elapsed hours:   0.00411416
+Average CPU utilization: 0.0503005
+Peak Memory usage: 0 bytes = 0 GiB
+2023-May-11 15:35:46.220152 Assembly ends.

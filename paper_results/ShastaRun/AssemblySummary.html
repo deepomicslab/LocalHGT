@@ -1,0 +1,179 @@
+
+<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Shasta assembler</title>
+<style>
+    body {
+        font-family: Arial;
+    }
+    pre {
+        font-family: courier;
+    }
+    p, input {
+        font-size: 16px;
+    }
+    h1, h2, h3 {
+        color: DarkSlateBlue;
+    }
+    table {
+        border-collapse: collapse;
+    }
+    th, td {
+        border: 1px solid #b8b5c7d9;
+        padding: 2px;
+    }
+    th {
+        font-weight: bold;
+        text-align: center;
+    }
+    th.left {
+        text-align: left;
+    }
+    td.centered {
+        text-align: center;
+    }
+    td.left {
+        text-align: left;
+    }
+    td.right {
+        text-align: right;
+    }
+    td.smaller {
+        font-size: smaller;
+    }
+    a {
+        color: DarkSlateBlue;
+    }
+
+    /* This can be used to get vertical text in table cells. */
+    span.rotated 
+    {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+    }
+
+    ul.navigationMenu {
+        list-style-type: none;
+        margin: 0px 0px 12px 0px;
+        padding: 0;
+        overflow: hidden;
+        background-color: #404040;
+    }
+
+    div.navigationButton {
+        display: inline-block;
+        color: white;
+        text-align: center;
+        padding: 14px 16px;
+        text-decoration: none;
+        // min-width: 120px;
+    }
+
+    .navigationMenuEntry:hover .navigationButton {
+        background-color: black;
+    }
+    
+    li.navigationMenuEntry {
+        display: inline-block;
+    }
+    
+    .navigationItems {
+        display: none;
+        position: absolute;
+        background-color: DodgerBlue;
+        // min-width: 120px;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        z-index: 1;
+    }
+    
+    a.navigationItem {
+        color: black;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+        text-align: left;
+    }
+    
+    .navigationItems a:hover {background-color: SteelBlue}
+    
+    .navigationMenuEntry:hover .navigationItems {
+        display: block;
+    }
+
+    input[type=submit] {
+        background-color: #89bef2;
+        padding: 4px;
+        margin: 2px;
+        border-radius: 8px;
+    }
+
+    input[type=button] {
+        padding: 4px;
+    }
+
+    input[type=text], input[type=radio] {
+        background-color: #ecf1f0;
+        border-width: thin;
+    }
+
+    button {
+        background-color: #89bef2;
+        padding: 4px;
+        margin: 2px;
+        border-radius: 8px;
+    }
+
+</style>
+    
+    <script>
+
+    // Copy to the clipboard the table that generated the event.
+    function copyToClipboard(event)
+    {
+        // If the CTRL key is not pressed, don't do anything.
+        if(!event.ctrlKey) {
+            return;
+        }
+
+        // Prevent default behavior.
+        // event.preventDefault();
+        // event.stopPropagation();
+        // event.returnValue = false;
+        
+        // Get the table element.
+        var element = event.currentTarget;
+         
+        // Remove any previous selection.
+        var selection = window.getSelection();
+        selection.removeAllRanges();
+        
+        // Select the table.
+        var range = document.createRange();
+        range.selectNodeContents(element);
+        selection.addRange(range);
+        
+        // Copy it to the clipboard.
+        document.execCommand("copy");
+
+        // Unselect it.
+        selection.removeAllRanges();
+
+        window.alert("The table was copied to the clipboard");
+    }
+
+    // Make a table copyable by Ctrl-click.
+    function makeCopyable(element)
+    {
+        element.addEventListener('click', copyToClipboard);
+        element.title = 'Ctrl-click anywhere on the table to copy the entire table to the clipboard';
+    }
+
+    // Make all tables copyable by Ctrl-click.
+    function makeAllTablesCopyable()
+    {
+        var tables = document.getElementsByTagName('table');
+        var i;
+        for(i=0; i<tables.length; i++) {
+            makeCopyable(tables[i]);
+        }
+    }
+    </script>
+    </head><body onload='makeAllTablesCopyable()'><h1>Shasta assembly summary</h1><h3>Shasta version</h3>Shasta Release 0.11.1<h3>Reads used in this assembly</h3><table><tr><td>Read representation<td class=right>1 (RLE)<tr><td>Minimum read length<td class=right>10000<tr><td>Number of reads<td class=right>127<tr><td>Number of read bases<td class=right>1676270<tr><td>Average read length<td class=right>13198<tr><td>Read N50<td class=right>13114<tr><td>Number of run-length encoded bases<td class=right>1182874<tr><td>Average length ratio of run-length encoded sequence over raw sequence<td class=right>0.7057<tr><td>Number of reads flagged as palindromic by self alignment<td class=right>0<tr><td>Number of reads flagged as chimeric<td class=right>5</table><ul><li>Reads discarded on input are not included in the above table (see <a href='#discarded'>below</a>).<li>See ReadLengthHistogram.csv and Binned-ReadLengthHistogram.csv for details of the read length distribution of reads used in this assembly.</ul><h3 id=discarded>Reads discarded on input</h3><table><tr><th><th>Reads<th>Bases<tr><td>Reads discarded on input because they contained invalid bases<td class=right>0<td class=right>0<tr><td>Reads discarded on input because they were too short<td class=right>192<td class=right>1340168<tr><td>Reads discarded on input because they contained repeat counts greater than 255<td class=right>0<td class=right>0<tr><td>Reads discarded on input, total<td class=right>192<td class=right>1340168<tr><td>Fraction of reads discarded on input over total present in input files<td class=right>0.6019<td class=right>0.4443</table><ul><li>Base counts in the above table are raw sequence bases.<li>Here and elsewhere, &quot;raw&quot; refers to the original read sequence, as opposed to run-length encoded sequence.</ul><h3>Marker <i>k</i>-mers</h3><table><tr><td>Length <i>k</i> of <i>k</i>-mers used as markers<td class=right>14<tr><td>Total number of <i>k</i>-mers<td class=right>6377292<tr><td>Number of <i>k</i>-mers used as markers<td class=right>638031<tr><td>Fraction of <i>k</i>-mers used as markers<td class=right>0.1</table><ul><li>In the above table, all <i>k</i>-mer counts only include run-length encoded <i>k</i>-mers, that is, <i>k</i>-mers without repeated bases.</ul><h3>Markers</h3><table><tr><td>Total number of markers on all reads, one strand<td class=right>118322<tr><td>Total number of markers on all reads, both strands<td class=right>236644<tr><td>Average number of markers per raw base<td class=right>0.07059<tr><td>Average number of markers per run-length encoded base<td class=right>0.1<tr><td>Average base offset between markers in raw sequence<td class=right>14.17<tr><td>Average base offset between markers in run-length encoded sequence<td class=right>9.997<tr><td>Average base gap between markers in run-length encoded sequence<td class=right>-4.003</table><h3>Alignments</h3><table><tr><td>Number of alignment candidates found by the LowHash algorithm<td class=right>558<tr><td>Number of good alignments<td class=right>401<tr><td>Number of good alignments kept in the read graph<td class=right>249</table><h3>Alignment criteria actually used for creation of the read graph</h3><table><tr><td>minAlignedMarkerCount<td class=right>65<tr><td>minAlignedFraction<td class=right>0.275<tr><td>maxSkip<td class=right>39<tr><td>maxDrift<td class=right>13<tr><td>maxTrim<td class=right>95</table><h3>Read graph</h3><table><tr><td>Number of vertices<td class=right>254<tr><td>Number of edges<td class=right>498</table><ul><li>The read graph contains both strands. Each read generates two vertices.<li>Isolated reads in the read graph don't contribute to the assembly. See the table below for a summary of isolated reads in the read graph. Each isolated read corresponds to two isolated vertices in the read graph, one for each strand.</ul><table><tr><th><th>Reads<th>Bases<tr><td>Isolated reads<td class=centered>43<td class=centered>555687<tr><td>Non-isolated reads<td class=centered>84<td class=centered>1120583<tr><td>Isolated reads fraction<td class=centered>0.3386<td class=centered>0.3315<tr><td>Non-isolated reads fraction<td class=centered>0.6614<td class=centered>0.6685</table><h3>Marker graph</h3><table><tr><td>Total number of vertices<td class=right>6744<tr><td>Total number of edges<td class=right>14356<tr><td>Number of vertices that are not isolated after edge removal<td class=right>6566<tr><td>Number of edges that were not removed<td class=right>6560</table><ul><li>The marker graph contains both strands.</ul><h3>Assembly graph</h3><table><tr><td>Number of vertices<td class=right>12<tr><td>Number of edges<td class=right>6<tr><td>Number of edges assembled<td class=right>3</table><ul><li>The assembly graph contains both strands.</ul><h3>Assembled segments (&quot;contigs&quot;)</h3><table><tr><td>Number of segments assembled<td class=right>3<tr><td>Total assembled segment length<td class=right>63563<tr><td>Longest assembled segment length<td class=right>29401<tr><td>Assembled segments N<sub>50</sub><td class=right>23725</table><ul><li>Shasta uses GFA terminology (<i>segment</i> instead of the most common <i>contig</i>). A contiguous section of assembled sequence can consist of multiple segments, for example in the presence of heterozygous bubbles.<li>See AssemblySummary.csv for lengths of assembled segments.</ul><h3>Performance</h3><table><tr><td>Elapsed time (seconds)<td class=right>14.81<tr><td>Elapsed time (minutes)<td class=right>0.2468<tr><td>Elapsed time (hours)<td class=right>0.004114<tr><td>Average CPU utilization<td class=right>0.0503<tr><td>Peak virtual memory utilization (bytes)<td class=right>Not determined.<tr><td>Number of threads used<td class=right>20<tr><td>Total number of virtual CPUs available<td class=right>20<tr><td>Total physical memory available (bytes)<td class=right>34163535872</table></body></html>

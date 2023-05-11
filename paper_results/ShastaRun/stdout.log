@@ -1,0 +1,123 @@
+2023-May-11 15:35:30.729560 Assembly begins.
+Command line:
+shasta --input /mnt/d/HGT/time_lines//tmp.fasta --config Nanopore-May2022 
+For options in use for this assembly, see shasta.conf in the assembly directory.
+This run uses options "--memoryBacking 4K --memoryMode anonymous".
+This could result in performance degradation.
+For full performance, use "--memoryBacking 2M --memoryMode filesystem"
+(root privilege via sudo required).
+Therefore the results of this run should not be used
+for benchmarking purposes.
+This assembly will use 20 threads.
+Setting up consensus caller Bayesian:guppy-5.0.7-b
+Using predefined Bayesian consensus caller guppy-5.0.7-b
+Bayesian consensus caller configuration name is HG005_wg_guppy_5.0.7_with_10_pseudocount_4-6-2022
+Discarded read statistics for file /mnt/d/HGT/time_lines/tmp.fasta:
+    Discarded 0 reads containing invalid bases for a total 0 valid bases.
+    Discarded 192 reads shorter than 10000 bases for a total 1340168 bases.
+    Discarded 0 reads containing repeat counts 256 or more for a total 0 bases.
+Discarded read statistics for all input files:
+    Discarded 0 reads containing invalid bases for a total 0 valid bases.
+    Discarded 192 short reads for a total 1340168 bases.
+    Discarded 0 reads containing repeat counts 256 or more for a total 0 bases.
+Read statistics for reads that will be used in this assembly:
+    Total number of reads is 127.
+    Total number of raw bases is 1676270.
+    Average read length is 13199 bases.
+    N50 for read length is 13114 bases.
+Total number of k-mers of length 14 is 268435456
+Number of RLE k-mers of length 14 is 6377292
+Of those, 638031 will be used as markers.
+Fraction of k-mers used as markers: requested 0.1, actual 0.100047.
+Flagged 0 reads as palindromic out of 127 total.
+Palindromic fraction is 0
+LowHash0 algorithm will use 2^17 = 131072 buckets. 
+Alignment candidates after lowhash iteration 0: high frequency 9, total 574, capacity 574.
+Alignment candidates after lowhash iteration 1: high frequency 32, total 737, capacity 888.
+Alignment candidates after lowhash iteration 2: high frequency 108, total 854, capacity 1186.
+Alignment candidates after lowhash iteration 3: high frequency 168, total 915, capacity 1242.
+Alignment candidates after lowhash iteration 4: high frequency 287, total 990, capacity 1441.
+Alignment candidates after lowhash iteration 5: high frequency 357, total 1029, capacity 1520.
+Alignment candidates after lowhash iteration 6: high frequency 424, total 1063, capacity 1571.
+Alignment candidates after lowhash iteration 7: high frequency 485, total 1095, capacity 1595.
+Alignment candidates after lowhash iteration 8: high frequency 532, total 1128, capacity 1627.
+Alignment candidates after lowhash iteration 9: high frequency 558, total 1149, capacity 1655.
+Found 558 alignment candidates.
+Average number of alignment candidates per oriented read is 4.3937.
+Number of alignment candidates before suppression is 558
+Suppressed 0 alignment candidates.
+Number of alignment candidates after suppression is 558
+Found and stored 401 good alignments.
+Automatically selected alignment criteria:
+	minAlignedFraction:	0.275
+	minAlignedMarkerCount:		65
+	maxDrift:		13
+	maxSkip:		39
+	maxTrim:		95
+Keeping 249 alignments of 401
+Of 254 vertices in the read graph, 0 are within distance 6 of their reverse complement.
+Found 0 strand jump regions.
+Marked 0 read graph edges out of 498 total as cross-strand.
+Flagged 5 reads as chimeric out of 127 total.
+Chimera rate is 0.0393701
+The read graph has 106 connected components.
+Unable to automatically select MarkerGraph.minCoverage. No significant cutoff found in disjoint sets size distribution. Observed peak has percent total area of 0.00014892
+minPercentArea is 0.08
+See DisjointSetsHistogram.csv.Using MarkerGraph.minCoverage = 5
+Kept 6744 disjoint sets with coverage in the requested range.
+Found 0 disjoint sets with more than one marker on a single oriented read or with less than 0 supporting oriented reads on each strand.
+Found 14356 edges for 6744 vertices.
+The marker graph has 6744 vertices and 14356 edges.
+Flagged as weak 0 edges with coverage 1 and marker skip greater than 100
+Flagged as weak 5636 edges with coverage 1 out of 5660 total.
+Flagged as weak 1302 edges with coverage 2 out of 1412 total.
+Flagged as weak 454 edges with coverage 3 out of 868 total.
+Flagged as weak 126 edges with coverage 4 out of 1018 total.
+Flagged as weak 36 edges with coverage 5 out of 1672 total.
+Flagged as weak 10 edges with coverage 6 out of 1132 total.
+Flagged as weak 4 edges with coverage 7 out of 774 total.
+Transitive reduction removed 7568 marker graph edges out of 14356 total.
+The marker graph has 6744 vertices and 6788 strong edges.
+Pruned 14 edges at prune iteration 0.
+Pruned 14 edges at prune iteration 1.
+Pruned 14 edges at prune iteration 2.
+Pruned 14 edges at prune iteration 3.
+Pruned 14 edges at prune iteration 4.
+Pruned 12 edges at prune iteration 5.
+The original marker graph had 6744 vertices and 14356 edges.
+The number of surviving edges is 6706.
+Begin simplifyMarkerGraph iteration 0 with maxLength = 10
+Before iteration 0 part 1, the assembly graph has 104 vertices and 148 edges.
+Before iteration 0 part 2, the assembly graph has 20 vertices and 18 edges.
+Begin simplifyMarkerGraph iteration 1 with maxLength = 100
+Before iteration 1 part 1, the assembly graph has 12 vertices and 6 edges.
+Before iteration 1 part 2, the assembly graph has 12 vertices and 6 edges.
+Begin simplifyMarkerGraph iteration 2 with maxLength = 1000
+Before iteration 2 part 1, the assembly graph has 12 vertices and 6 edges.
+Before iteration 2 part 2, the assembly graph has 12 vertices and 6 edges.
+Begin simplifyMarkerGraph iteration 3 with maxLength = 10000
+Before iteration 3 part 1, the assembly graph has 12 vertices and 6 edges.
+Before iteration 3 part 2, the assembly graph has 12 vertices and 6 edges.
+Begin simplifyMarkerGraph iteration 4 with maxLength = 100000
+Before iteration 4 part 1, the assembly graph has 12 vertices and 6 edges.
+Before iteration 4 part 2, the assembly graph has 12 vertices and 6 edges.
+Removed 0 low coverage cross edges of the assembly graph and 0 corresponding marker graph edges.
+Before detangling, the assembly graph has 12 vertices and 6 edges.
+Found 0 tangles.
+The detangled assembly graph has 12 vertices.
+The detangled assembly graph has 6 edges.
+Removed 0 low coverage cross edges of the assembly graph and 0 corresponding marker graph edges.
+Using 20 threads.
+Assembly begins for 6 edges of the assembly graph.
+Assembled a total 63563 bases for 6 assembly graph edges of which 3 were assembled.
+The assembly graph has 12 vertices and 6 edges of which 3 were assembled.
+Total length of assembled sequence is 63563
+N50 for assembly segments is 23725
+This run used options "--memoryBacking 4K --memoryMode anonymous".
+This could have resulted in performance degradation.
+For full performance, use "--memoryBacking 2M --memoryMode filesystem"
+(root privilege via sudo required).
+Therefore the results of this run should not be used
+for benchmarking purposes.
+Shasta Release 0.11.1
+2023-May-11 15:35:46.220170 Assembly ends.

@@ -1,0 +1,205 @@
+
+<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Shasta assembler</title>
+<style>
+    body {
+        font-family: Arial;
+    }
+    pre {
+        font-family: courier;
+    }
+    p, input {
+        font-size: 16px;
+    }
+    h1, h2, h3 {
+        color: DarkSlateBlue;
+    }
+    table {
+        border-collapse: collapse;
+    }
+    th, td {
+        border: 1px solid #b8b5c7d9;
+        padding: 2px;
+    }
+    th {
+        font-weight: bold;
+        text-align: center;
+    }
+    th.left {
+        text-align: left;
+    }
+    td.centered {
+        text-align: center;
+    }
+    td.left {
+        text-align: left;
+    }
+    td.right {
+        text-align: right;
+    }
+    td.smaller {
+        font-size: smaller;
+    }
+    a {
+        color: DarkSlateBlue;
+    }
+
+    /* This can be used to get vertical text in table cells. */
+    span.rotated 
+    {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+    }
+
+    ul.navigationMenu {
+        list-style-type: none;
+        margin: 0px 0px 12px 0px;
+        padding: 0;
+        overflow: hidden;
+        background-color: #404040;
+    }
+
+    div.navigationButton {
+        display: inline-block;
+        color: white;
+        text-align: center;
+        padding: 14px 16px;
+        text-decoration: none;
+        // min-width: 120px;
+    }
+
+    .navigationMenuEntry:hover .navigationButton {
+        background-color: black;
+    }
+    
+    li.navigationMenuEntry {
+        display: inline-block;
+    }
+    
+    .navigationItems {
+        display: none;
+        position: absolute;
+        background-color: DodgerBlue;
+        // min-width: 120px;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        z-index: 1;
+    }
+    
+    a.navigationItem {
+        color: black;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+        text-align: left;
+    }
+    
+    .navigationItems a:hover {background-color: SteelBlue}
+    
+    .navigationMenuEntry:hover .navigationItems {
+        display: block;
+    }
+
+    input[type=submit] {
+        background-color: #89bef2;
+        padding: 4px;
+        margin: 2px;
+        border-radius: 8px;
+    }
+
+    input[type=button] {
+        padding: 4px;
+    }
+
+    input[type=text], input[type=radio] {
+        background-color: #ecf1f0;
+        border-width: thin;
+    }
+
+    button {
+        background-color: #89bef2;
+        padding: 4px;
+        margin: 2px;
+        border-radius: 8px;
+    }
+
+</style>
+    
+    <script>
+
+    // Copy to the clipboard the table that generated the event.
+    function copyToClipboard(event)
+    {
+        // If the CTRL key is not pressed, don't do anything.
+        if(!event.ctrlKey) {
+            return;
+        }
+
+        // Prevent default behavior.
+        // event.preventDefault();
+        // event.stopPropagation();
+        // event.returnValue = false;
+        
+        // Get the table element.
+        var element = event.currentTarget;
+         
+        // Remove any previous selection.
+        var selection = window.getSelection();
+        selection.removeAllRanges();
+        
+        // Select the table.
+        var range = document.createRange();
+        range.selectNodeContents(element);
+        selection.addRange(range);
+        
+        // Copy it to the clipboard.
+        document.execCommand("copy");
+
+        // Unselect it.
+        selection.removeAllRanges();
+
+        window.alert("The table was copied to the clipboard");
+    }
+
+    // Make a table copyable by Ctrl-click.
+    function makeCopyable(element)
+    {
+        element.addEventListener('click', copyToClipboard);
+        element.title = 'Ctrl-click anywhere on the table to copy the entire table to the clipboard';
+    }
+
+    // Make all tables copyable by Ctrl-click.
+    function makeAllTablesCopyable()
+    {
+        var tables = document.getElementsByTagName('table');
+        var i;
+        for(i=0; i<tables.length; i++) {
+            makeCopyable(tables[i]);
+        }
+    }
+    </script>
+    </head><body onload='makeAllTablesCopyable()'><body><h1>Shasta assembly output files</h1><table><tr><td><a href='AlignedFractionHistogram.csv'>AlignedFractionHistogram.csv</a><td>Histogram of aligned fraction for all computed alignments.
+<tr><td><a href='AlignmentDriftHistogram.csv'>AlignmentDriftHistogram.csv</a><td>Histogram of marker drift for all computed alignments.
+<tr><td><a href='AlignmentMarkerCountHistogram.csv'>AlignmentMarkerCountHistogram.csv</a><td>Histogram of number of aligned markers for all computed alignments.
+<tr><td><a href='AlignmentSkipHistogram.csv'>AlignmentSkipHistogram.csv</a><td>Histogram of marker skip for all computed alignments.
+<tr><td><a href='AlignmentTrimHistogram.csv'>AlignmentTrimHistogram.csv</a><td>Histogram of marker trim for all computed alignments.
+<tr><td><a href='Assembly-BothStrands-NoSequence.gfa'>Assembly-BothStrands-NoSequence.gfa</a><td>Assembly in GFA format (compact output without sequence, both strands).
+<tr><td><a href='Assembly-BothStrands.gfa'>Assembly-BothStrands.gfa</a><td>Assembly in GFA format (both strands).
+<tr><td><a href='Assembly.fasta'>Assembly.fasta</a><td>Assembly in FASTA format (one strand only).
+<tr><td><a href='Assembly.gfa'>Assembly.gfa</a><td>Assembly in GFA format (one strand only).
+<tr><td><a href='AssemblySummary.csv'>AssemblySummary.csv</a><td>List of assembled segments in order of decreasing length.
+<tr><td><a href='AssemblySummary.html'>AssemblySummary.html</a><td>Assembly summary information in html format.
+<tr><td><a href='AssemblySummary.json'>AssemblySummary.json</a><td>Assembly summary information in json format.
+<tr><td><a href='Binned-ReadLengthHistogram.csv'>Binned-ReadLengthHistogram.csv</a><td>Read length distribution in 1 kb bins.
+<tr><td><a href='DisjointSetsHistogram.csv'>DisjointSetsHistogram.csv</a><td>Coverage histogram for all disjoint sets.
+<tr><td><a href='index.html'>index.html</a><td>Html file containing a list of assembly output files and their descriptions.
+<tr><td><a href='LowHashBucketHistogram.csv'>LowHashBucketHistogram.csv</a><td>MinHash bucket population histogram.
+<tr><td><a href='MarkerGraphEdgeCoverageHistogram.csv'>MarkerGraphEdgeCoverageHistogram.csv</a><td>Coverage histogram for marker graph edges.
+<tr><td><a href='MarkerGraphVertexCoverageHistogram.csv'>MarkerGraphVertexCoverageHistogram.csv</a><td>Coverage histogram for marker graph vertices.
+<tr><td><a href='performance.log'>performance.log</a><td>Performance log output. Contains messages that are mnostly useful for performance analysis.
+<tr><td><a href='ReadGraphComponents.csv'>ReadGraphComponents.csv</a><td>Information about connected components of the read graph.
+<tr><td><a href='ReadLengthHistogram.csv'>ReadLengthHistogram.csv</a><td>Detailed read length distribution.
+<tr><td><a href='ReadLowHashStatistics.csv'>ReadLowHashStatistics.csv</a><td>MinHash/LowHash statistics for each read.
+<tr><td><a href='ReadSummary.csv'>ReadSummary.csv</a><td>Summary file containing one line of information for each read.
+<tr><td><a href='shasta.conf'>shasta.conf</a><td>Configuration file containing options in effect for this assembly.
+<tr><td><a href='stdout.log'>stdout.log</a><td>Assembly log output.
+<tr><td><a href='SuppressedAlignmentCandidates.csv'>SuppressedAlignmentCandidates.csv</a><td>Details of suppressed alignment candidates.
+</body></html>
