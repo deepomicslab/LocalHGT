@@ -43,8 +43,9 @@ def get_support_reads(bam, chr, pos):
     read_list = []
     # # Create a new BAM file for the supporting reads
     # out_bamfile = pysam.AlignmentFile("supporting_reads.bam", "wb", template=bamfile)
-    start = pos - window
-    end = pos + window
+    near = 20000
+    start = pos - near
+    end = pos + near
     if start < 0:
         start = 1
 
@@ -55,12 +56,12 @@ def get_support_reads(bam, chr, pos):
             continue
 
         # Check if the read overlaps the breakpoint position
-        if read.reference_start <= pos and read.reference_end >= pos:
+        # if read.reference_start <= pos and read.reference_end >= pos:
 
             # print(read.query_name, read.reference_name, read.reference_start, read.reference_end, read.cigar, sep="\t")
             # Write the read to the output BAM file
             # out_bamfile.write(read)
-            read_list.append(read)
+        read_list.append(read)
 
     # Close the input and output BAM files
     bamfile.close()
@@ -153,16 +154,24 @@ class Map():
         delete_support_reads_2 = get_support_reads(bamfile, hgt_event[2], hgt_event[4])
         reads_set = insert_support_reads + delete_support_reads_1 + delete_support_reads_2
 
-        # templatefile = pysam.AlignmentFile(bamfile, "rb")
-        # out_bamfile = pysam.AlignmentFile(tmp_bam, "wb", template=templatefile)
-        # uniq_dict = {}
-        # for read in reads_set:
-        #     if read.query_name not in uniq_dict:
-        #         out_bamfile.write(read)
-        #     uniq_dict[read.query_name] = 1
-        # out_bamfile.close()
-        # os.system(f"samtools bam2fq {tmp_bam} > {tmp_fastq}")
-        # templatefile.close()
+        templatefile = pysam.AlignmentFile(bamfile, "rb")
+        out_bamfile = pysam.AlignmentFile(tmp_bam, "wb", template=templatefile)
+        f = open(tmp_nano_str, 'w')
+        uniq_dict = {}
+        edit_reads_set = list(reads_set)
+        for read in edit_reads_set:
+            origin_name = read.query_name
+            if read.query_name in uniq_dict:
+                uniq_dict[read.query_name] += 1
+                read.query_name = read.query_name + "_" + str(uniq_dict[read.query_name])
+            else:
+                uniq_dict[read.query_name] = 1
+            print (f">{read.query_name}\n{read.query_sequence}", file = f)
+            read.query_name = origin_name
+            out_bamfile.write(read)
+        out_bamfile.close()
+        os.system(f"samtools bam2fq {tmp_bam} > {tmp_fastq}")
+        templatefile.close()
 
         return reads_set
 
@@ -251,14 +260,19 @@ class Map():
 
         total_hgt_event_num = 0
         valid_hgt_event_num = 0
+        skip_hgt_event_num = 0
 
         for hgt_event in sorted(list(hgt_event_dict[sample])):
-            # if hgt_event[0] != "GUT_GENOME147854_18":
-            #     continue
+            if hgt_event[0] != "GUT_GENOME103864_80":
+                continue
             # if 'GUT_GENOME156655_37' not in hgt_event:
             #     continue
             verify_flag = False
             reads_set = self.get_reads(hgt_event)
+
+            if len(reads_set) < 5:  # skipt the event with less than five support reads
+                skip_hgt_event_num += 1
+                continue
 
             delete_len = hgt_event[4] - hgt_event[3]
             
@@ -288,7 +302,7 @@ class Map():
                 best_verified += 1
             print ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
             # break
-        print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(total_hgt_event_num, valid_hgt_event_num, valid_hgt_event_num/total_hgt_event_num))
+        print ("Total HGT num is %s; valid one is %s; valid ratio is %s; skip num is %s."%(total_hgt_event_num, valid_hgt_event_num, valid_hgt_event_num/total_hgt_event_num, skip_hgt_event_num))
         return final_total, final_verified, best_verified
 
     def verify_bk(self, reads_set, merged_seq, rev_merged_seq):
@@ -494,42 +508,42 @@ def parse_paf(paf_file):
                 end_match_interval = target_end
             # if map_flag:
             #     break
-            # print (read_len, target_start, target_end, "|", fields[7], fields[8], start_junc, end_junc, sep = "\t")
+            print (read_len, target_start, target_end, "|", fields[7], fields[8], start_junc, end_junc, sep = "\t")
             if start_junc[0] >= target_start and end_junc[1] <= target_end:
                 best_flag = True
             if best_flag:
                 break
     # print (start_flag, end_flag)
-    # print ("<<<<<<<<<<<<<<<<<<<<<<")
+    print ("<<<<<<<<<<<<<<<<<<<<<<")
     return start_flag, end_flag, best_flag, start_match_interval, end_match_interval
 
 
 if __name__ == "__main__":
 
-    # database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
-    # workdir = "/mnt/d/HGT/time_lines/"
-    # meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    # data_pair = "/mnt/d/HGT/time_lines/SRP366030.ngs_tgs_pair.csv"
-    # design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
-    # result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-    # tgs_bam_dir = "/mnt/d/HGT/time_lines/tgs_bam_results"
-    # verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
+    database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
+    workdir = "/mnt/d/HGT/time_lines/"
+    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    data_pair = "/mnt/d/HGT/time_lines/SRP366030.ngs_tgs_pair.csv"
+    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
+    result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    tgs_bam_dir = "/mnt/d/HGT/time_lines/tgs_bam_results"
+    verified_result = "/mnt/d/HGT/time_lines/SRP366030.verified_event.csv"
 
-    database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
-    workdir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/"
-    meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
-    data_pair = "/mnt/disk2_workspace/wangshuai/00.strain/32.BFB/SRP366030.ngs_tgs_pair.csv"
-    design_file = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
-    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
-    identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
-    tgs_bam_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/nanopore_alignment/results/"
-    verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
+    # database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
+    # workdir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/"
+    # meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
+    # data_pair = "/mnt/disk2_workspace/wangshuai/00.strain/32.BFB/SRP366030.ngs_tgs_pair.csv"
+    # design_file = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
+    # result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    # identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
+    # tgs_bam_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/nanopore_alignment/results/"
+    # verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
 
 
     tmp_bam = workdir + "/tmp.bam"
     tmp_fastq = workdir + "/tmp.fastq"
-    tmp_ref = workdir + "/tmp.fasta"
+    tmp_nano_str = workdir + "/tmp.fasta"
     reverse_tmp_ref = workdir + "/tmp.rev.fasta"
 
     hgt_event_dict = read_event()
@@ -545,8 +559,8 @@ if __name__ == "__main__":
     # minimap2_align()
 
     for sample in hgt_event_dict:
-        # if sample != "SRR18491328":
-        #     continue
+        if sample != "SRR18490939":
+            continue
         bamfile = tgs_bam_dir + "/%s.bam"%(ngs_tgs_pair[sample])
         baifile = tgs_bam_dir + "/%s.bam.bai"%(ngs_tgs_pair[sample])
 

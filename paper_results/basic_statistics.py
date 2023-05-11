@@ -308,16 +308,6 @@ def read_file_to_string(file_path):
     return file_contents
 
 def prepare_tree(): # just use genome name
-    sorted_dict = ba.sort_taxa_by_freq(8) # 8 means genome level
-    print ("total genome number is", len(sorted_dict))
-    extracted_genome = []
-    extracted_genome_dict = {}
-    freq_dict = {}
-    for i in range(300): # choose node number
-        extracted_genome.append(sorted_dict[i][0])
-        extracted_genome_dict[sorted_dict[i][0]] = 1
-        freq_dict[sorted_dict[i][0]] = float(sorted_dict[i][1])
-
     gradient_template = "/mnt/d/HGT/time_lines/distribution/dataset_gradient_template.txt"
     # Load a tree structure from a newick file.
     f = open("/mnt/d/HGT/time_lines/distribution/hgt_tree.nwk", 'w')
@@ -326,11 +316,26 @@ def prepare_tree(): # just use genome name
     c = open("/mnt/d/HGT/time_lines/distribution/connection.txt", 'w')
     g = open("/mnt/d/HGT/time_lines/distribution/gradient_annotation.txt", 'w')
     t = Tree("/mnt/d/HGT/time_lines/distribution/bac120_iqtree.nwk")
+
+
+    sorted_dict = ba.sort_taxa_by_freq(8) # 8 means genome level
+    print ("total genome number is", len(sorted_dict))
+    extracted_genome = []
+    extracted_genome_dict = {}
+    genome_num = len(sorted_dict)
+    freq_dict = {}
+    for i in range(genome_num): # choose node number
+        if len(t.search_nodes(name=sorted_dict[i][0])) == 0: # genome not in a tree
+            continue
+        extracted_genome.append(sorted_dict[i][0])
+        extracted_genome_dict[sorted_dict[i][0]] = 1
+        freq_dict[sorted_dict[i][0]] = float(sorted_dict[i][1])
+
+    print ("total genome number in the tree is", len(extracted_genome))
     t.prune(extracted_genome) # only keep the nodes with top HGT freq
     dark2=['#1B9E77', '#D95F02', '#7570B3', '#E7298A', '#66A61E', '#E6AB02', '#A6761D']
-    set1=['#E41A1C', '#377EB8', '#4DAF4A', '#984EA3', '#FF7F00', '#FFFF33', '#A65628', '#F781BF', '#999999']
+    set1=['#E41A1C', '#377EB8','#FFFF33', '#984EA3', '#FF7F00',  '#A65628', '#F781BF', '#999999', '#4DAF4A']
     color_palette = dark2 + set1
-    phylum_dict = {}
     index_dict = {'Firmicutes_A': 0, 'Bacteroidota': 1, 'Firmicutes': 2, 'Proteobacteria': 3, 'Actinobacteriota': 4, 'Firmicutes_C': 5, 'Verrucomicrobiota': 6}
     print ("TREE_COLORS\nSEPARATOR SPACE\nDATA\n", file = a)
     print ("DATASET_SIMPLEBAR\nSEPARATOR COMMA\nDATASET_LABEL,my_data\nCOLOR,#45818e\nDATA\n", file = b)
@@ -344,11 +349,11 @@ def prepare_tree(): # just use genome name
             continue
         genome_name = node.name
         phylum = get_genome_taxa(node.name, 1)[3:]
-        if phylum not in phylum_dict:
-            phylum_dict[phylum] = len(phylum_dict)
+        if phylum not in index_dict:
+            index_dict[phylum] = len(index_dict)
         print (f"{genome_name} range {color_palette[index_dict[phylum]]} {phylum}", file = a)
         print (f"{node.name},{freq_dict[genome_name]},label1", file = b)
-        print (f"{node.name} {freq_dict[genome_name]}", file = g)
+        print (f"{node.name} {np.log(freq_dict[genome_name])}", file = g)
     # print (t)
     print (t.write(), file = f)
     count_pair(ba.cohort_data, extracted_genome_dict, c)
@@ -358,12 +363,14 @@ def prepare_tree(): # just use genome name
     b.close()
     c.close()
     g.close()
-    print (phylum_dict)
+    print (index_dict, len(index_dict))
     
-
 def count_pair(cohort_data, extracted_genome_dict, connection_flag):
     print ("DATASET_CONNECTION\nSEPARATOR COMMA\nDATASET_LABEL,example connections\nCOLOR,#ff0ff0\nDRAW_ARROWS,0\nARROW_SIZE,20\nLOOP_SIZE,100\nMAXIMUM_LINE_WIDTH,10\nCURVE_ANGLE,0\nCENTER_CURVES,1\nALIGN_TO_LABELS,1\nDATA\n", file =connection_flag )
+    # set1=['#E41A1C', '#377EB8', '#4DAF4A', '#984EA3', '#FF7F00', '#FFFF33', '#A65628', '#F781BF', '#999999']
+    set1=["orange", "red", "blue", "green", "purple", "pink", "yellow"]
     pair_dict = {}
+    print ("sample num:", len(cohort_data))
     for sample in cohort_data:
         for bkp in cohort_data[sample]:
             from_tax = get_genome_taxa(bkp.from_ref_genome, 8)
@@ -380,10 +387,28 @@ def count_pair(cohort_data, extracted_genome_dict, connection_flag):
         g2 = array[1]
         phylum1 = get_genome_taxa(g1, 1)[3:]
         phylum2 = get_genome_taxa(g2, 1)[3:]
-        if phylum1 == phylum2:
-            print (f"{g1},{g2},{pair_dict[pair_name]},red,normal,", file = connection_flag)
+        class1 = get_genome_taxa(g1, 2)[3:]
+        class2 = get_genome_taxa(g2, 2)[3:]
+        order1 = get_genome_taxa(g1, 3)[3:]
+        order2 = get_genome_taxa(g2, 3)[3:]
+        family1 = get_genome_taxa(g1, 4)[3:]
+        family2 = get_genome_taxa(g2, 4)[3:]
+        genus1 = get_genome_taxa(g1, 5)[3:]
+        genus2 = get_genome_taxa(g2, 5)[3:]
+        if genus1 != '' and genus1 == genus2:
+            color = set1[0]
+        elif family1 != '' and family1 == family2:
+            color = set1[1]
+        elif order1 != '' and order1 == order2:
+            color = set1[2]
+        elif class1 != '' and class1 == class2:
+            color = set1[3]
+        elif phylum1 != '' and phylum1 == phylum2:
+            color = set1[4]
         else:
-            print (f"{g1},{g2},{pair_dict[pair_name]},blue,normal,", file = connection_flag)
+            color = set1[5]
+        
+        print (f"{g1},{g2},{pair_dict[pair_name]},{color},normal,", file = connection_flag)
 
 if __name__ == "__main__":
     bin_size = 100
@@ -407,18 +432,21 @@ if __name__ == "__main__":
 
 
     # ######## just sort taxa by HGT freq
-    # taxa_sort_data = []
-    # for level in range(1, 7):
-    #     sorted_dict = ba.sort_taxa_by_freq(level)
-        # for i in range(10):
-        #     print (i, sorted_dict[i][0], sorted_dict[i][1])
-        #     taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level])
+    taxa_sort_data = []
+    for level in range(1, 7):
+        sorted_dict = ba.sort_taxa_by_freq(level)
+        top_sum = 0
+        for i in range(5):
+            print (i, sorted_dict[i][0], sorted_dict[i][1])
+            taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
+            top_sum += sorted_dict[i][1]
+        taxa_sort_data.append([level_list[level-1]+"_other", 1-top_sum, level_list[level-1]])
 
-    # df = pd.DataFrame(taxa_sort_data, columns = ["Order", "The Number of HGT", "Level"])
-    # df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')
+    df = pd.DataFrame(taxa_sort_data, columns = ["Taxa", "Frequency", "Level"])
+    df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')
 
     #### prepare count tree
-    prepare_tree()
+    # prepare_tree()
 
     # ######## get intra-taxa HGT freq
     # intra_freq_data = []
