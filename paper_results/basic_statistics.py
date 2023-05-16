@@ -440,7 +440,7 @@ if __name__ == "__main__":
             print (i, sorted_dict[i][0], sorted_dict[i][1])
             taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
             top_sum += sorted_dict[i][1]
-        taxa_sort_data.append([level_list[level-1]+"_other", 1-top_sum, level_list[level-1]])
+        taxa_sort_data.append([level_list[level-1][0]+"__other", 1-top_sum, level_list[level-1]])
 
     df = pd.DataFrame(taxa_sort_data, columns = ["Taxa", "Frequency", "Level"])
     df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')

@@ -257,7 +257,7 @@ class Map():
         skip_hgt_event_num = 0
 
         for hgt_event in sorted(list(hgt_event_dict[sample])):
-            # if hgt_event[0] != "GUT_GENOME147854_18":
+            # if hgt_event[0] != "GUT_GENOME000035_9":
             #     continue
             # if 'GUT_GENOME156655_37' not in hgt_event:
             #     continue
@@ -631,7 +631,7 @@ if __name__ == "__main__":
     # minimap2_align()
 
     for sample in hgt_event_dict:
-        # if sample != "SRR18491328":
+        # if sample != "SRR18491254":
         #     continue
         bamfile = tgs_bam_dir + "/%s.bam"%(ngs_tgs_pair[sample])
         baifile = tgs_bam_dir + "/%s.bam.bai"%(ngs_tgs_pair[sample])

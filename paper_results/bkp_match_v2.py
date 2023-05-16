@@ -9,6 +9,7 @@ import networkx as nx
 import pandas as pd
 import pickle
 from pyfaidx import Fasta
+from sklearn.cluster import DBSCAN
  
 def read_meta():
     
@@ -107,8 +108,8 @@ class Match():
             sra_id = acc_file.split("/")[-1].split(".")[0]
             
             td_id = sra_sample_dict[sra_id]
-            if td_id[:2] != "CD":
-                continue
+            # if td_id[:2] != "CD":
+            #     continue
             # print (sample_individual_dict[td_id])
             # if int(sample_individual_dict[td_id]) not in [1, 2, 3, 4,5, 6, 7, 8, 9, 10]:
             #     continue
@@ -167,118 +168,6 @@ class Match():
                 self.all_hgt[hgt_tag] = hgt_index
         print ("All HGT", len(self.all_hgt))
 
-    def get_correlation(self):
-        for hgt_tag in self.all_hgt:
-            self.hgt_array_dict[hgt_tag] = [0] * len(self.cohort_data)
-        
-        sample_index_dict = {}
-        index = 0
-        for sra_id in self.cohort_data:
-            sample_index_dict[sra_id] = index
-            index += 1
-
-        for sra_id in self.cohort_data:
-            index = sample_index_dict[sra_id]
-
-            for hgt in self.cohort_data[sra_id]:
-                if hgt.hgt_tag not in self.all_hgt:
-                    continue
-                self.hgt_array_dict[hgt.hgt_tag][index] = 1
-        
-        for hgt_tag_1 in self.hgt_array_dict:
-
-            for hgt_tag_2 in self.hgt_array_dict:
-                if hgt_tag_1 == hgt_tag_2:
-                    continue
-                if hgt_tag_1 not in self.can_match_bkp or hgt_tag_2 not in self.can_match_bkp:
-                    continue
-                res = stats.spearmanr(self.hgt_array_dict[hgt_tag_1], self.hgt_array_dict[hgt_tag_2])
-                # if res.correlation > 0:
-                #     correlation_dict[hgt_tag_2] = res.correlation
-                bkp_pair = self.get_bkp_pair_name(hgt_tag_1, hgt_tag_2)
-                self.correlation_matrix[bkp_pair] = res.correlation
-
-    def get_precise_HGT(self):
-        data = []
-        for sra_id in self.cohort_data:
-            sample_dict = {}
-            for hgt in self.cohort_data[sra_id]:
-                if hgt.hgt_tag in self.paired_bkp:
-                    # print (sra_id, hgt.from_ref, hgt.from_bkp, hgt.to_ref, hgt.to_bkp)
-                    sample_dict[hgt.hgt_tag] = hgt
-            # for hgt_tag in self.paired_bkp:
-            #     hgt_tag_2 = self.paired_bkp[hgt_tag]
-            for bkp_pair in self.matched_bkp_pairs:
-                hgt_tag = bkp_pair[0]
-                hgt_tag_2 = bkp_pair[1]
-                if hgt_tag in sample_dict and hgt_tag_2 in sample_dict:
-                    # print (sample_dict[hgt_tag].from_ref, sample_dict[hgt_tag].from_bkp, sample_dict[hgt_tag].to_ref, sample_dict[hgt_tag].to_bkp, \
-                    # sample_dict[hgt_tag_2].from_ref, sample_dict[hgt_tag_2].from_bkp, sample_dict[hgt_tag_2].to_ref, sample_dict[hgt_tag_2].to_bkp)
-
-                    array_1 = [sample_dict[hgt_tag].from_ref, sample_dict[hgt_tag].from_bkp, sample_dict[hgt_tag].to_ref, sample_dict[hgt_tag].to_bkp]
-                    array_2 = [sample_dict[hgt_tag_2].from_ref, sample_dict[hgt_tag_2].from_bkp, sample_dict[hgt_tag_2].to_ref, sample_dict[hgt_tag_2].to_bkp]
-                    
-                    if array_1[0] != array_2[0]:
-                        array_2 = [array_2[2], array_2[3], array_2[0], array_2[1]]
-
-                    if abs(array_1[1] - array_2[1]) < abs(array_1[3] - array_2[3]):
-                        insertion = [array_1[0], array_1[1]]
-                        deletion = [array_1[2], array_1[3], array_2[3]]
-                    else:
-                        insertion = [array_1[2], array_1[3]]
-                        deletion = [array_1[0], array_1[1], array_2[1]]
-                    if deletion[2] < deletion[1]:
-                        a = deletion[1]
-                        deletion[1] = deletion[2]
-                        deletion[2] = a
-                    # print (sra_id, insertion, deletion)
-                    data.append([sra_id] + insertion + deletion)
-        df = pd.DataFrame(data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end"])
-        df.to_csv(identified_hgt, sep=',')
-
-    def matching(self):
-        # Create a graph with nodes on the left and right
-        G = nx.Graph()
-        bkp_list = list(self.can_match_bkp)
-        possible_match_num = 0
-        print ("bkp num", len(bkp_list))
-        for i in range(len(bkp_list)):
-            for j in range(i+1, len(bkp_list)):
-        # for bkp1 in bkp_list:    
-        #     for bkp2 in bkp_list:   
-        #         if bkp1 == bkp2:
-        #             continue
-                bkp1, bkp2 = bkp_list[i], bkp_list[j]
-                if self.check_point_share(bkp1, bkp2):
-                    possible_match_num += 1
-                    bkp_pair = self.get_bkp_pair_name(bkp1, bkp2)
-                    edge_weight_by_sample = 0
-                    edge_weight_by_correlation = 0
-                    if bkp_pair in self.edge_weight_sample and self.edge_weight_sample[bkp_pair] > 0:
-                        edge_weight_by_sample = 1
-                    # if self.correlation_matrix[bkp_pair] > 0.7:
-                    #     edge_weight_by_correlation = self.correlation_matrix[bkp_pair]
-                    gene_length = self.cal_gene_length(bkp1, bkp2) # /bin
-                    edge_weight = (edge_weight_by_correlation + edge_weight_by_sample)/gene_length/bin_size
-                    # edge_weight = (edge_weight_by_sample)/gene_length/bin_size
-                    # print (bkp_pair.split("&"), edge_weight)
-                    if edge_weight > 0:
-                        G.add_edge(bkp1, bkp2, weight = edge_weight)
-                # else:
-                #     G.add_edge(bkp1, bkp2, weight=0)
-
-        G.add_nodes_from(bkp_list)
-        for cc in nx.connected_components(G):
-            G_lcc = G.subgraph(cc)
-            # print("Nodes in largest connected component:", len(G_lcc.nodes))
-            matching = nx.algorithms.matching.max_weight_matching(G_lcc, weight='weight')
-            # print("matching")
-            self.matched_bkp_pairs = self.matched_bkp_pairs | matching
-
-        print("N.O. of matched bkp pairs:", len(self.matched_bkp_pairs), "Possible match:", possible_match_num/2)
-        for bkp_pair in self.matched_bkp_pairs:
-            self.paired_bkp[bkp_pair[0]] = bkp_pair[1]
-            self.paired_bkp[bkp_pair[1]] = bkp_pair[0]
 
     def check_point_share(self, hgt_tag_1, hgt_tag_2):
         array_1 = hgt_tag_1.split("&")
@@ -353,7 +242,7 @@ class Match():
 
         flag = flag and bkp_obj_1.if_reverse == bkp_obj_2.if_reverse
         # if flag:
-        #     if len(self.pair_dict[donor+ "&" + str(int(delete_start/bin_size))]) >1 and len(self.pair_dict[donor+ "&" + str(int(delete_end/bin_size))]) >1:
+        #     if len(self.pair_dict[donor+ "&" + str(int(delete_start/bin_size))]) >1 and len(self.pair_dict[donor+ "&" + str(int(delete_end/bin_size))]) > 1:
         #         flag = False
         if flag: 
             if delete_end - delete_start < min_hgt_len:
@@ -361,7 +250,8 @@ class Match():
         if flag:
             event_data = [ID, receptor,insert_pos,donor,delete_start,delete_end, bkp_obj_1.if_reverse]
 
-            match_num = self.remove_ambiguity(event_data)
+            # match_num = self.remove_ambiguity(event_data)
+            match_num = self.remove_ambiguity_pop(event_data)
             print (ID, receptor,insert_pos,donor,delete_start,delete_end, match_num)
             if match_num == 2:
                 result_data.append(event_data)
@@ -385,6 +275,29 @@ class Match():
         # if len(pos) > 2:
         # print (pos)
         return len(pos)
+
+    def remove_ambiguity_pop(self, event_data):
+        ## ID, receptor,insert_pos,donor,delete_start,delete_end
+        ID = event_data[0]
+        pos = []
+        for ID in self.cohort_data:
+            for bkp in self.cohort_data[ID]:
+                if bkp.from_ref == event_data[1] and abs(bkp.from_bkp - event_data[2]) < max_diff: # ins 
+                    if bkp.to_ref == event_data[3]:
+                    # if bkp.to_ref.split("_")[1] == event_data[3].split("_")[1]:
+                        pos.append(bkp.to_bkp)
+                if bkp.to_ref == event_data[1] and abs(bkp.to_bkp - event_data[2]) < max_diff: # ins
+                    if bkp.from_ref == event_data[3]:
+                    # if bkp.from_ref.split("_")[1] == event_data[3].split("_")[1]:
+                        pos.append(bkp.from_bkp)
+        # if len(pos) > 2:
+        # print (pos)
+        dbscan = DBSCAN(eps=bin_size, min_samples=1)
+        dbscan.fit(np.array(pos).reshape(-1, 1))
+        cluster_num = max(dbscan.labels_) + 1
+        # print the cluster labels
+        # print(dbscan.labels_)
+        return cluster_num
 
     def cal_gene_length(self, hgt_tag_1, hgt_tag_2):
         array_1 = hgt_tag_1.split("&")
@@ -429,47 +342,6 @@ class Match():
     def get_bkp_pair_name(self, bkp1, bkp2):
         bkp_pair = "%".join(sorted([bkp1, bkp2]))
         return bkp_pair
-
-    def classify_bkp(self):
-        bkp_list = list(self.all_hgt.keys())
-        # for bkp1 in bkp_list:    
-        #     for bkp2 in bkp_list:   
-        #         if bkp1 == bkp2:
-        #             continue
-        for i in range(len(bkp_list)):
-            for j in range(i+1, len(bkp_list)):
-                bkp1, bkp2 = bkp_list[i], bkp_list[j]
-
-                if self.check_point_share(bkp1, bkp2):
-                    if bkp1 not in self.can_match_bkp:
-                        self.can_match_bkp[bkp1] = 0
-                        # self.can_match_bkp_info[bkp1] = []
-                    self.can_match_bkp[bkp1] += 1
-                    # self.can_match_bkp_info[bkp1] += [bkp2]
-
-                    if bkp2 not in self.can_match_bkp:
-                        self.can_match_bkp[bkp2] = 0
-                        # self.can_match_bkp_info[bkp2] = []
-                    self.can_match_bkp[bkp2] += 1
-                    # self.can_match_bkp_info[bkp2] += [bkp1]
-        print ("%s bkp after filtering, and %s bkp have possible matched object."%(len(bkp_list), len(self.can_match_bkp)))
-        single_match_num = 0
-        alt_match_num = 0
-        for bkp in self.can_match_bkp:
-            if self.can_match_bkp[bkp] > 1:
-                alt_match_num += 1
-                # print ("multiple pairs", bkp, self.can_match_bkp_info[bkp])
-            else:
-                single_match_num += 1
-        with open(saved_can_match_bkp, 'wb') as f:
-            pickle.dump(self.can_match_bkp, f)
-        print ("%s has one matched, %s has more than one."%(single_match_num, alt_match_num))
-    
-    def load_can_match(self):
-        # open the file in read binary mode
-        with open(saved_can_match_bkp, 'rb') as f:
-            # load the dictionary object from the file using pickle
-            self.can_match_bkp = pickle.load(f)       
 
     def draw(self, G):
         # # Compute the bipartite layout
@@ -560,7 +432,8 @@ if __name__ == "__main__":
     tim.read_samples()
     print ("load is done.")
     sample_list = list(tim.cohort_data.keys())
-    # sample_list = ["SRR18491248", "SRR18490939", "SRR18491317", "SRR18491328"]
+    # sample_list = ["SRR18491248", "SRR18490939", "SRR18491317", "SRR18491328", "SRR18491254"]
+    # sample_list = ["SRR18490939"]
     print (sample_list)
     for sample in sample_list:
         tim.match_each_sample(sample)
