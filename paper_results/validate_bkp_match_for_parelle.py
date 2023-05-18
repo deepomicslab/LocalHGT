@@ -165,7 +165,8 @@ class Map():
                 continue
             print (f">{read.query_name}\n{read_seqs[read.query_name]}", file = f)
             uniq_dict[read.query_name] = 1
-        os.system(f"shasta --memoryBacking 2M --memoryMode filesystem --assemblyDirectory {contig_dir} --input {tmp_nano_str} --config Nanopore-May2022 2> {standard_output}")
+        # os.system(f"shasta --memoryBacking 2M --memoryMode filesystem --assemblyDirectory {contig_dir} --input {tmp_nano_str} --config Nanopore-May2022 2> {standard_output}")
+        os.system(f"flye --threads 5 --nano-raw {tmp_nano_str} --out-dir {contig_dir} 2> {standard_output}")
 
         return reads_set, pos_read_num
 
@@ -546,6 +547,7 @@ def parse_paf(paf_file):
     best_flag = False
     start_match_interval = float('inf') # the mapped interval of the reads 
     end_match_interval = 0 # the mapped interval of the reads 
+    junc_len = 30
     with open(paf_file) as f:
         for line in f:
             fields = line.strip().split("\t")
@@ -557,8 +559,8 @@ def parse_paf(paf_file):
             # start_junc = [window/2, 1.5*window] 
             # end_junc = [target_len - 1.5*window, target_len-window/2]
 
-            start_junc = [window-50, window+50] 
-            end_junc = [target_len - window - 50, target_len-window + 50]
+            start_junc = [window-junc_len, window+junc_len] 
+            end_junc = [target_len - window - junc_len, target_len-window + junc_len]
             
             # start_junc = [window/2, target_len/2] 
             # if start_junc[1] - start_junc[0] > max_seg:
@@ -615,8 +617,8 @@ if __name__ == "__main__":
     tmp_fastq = workdir + "/tmp.fastq"
     tmp_nano_str = workdir + "/tmp.fasta"
     reverse_tmp_ref = workdir + "/tmp.rev.fasta"
-    contig_dir = workdir + "/ShastaRun/"
-    contig_file = contig_dir + "/Assembly.fasta"
+    contig_dir = workdir + "/flye/"
+    contig_file = contig_dir + "/assembly.fasta"
     standard_output = workdir + "/minimap2.log"
 
     hgt_event_dict = read_event()

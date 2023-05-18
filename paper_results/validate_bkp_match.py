@@ -165,7 +165,8 @@ class Map():
                 continue
             print (f">{read.query_name}\n{read_seqs[read.query_name]}", file = f)
             uniq_dict[read.query_name] = 1
-        os.system(f"shasta --memoryBacking 2M --memoryMode filesystem --assemblyDirectory {contig_dir} --input {tmp_nano_str} --config Nanopore-May2022 2> {standard_output}")
+        # os.system(f"shasta --memoryBacking 2M --memoryMode filesystem --assemblyDirectory {contig_dir} --input {tmp_nano_str} --config Nanopore-May2022 2> {standard_output}")
+        os.system(f"flye --threads 5 --nano-raw {tmp_nano_str} --out-dir {contig_dir} 2> {standard_output}")
 
         return reads_set, pos_read_num
 
@@ -257,7 +258,7 @@ class Map():
         skip_hgt_event_num = 0
 
         for hgt_event in sorted(list(hgt_event_dict[sample])):
-            # if hgt_event[0] != "GUT_GENOME000035_9":
+            # if hgt_event[0] != "GUT_GENOME001602_16":
             #     continue
             # if 'GUT_GENOME156655_37' not in hgt_event:
             #     continue
@@ -443,15 +444,15 @@ class Map():
             contigs = Fasta(contig_file)
             for name in contigs.keys():
                 sequence = str(contigs[name])
-                sequence_list.append(sequence)
+                sequence_list.append([name, sequence])
         for read in reads_set:
             if read.query_name in uniq_dict:
                 continue
             sequence = read_seqs[read.query_name]
-            sequence_list.append(sequence)
+            sequence_list.append([read.query_name, sequence])
             uniq_dict[read.query_name] = 1
 
-        for sequence in sequence_list:
+        for name, sequence in sequence_list:
             if sequence == None:
                 continue
             if len(sequence) < self.window:
@@ -462,9 +463,9 @@ class Map():
                 continue
             
             if reverse_flag == "True":
-                start_flag, end_flag, best_flag, start_match_interval, end_match_interval = minimap2_align(rev_merged_seq, sequence)
+                start_flag, end_flag, best_flag, start_match_interval, end_match_interval = minimap2_align(rev_merged_seq, sequence, name)
             else:
-                start_flag, end_flag, best_flag, start_match_interval, end_match_interval = minimap2_align(merged_seq, sequence)
+                start_flag, end_flag, best_flag, start_match_interval, end_match_interval = minimap2_align(merged_seq, sequence, name)
 
 
             all_start_flag = all_start_flag or  start_flag
@@ -519,7 +520,7 @@ def write_fasta_file(filename, seq_name, sequence):
     with open(filename, "w") as f:
         f.write(f">{seq_name}\n{sequence}\n")
 
-def minimap2_align(seq1, seq2):
+def minimap2_align(seq1, seq2, name):
     # Example sequences
     seq1_file = workdir + "/seq1.fasta"
     seq2_file = workdir + "/seq2.fasta"
@@ -535,9 +536,9 @@ def minimap2_align(seq1, seq2):
     cmd = f"minimap2 -t 10 -x map-ont {seq2_file} {seq1_file} -o {paf} 2> {standard_output}"
     os.system(cmd)
     # os.system(f"cat {paf}|cut -f 1-4")
-    return parse_paf(paf)
+    return parse_paf(paf, name)
 
-def parse_paf(paf_file):
+def parse_paf(paf_file, name):
     """Parse a PAF file and extract the Target start and end positions"""
     map_flag = False
     start_flag = False
@@ -545,6 +546,7 @@ def parse_paf(paf_file):
     best_flag = False
     start_match_interval = float('inf') # the mapped interval of the reads 
     end_match_interval = 0 # the mapped interval of the reads 
+    junc_len = 30
     with open(paf_file) as f:
         for line in f:
             fields = line.strip().split("\t")
@@ -556,8 +558,8 @@ def parse_paf(paf_file):
             # start_junc = [window/2, 1.5*window] 
             # end_junc = [target_len - 1.5*window, target_len-window/2]
 
-            start_junc = [window-50, window+50] 
-            end_junc = [target_len - window - 50, target_len-window + 50]
+            start_junc = [window-junc_len, window+junc_len] 
+            end_junc = [target_len - window - junc_len, target_len-window + junc_len]
             
             # start_junc = [window/2, target_len/2] 
             # if start_junc[1] - start_junc[0] > max_seg:
@@ -578,13 +580,13 @@ def parse_paf(paf_file):
                 end_match_interval = target_end
             # if map_flag:
             #     break
-            # print (read_len, target_start, target_end, "|", fields[7], fields[8], start_junc, end_junc, sep = "\t")
+            # print (name, read_len, target_start, target_end, "|", fields[7], fields[8], start_junc, end_junc, sep = "\t")
             if start_junc[0] >= target_start and end_junc[1] <= target_end:
                 best_flag = True
             if best_flag:
                 break
     # print (start_flag, end_flag)
-    # print ("<<<<<<<<<<<<<<<<<<<<<<")
+    # print (name, "<<<<<<<<<<<<<<<<<<<<<<")
     return start_flag, end_flag, best_flag, start_match_interval, end_match_interval
 
 if __name__ == "__main__":
@@ -614,8 +616,8 @@ if __name__ == "__main__":
     tmp_fastq = workdir + "/tmp.fastq"
     tmp_nano_str = workdir + "/tmp.fasta"
     reverse_tmp_ref = workdir + "/tmp.rev.fasta"
-    contig_dir = workdir + "/ShastaRun/"
-    contig_file = contig_dir + "/Assembly.fasta"
+    contig_dir = workdir + "/flye/"
+    contig_file = contig_dir + "/assembly.fasta"
     standard_output = workdir + "/minimap2.log"
 
     hgt_event_dict = read_event()
@@ -631,7 +633,7 @@ if __name__ == "__main__":
     # minimap2_align()
 
     for sample in hgt_event_dict:
-        # if sample != "SRR18491254":
+        # if sample != "SRR18490939":
         #     continue
         bamfile = tgs_bam_dir + "/%s.bam"%(ngs_tgs_pair[sample])
         baifile = tgs_bam_dir + "/%s.bam.bai"%(ngs_tgs_pair[sample])
