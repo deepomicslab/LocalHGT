@@ -497,7 +497,7 @@ class Map():
             # uniq_dict[read.query_name] = 1
         # if len(merged_seq) < self.max_length: # check the whole inserted segment if short
         #     verify = best_flag
-        os.system(f"rm -r {contig_dir}")
+        os.system(f"rm -rf {contig_dir}")
         return verify, best_flag 
 
     def genetate_fasta(self, file, seq):
