@@ -166,7 +166,7 @@ class Map():
             print (f">{read.query_name}\n{read_seqs[read.query_name]}", file = f)
             uniq_dict[read.query_name] = 1
         # os.system(f"shasta --memoryBacking 2M --memoryMode filesystem --assemblyDirectory {contig_dir} --input {tmp_nano_str} --config Nanopore-May2022 2> {standard_output}")
-        os.system(f"flye --threads 5 --nano-raw {tmp_nano_str} --out-dir {contig_dir} 2> {standard_output}")
+        os.system(f"flye --threads 10 --nano-raw {tmp_nano_str} --out-dir {contig_dir} 2> {standard_output}")
 
         return reads_set, pos_read_num
 
@@ -452,6 +452,8 @@ class Map():
             sequence_list.append([read.query_name, sequence])
             uniq_dict[read.query_name] = 1
 
+        sequence_list = sorted(sequence_list, key=lambda x: len(x[1]), reverse = True) # long read first
+        consider_read_num = 0
         for name, sequence in sequence_list:
             if sequence == None:
                 continue
@@ -494,9 +496,13 @@ class Map():
 
             if best_flag:
                 break
+            if verify:
+                break
+            consider_read_num += 1
             # uniq_dict[read.query_name] = 1
         # if len(merged_seq) < self.max_length: # check the whole inserted segment if short
         #     verify = best_flag
+        print ("consider_read_num", consider_read_num+1)
         os.system(f"rm -rf {contig_dir}")
         return verify, best_flag 
 
@@ -641,6 +647,7 @@ if __name__ == "__main__":
         if os.path.isfile(bamfile) and os.path.isfile(baifile):
             print (sample)
             read_seqs = extract_read_seq(bamfile)
+            print ("reads are loaded.")
             ma = Map()
             final_total, final_verified, best_verified = ma.for_each_sample(sample, final_total, final_verified, best_verified)
     print ("Total HGT num is %s; valid one is %s; valid ratio is %s, best valid ratio is %s."%(final_total, final_verified, final_verified/final_total, best_verified/final_total))

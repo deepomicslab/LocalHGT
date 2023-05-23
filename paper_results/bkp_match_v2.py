@@ -398,19 +398,20 @@ class Match():
 
 if __name__ == "__main__":
 
-    # meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    # design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
+    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
     # result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-    # saved_can_match_bkp = "/mnt/d/HGT/time_lines/SRP366030.can_match.pickle"
-    # database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
+    result_dir = "/mnt/d/breakpoints/script/analysis/homo_filter/"
+    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    saved_can_match_bkp = "/mnt/d/HGT/time_lines/SRP366030.can_match.pickle"
+    database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
 
-    meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
-    design_file =  "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
-    result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
-    identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
-    saved_can_match_bkp = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match//SRP366030.can_match.pickle"
-    database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
+    # meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
+    # design_file =  "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
+    # result_dir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/hgt/result/"
+    # identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
+    # saved_can_match_bkp = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match//SRP366030.can_match.pickle"
+    # database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
 
     bin_size = 100
     window = 200
@@ -433,7 +434,7 @@ if __name__ == "__main__":
     print ("load is done.")
     sample_list = list(tim.cohort_data.keys())
     # sample_list = ["SRR18491248", "SRR18490939", "SRR18491317", "SRR18491328", "SRR18491254"]
-    # sample_list = ["SRR18490939"]
+    # sample_list = ["SRR18490984"]
     print (sample_list)
     for sample in sample_list:
         tim.match_each_sample(sample)

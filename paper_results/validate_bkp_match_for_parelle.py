@@ -166,7 +166,7 @@ class Map():
             print (f">{read.query_name}\n{read_seqs[read.query_name]}", file = f)
             uniq_dict[read.query_name] = 1
         # os.system(f"shasta --memoryBacking 2M --memoryMode filesystem --assemblyDirectory {contig_dir} --input {tmp_nano_str} --config Nanopore-May2022 2> {standard_output}")
-        os.system(f"flye --threads 5 --nano-raw {tmp_nano_str} --out-dir {contig_dir} 2> {standard_output}")
+        os.system(f"flye --threads 10 --nano-raw {tmp_nano_str} --out-dir {contig_dir} 2> {standard_output}")
 
         return reads_set, pos_read_num
 
@@ -453,6 +453,8 @@ class Map():
             sequence_list.append(sequence)
             uniq_dict[read.query_name] = 1
 
+        sequence_list = sorted(sequence_list, key=lambda x: len(x[1]), reverse = True) # long read first
+
         for sequence in sequence_list:
             if sequence == None:
                 continue
@@ -494,6 +496,8 @@ class Map():
             # else:
 
             if best_flag:
+                break
+            if verify:
                 break
             # uniq_dict[read.query_name] = 1
         # if len(merged_seq) < self.max_length: # check the whole inserted segment if short
@@ -613,6 +617,11 @@ if __name__ == "__main__":
     verified_result = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.verified_event.csv"
 
 
+    sample = sys.argv[1]
+
+    workdir += "/%s"%(sample)
+    os.system("mkdir %s"%(workdir))
+
     tmp_bam = workdir + "/tmp.bam"
     tmp_fastq = workdir + "/tmp.fastq"
     tmp_nano_str = workdir + "/tmp.fasta"
@@ -632,7 +641,7 @@ if __name__ == "__main__":
     max_seg = 5000
 
     # minimap2_align()
-    sample = sys.argv[1]
+    
     # for sample in hgt_event_dict:
         # if sample != "SRR18491328":
         #     continue
@@ -649,4 +658,6 @@ if __name__ == "__main__":
 
     df = pd.DataFrame(final_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "reverse_flag", "Verified"])
     df.to_csv(verified_result + "_" + sample, sep=',')
+
+    os.system("rm -r %s"%(workdir))
 
