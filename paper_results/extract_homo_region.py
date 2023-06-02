@@ -31,7 +31,7 @@ def extract_uniq_region(map_ref):
             continue
         if float(array[3]) < 50: # length
             continue
-        if float(array[2]) < 99: # identity
+        if float(array[2]) < min_identity: # identity
             continue
         clean_genome_1 =  "_".join(array[0].split("_")[:-1])
         clean_genome_2 =  "_".join(array[1].split("_")[:-1])
@@ -179,14 +179,17 @@ if __name__ == "__main__":
 
     filter_hgt_result_dir = "/mnt/d/breakpoints/script/analysis/homo_filter/"
 
-    if os.path.isfile(genome_homo_dict_file):
-        genome_homo_dict = np.load(genome_homo_dict_file, allow_pickle='TRUE').item()
-        print ("loaded")
-    else:
-        genome_homo_dict = extract_uniq_region(blast_file)
-        np.save(genome_homo_dict_file, genome_homo_dict)
+    min_identity = 98
 
-    # genome_homo_dict = {}
+    # if os.path.isfile(genome_homo_dict_file):
+    #     genome_homo_dict = np.load(genome_homo_dict_file, allow_pickle='TRUE').item()
+    #     print ("loaded")
+    # else:
+    #     genome_homo_dict = extract_uniq_region(blast_file)
+    #     np.save(genome_homo_dict_file, genome_homo_dict)
+
+    
+    genome_homo_dict = {}
 
     # intervals = genome_homo_dict["GUT_GENOME123416"]["GUT_GENOME147678_1"]
     # print (is_position_in_intervals(1690584, intervals), is_position_in_intervals(1958707, intervals))

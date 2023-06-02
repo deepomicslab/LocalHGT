@@ -53,6 +53,7 @@ def get_support_reads(bam, chr, pos):
 
     # Iterate over the reads in the BAM file
     for read in bamfile.fetch(chr, start, end):
+    # for read in bamfile.fetch():
 
         if read.is_unmapped:
             continue
@@ -170,83 +171,6 @@ class Map():
 
         return reads_set, pos_read_num
 
-    def for_each_sample_bk(self, sample, final_total, final_verified):
-        if sample not in hgt_event_dict:
-            print ("No hgt for sample", sample)
-        else:
-            print ("Detect hgt for sample", sample)
-
-        total_hgt_event_num = 0
-        valid_hgt_event_num = 0
-
-        for hgt_event in sorted(list(hgt_event_dict[sample])):
-            # if hgt_event[0] != "GUT_GENOME095993_10":
-            #     continue
-            # if 'GUT_GENOME156655_37' not in hgt_event:
-            #     continue
-            verify_flag = False
-            reads_set = self.get_reads(hgt_event)
-
-            delete_len = hgt_event[4] - hgt_event[3]
-            
-            if  delete_len < self.max_length:
-                insert_left = self.extract_ref_seq(hgt_event[0], hgt_event[1] - self.window, hgt_event[1])
-                insert_right = self.extract_ref_seq(hgt_event[0], hgt_event[1], hgt_event[1] + self.window)
-                delete_seq = self.extract_ref_seq(hgt_event[2], hgt_event[3], hgt_event[4])
-                reverse_delete_seq = self.get_reverse_complement_seq(delete_seq)
-                merged_seq = insert_left + delete_seq + insert_right
-                rev_merged_seq = insert_left + reverse_delete_seq + insert_right
-                verify_flag = self.verify(reads_set, merged_seq, rev_merged_seq)
-            else:
-
-                delete_seq = self.extract_ref_seq(hgt_event[2], hgt_event[3], hgt_event[4])
-                reverse_delete_seq = self.get_reverse_complement_seq(delete_seq)
-
-                left_ins = self.extract_ref_seq(hgt_event[0], hgt_event[1] - self.window, hgt_event[1])
-                left_del = delete_seq[:self.window]
-                left_junc = left_ins + left_del
-                left_junc_rev = left_ins + reverse_delete_seq[:self.window]
-            
-                mid_locus = hgt_event[3] + self.window * 3
-                mid_del = self.extract_ref_seq(hgt_event[2], mid_locus-self.window, mid_locus+self.window)
-                mid_del_rev = self.get_reverse_complement_seq(mid_del)
-
-
-                right_del = delete_seq[-self.window:]
-                right_ins = self.extract_ref_seq(hgt_event[0], hgt_event[1], hgt_event[1] + self.window)
-                right_junc = right_del + right_ins
-                right_junc_rev = reverse_delete_seq[-self.window:] + right_ins
-
-                left_flag = self.verify(reads_set, left_junc, left_junc_rev)
-                mid_flag = self.verify(reads_set, mid_del, mid_del_rev)
-                right_flag = self.verify(reads_set, right_junc, right_junc_rev)
-
-                if left_flag and mid_flag and right_flag:
-                    verify_flag = True
-                else:
-                    print (left_flag,mid_flag,right_flag )
-
-            total_hgt_event_num += 1
-            final_total += 1
-
-
-            # self.genetate_fasta(tmp_ref, merged_seq)
-            # self.genetate_fasta(reverse_tmp_ref, rev_merged_seq)
-            del_ref_len = len(self.ref_fasta[hgt_event[2]])
-            ins_ref_len = len(self.ref_fasta[hgt_event[0]])
-            if verify_flag:
-                print (hgt_event, "HGT event is verified.", delete_len, "genome length", del_ref_len, ins_ref_len)  
-                final_data.append([sample] + hgt_event + ["Yes"])
-                valid_hgt_event_num += 1
-                final_verified += 1
-            else:
-                final_data.append([sample] + hgt_event + ["No"])
-                print (hgt_event, "HGT event is not verified.", delete_len, "genome length", del_ref_len, ins_ref_len)
-            print ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
-            # break
-        print ("Total HGT num is %s; valid one is %s; valid ratio is %s."%(total_hgt_event_num, valid_hgt_event_num, valid_hgt_event_num/total_hgt_event_num))
-        return final_total, final_verified
-
     def for_each_sample(self, sample, final_total, final_verified, best_verified):
         if sample not in hgt_event_dict:
             print ("No hgt for sample", sample)
@@ -258,9 +182,9 @@ class Map():
         skip_hgt_event_num = 0
 
         for hgt_event in sorted(list(hgt_event_dict[sample])):
-            # if hgt_event[0] != "GUT_GENOME001602_16":
-            #     continue
-            # if 'GUT_GENOME156655_37' not in hgt_event:
+            if hgt_event[0] != "GUT_GENOME247421_191":
+                continue
+            # if "GENOME036763" != hgt_event[0].split("_")[1]:
             #     continue
             verify_flag = False
             reads_set, pos_read_num = self.get_reads(hgt_event)
@@ -279,6 +203,9 @@ class Map():
             rev_merged_seq = insert_left + reverse_delete_seq + insert_right
             reverse_flag = hgt_event[5]
             verify_flag, best_flag = self.verify(reads_set, merged_seq, rev_merged_seq, reverse_flag)
+            # print (insert_left)
+            # print (delete_seq)
+            # print (insert_right)
 
             total_hgt_event_num += 1
             final_total += 1
@@ -297,37 +224,9 @@ class Map():
                 best_verified += 1
             print ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
             # break
-        print ("#Sample %s, Total HGT num is %s; valid one is %s; valid ratio is %s; skip num is %s."%(sample, total_hgt_event_num, valid_hgt_event_num, valid_hgt_event_num/total_hgt_event_num, skip_hgt_event_num))
+        print ("#Sample %s, Total HGT num is %s; valid one is %s; valid ratio is %s; skip num is %s."%(sample, total_hgt_event_num, valid_hgt_event_num, \
+            valid_hgt_event_num/total_hgt_event_num, skip_hgt_event_num))
         return final_total, final_verified, best_verified
-
-    def verify_bk(self, reads_set, merged_seq, rev_merged_seq):
-        uniq_dict = {}
-        max_align_length = 0
-        for read in reads_set:
-            if read.query_sequence == None:
-                continue
-            if len(read.query_sequence) < self.window:
-                continue
-            if read.query_name in uniq_dict:
-                continue
-            if countN(merged_seq)/len(merged_seq) > 0.4:
-                continue
-
-            align_len = self.align(merged_seq, rev_merged_seq, read.query_sequence)
-            if align_len > max_align_length:
-                max_align_length = align_len
-            # print (start_end_positions, len(delete_seq), len(merged_seq))
-            # print ("fr", alignment[0])
-            # print ("to", alignment[1])
-            uniq_dict[read.query_name] = 1
-
-            if len(merged_seq) - max_align_length < self.window/2 and max_align_length > self.window:
-                break
-        print ("aligned len", len(merged_seq), max_align_length)
-        if len(merged_seq) - max_align_length < self.window/2 and max_align_length > self.window: 
-            return True
-        else:
-            return False  
 
     def align(self, merged_seq, rev_merged_seq, read_seq):
         from_seq = DNA(merged_seq)
@@ -362,69 +261,6 @@ class Map():
 
         # return max([align_length, rev_align_length])
         return max([align_length, rev_align_length, rev_read_align_length, rev_read_rev_align_length])
-
-    def verify_bk2(self, reads_set, merged_seq, rev_merged_seq, reverse_flag):
-        uniq_dict = {}
-        max_align_length = 0
-        verify = False
-        best_flag = False
-        all_start_flag = False
-        all_end_flag = False
-
-        start_interval = [float("inf"), 0] # the mapped region of the reads mapped to start junctions
-        end_interval = [float("inf"), 0] # the mapped region of the reads mapped to end junctions
-
-        for read in reads_set:
-            read.query_sequence = read_seqs[read.query_name]
-            # print (read.query_name, read.query_sequence)
-            if read.query_sequence == None:
-                continue
-            if len(read.query_sequence) < self.window:
-                continue
-            if read.query_name in uniq_dict:
-                continue
-            if countN(merged_seq)/len(merged_seq) > 0.4:
-                continue
-            
-            if reverse_flag == "True":
-                start_flag, end_flag, best_flag, start_match_interval, end_match_interval = minimap2_align(rev_merged_seq, read.query_sequence)
-            else:
-                start_flag, end_flag, best_flag, start_match_interval, end_match_interval = minimap2_align(merged_seq, read.query_sequence)
-
-
-            all_start_flag = all_start_flag or  start_flag
-            all_end_flag = all_end_flag or end_flag
-
-            if start_flag and end_flag:
-                verify = True
-
-            if start_flag:
-                if start_match_interval < start_interval[0]:
-                    start_interval[0] = start_match_interval
-                if end_match_interval > start_interval[1]:
-                    start_interval[1] = end_match_interval
-            if end_flag:
-                if start_match_interval < end_interval[0]:
-                    end_interval[0] = start_match_interval
-                if end_match_interval > end_interval[1]:
-                    end_interval[1] = end_match_interval
-
-            if len(merged_seq) > self.max_length:
-                if all_start_flag and all_end_flag:
-                    if end_interval[0] < start_interval[1]:
-                        verify = True
-            # print ("<<<<<<<<<<<<<", start_interval, end_interval, start_flag, end_flag)
-            # else:
-
-            if best_flag:
-                break
-
-            uniq_dict[read.query_name] = 1
-
-        # if len(merged_seq) < self.max_length: # check the whole inserted segment if short
-        #     verify = best_flag
-
-        return verify, best_flag 
 
     def verify(self, reads_set, merged_seq, rev_merged_seq, reverse_flag):
         uniq_dict = {}
@@ -502,7 +338,7 @@ class Map():
             # uniq_dict[read.query_name] = 1
         # if len(merged_seq) < self.max_length: # check the whole inserted segment if short
         #     verify = best_flag
-        print ("consider_read_num", consider_read_num+1)
+        print ("consider_read_num", consider_read_num+1, len(sequence_list), len(reads_set), verify, best_flag)
         os.system(f"rm -rf {contig_dir}")
         return verify, best_flag 
 
@@ -586,13 +422,13 @@ def parse_paf(paf_file, name):
                 end_match_interval = target_end
             # if map_flag:
             #     break
-            # print (name, read_len, target_start, target_end, "|", fields[7], fields[8], start_junc, end_junc, sep = "\t")
+            print (name, read_len, target_start, target_end, "|", fields[7], fields[8], start_junc, end_junc, sep = "\t")
             if start_junc[0] >= target_start and end_junc[1] <= target_end:
                 best_flag = True
             if best_flag:
                 break
     # print (start_flag, end_flag)
-    # print (name, "<<<<<<<<<<<<<<<<<<<<<<")
+    print (name, "<<<<<<<<<<<<<<<<<<<<<<")
     return start_flag, end_flag, best_flag, start_match_interval, end_match_interval
 
 if __name__ == "__main__":
@@ -639,8 +475,8 @@ if __name__ == "__main__":
     # minimap2_align()
 
     for sample in hgt_event_dict:
-        # if sample != "SRR18490939":
-        #     continue
+        if sample != "SRR18491277":
+            continue
         bamfile = tgs_bam_dir + "/%s.bam"%(ngs_tgs_pair[sample])
         baifile = tgs_bam_dir + "/%s.bam.bai"%(ngs_tgs_pair[sample])
 

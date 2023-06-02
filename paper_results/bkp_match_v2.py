@@ -434,7 +434,7 @@ if __name__ == "__main__":
     print ("load is done.")
     sample_list = list(tim.cohort_data.keys())
     # sample_list = ["SRR18491248", "SRR18490939", "SRR18491317", "SRR18491328", "SRR18491254"]
-    # sample_list = ["SRR18490984"]
+    sample_list = ["SRR18491277"] # , "SRR18490984"
     print (sample_list)
     for sample in sample_list:
         tim.match_each_sample(sample)
