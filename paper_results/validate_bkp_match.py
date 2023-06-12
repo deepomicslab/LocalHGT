@@ -201,7 +201,7 @@ class Map():
             rev_merged_seq = insert_left + reverse_delete_seq + insert_right
             reverse_flag = hgt_event[5]
             record_map_list = [0]*len(merged_seq)
-            verify_flag, best_flag, junction_flag, record_map_list = self.verify(reads_set, merged_seq, rev_merged_seq, reverse_flag, record_map_list)
+            verify_flag, best_flag, junction_flag, record_map_list, gene_map_flag = self.verify(reads_set, merged_seq, rev_merged_seq, reverse_flag, record_map_list)
             record_gene_map_list = record_map_list[self.window: len(record_map_list) - self.window]
             gene_map_ratio = sum(record_gene_map_list)/len(record_gene_map_list)
             print ("gene map ratio", gene_map_ratio)
@@ -218,6 +218,9 @@ class Map():
             if gene_map_ratio < 0.93:
                 skip_hgt_event_num += 1
                 continue
+            if gene_map_flag == False:
+                skip_hgt_event_num += 1
+                continue                
 
             total_hgt_event_num += 1
             final_total += 1
@@ -283,6 +286,7 @@ class Map():
         all_end_flag = False
         junction_flag = False # whther the two junction has long reads support 
         
+        mapped_targed_intervals = []
         
 
         start_interval = [float("inf"), 0] # the mapped region of the reads mapped to start junctions
@@ -318,7 +322,8 @@ class Map():
             else:
                 start_flag, end_flag, best_flag, start_match_interval, end_match_interval, record_map_list = minimap2_align(merged_seq, sequence, name, record_map_list)
             # print ("<<<<<read index", consider_read_num + 1)
-
+            if end_match_interval != 0:
+                mapped_targed_intervals.append([start_match_interval, end_match_interval])
 
             all_start_flag = all_start_flag or  start_flag
             all_end_flag = all_end_flag or end_flag
@@ -353,14 +358,52 @@ class Map():
         # if len(merged_seq) < self.max_length: # check the whole inserted segment if short
         #     verify = best_flag
         junction_flag = all_start_flag and all_end_flag
+        gene_map_flag, good_interval_1, good_interval_2 = self.check_gene_map(mapped_targed_intervals, merged_seq)
+        print (gene_map_flag, good_interval_1, good_interval_2)
         print ("consider_read_num", consider_read_num+1, len(sequence_list), len(reads_set), verify, best_flag, junction_flag)
         os.system(f"rm -rf {contig_dir}")
-        return verify, best_flag, junction_flag, record_map_list
+        return verify, best_flag, junction_flag, record_map_list, gene_map_flag
 
     def genetate_fasta(self, file, seq):
         f = open(file, 'w')
         print (">seq\n%s"%(seq), file = f)
         f.close()
+
+    def check_gene_map(self, mapped_targed_intervals, merged_seq):
+        # print (mapped_targed_intervals)
+        gene_map_flag = False
+        good_interval_1 = []
+        good_interval_2 = []
+
+        for i in range(len(mapped_targed_intervals)):
+            if mapped_targed_intervals[i][0] <= self.window and mapped_targed_intervals[i][1] >= len(merged_seq) - self.window:
+                gene_map_flag = True
+                good_interval_1 = mapped_targed_intervals[i]
+                good_interval_2 = []
+                return gene_map_flag, good_interval_1, good_interval_2
+
+        for i in range(len(mapped_targed_intervals)):
+            for j in range(i+1, len(mapped_targed_intervals)):
+                fir_interval = mapped_targed_intervals[i]
+                sec_interval = mapped_targed_intervals[j]
+                if fir_interval[0] >= sec_interval[0] and fir_interval[0] <= sec_interval[1]:
+                    start = sec_interval[0]
+                    end = max([fir_interval[1], sec_interval[1]])
+                    if start <= self.window and end >= len(merged_seq) - self.window:
+                        gene_map_flag = True
+                        good_interval_1 = fir_interval
+                        good_interval_2 = sec_interval
+                        break
+                elif sec_interval[0] >= fir_interval[0] and sec_interval[0] <= fir_interval[1]:
+                    start = fir_interval[0]
+                    end = max([fir_interval[1], sec_interval[1]])
+                    if start <= self.window and end >= len(merged_seq) - self.window:
+                        gene_map_flag = True
+                        good_interval_1 = fir_interval
+                        good_interval_2 = sec_interval
+                        break
+
+        return gene_map_flag, good_interval_1, good_interval_2
 
 def countN(sequence):
     # initialize a counter variable
@@ -422,10 +465,19 @@ def parse_paf(paf_file, name, record_map_list):
                 start_flag = True
             if end_junc[0] >= target_start and end_junc[1] <= target_end:
                 end_flag = True
-            if target_start < start_match_interval:
-                start_match_interval = target_start
-            if target_end > end_match_interval:
-                end_match_interval = target_end
+
+            if start_flag or end_flag: # record the map interval, choose one interval if there are more than one map interval
+                start_match_interval, end_match_interval = target_start, target_end
+            else:
+                if end_match_interval == 0:
+                    start_match_interval, end_match_interval = target_start, target_end
+                else:
+                    if target_end - target_start > end_match_interval - start_match_interval:
+                        start_match_interval, end_match_interval = target_start, target_end
+            # if target_start < start_match_interval:
+            #     start_match_interval = target_start
+            # if target_end > end_match_interval:
+            #     end_match_interval = target_end
 
             # print (name, read_len, target_start, target_end, "|", fields[7], fields[8], start_junc, end_junc, start_flag, end_flag, sep = "\t")
             if start_junc[0] >= target_start and end_junc[1] <= target_end:
@@ -468,8 +520,8 @@ if __name__ == "__main__":
     # final_data = []
 
     # for sample in hgt_event_dict:
-    #     # if sample != "SRR18491277":
-    #     #     continue
+    #     if sample != "SRR18491277":
+    #         continue
     #     bamfile = tgs_bam_dir + "/%s.bam"%(ngs_tgs_pair[sample])
     #     baifile = tgs_bam_dir + "/%s.bam.bai"%(ngs_tgs_pair[sample])
 
