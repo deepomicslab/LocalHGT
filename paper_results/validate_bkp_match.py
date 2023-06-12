@@ -182,7 +182,7 @@ class Map():
         skip_hgt_event_num = 0
 
         for hgt_event in sorted(list(hgt_event_dict[sample])):
-            # if hgt_event[0] != "GUT_GENOME001770_25":
+            # if hgt_event[0] != "GUT_GENOME247421_191":
             #     continue
             # if "GENOME036763" != hgt_event[0].split("_")[1]:
             #     continue
@@ -191,7 +191,6 @@ class Map():
             # if pos_read_num < 5:  # skipt the event with less than five support reads
             #     skip_hgt_event_num += 1
             #     continue
-
             delete_len = hgt_event[4] - hgt_event[3]
             
             insert_left = self.extract_ref_seq(hgt_event[0], hgt_event[1] - self.window, hgt_event[1])
@@ -201,14 +200,22 @@ class Map():
             merged_seq = insert_left + delete_seq + insert_right
             rev_merged_seq = insert_left + reverse_delete_seq + insert_right
             reverse_flag = hgt_event[5]
-            verify_flag, best_flag, junction_flag = self.verify(reads_set, merged_seq, rev_merged_seq, reverse_flag)
+            record_map_list = [0]*len(merged_seq)
+            verify_flag, best_flag, junction_flag, record_map_list = self.verify(reads_set, merged_seq, rev_merged_seq, reverse_flag, record_map_list)
+            record_gene_map_list = record_map_list[self.window: len(record_map_list) - self.window]
+            gene_map_ratio = sum(record_gene_map_list)/len(record_gene_map_list)
+            print ("gene map ratio", gene_map_ratio)
             # print (insert_left)
             # print (delete_seq)
             # print (insert_right)
             if not junction_flag: # the two junctions not supported by long reads 
                 skip_hgt_event_num += 1
                 continue
-            if len(delete_seq) > 80000: # hard to validate too long transferred gene, especially when it has a deletion > 10k
+            # hard to validate too long transferred gene, especially when it has a deletion > 10k
+            # if len(delete_seq) > 80000: 
+            #     skip_hgt_event_num += 1
+            #     continue
+            if gene_map_ratio < 0.93:
                 skip_hgt_event_num += 1
                 continue
 
@@ -267,7 +274,7 @@ class Map():
         # return max([align_length, rev_align_length])
         return max([align_length, rev_align_length, rev_read_align_length, rev_read_rev_align_length])
 
-    def verify(self, reads_set, merged_seq, rev_merged_seq, reverse_flag):
+    def verify(self, reads_set, merged_seq, rev_merged_seq, reverse_flag, record_map_list):
         uniq_dict = {}
         max_align_length = 0
         verify = False
@@ -307,9 +314,9 @@ class Map():
                 continue
             
             if reverse_flag == "True":
-                start_flag, end_flag, best_flag, start_match_interval, end_match_interval = minimap2_align(rev_merged_seq, sequence, name)
+                start_flag, end_flag, best_flag, start_match_interval, end_match_interval, record_map_list = minimap2_align(rev_merged_seq, sequence, name, record_map_list)
             else:
-                start_flag, end_flag, best_flag, start_match_interval, end_match_interval = minimap2_align(merged_seq, sequence, name)
+                start_flag, end_flag, best_flag, start_match_interval, end_match_interval, record_map_list = minimap2_align(merged_seq, sequence, name, record_map_list)
             # print ("<<<<<read index", consider_read_num + 1)
 
 
@@ -348,7 +355,7 @@ class Map():
         junction_flag = all_start_flag and all_end_flag
         print ("consider_read_num", consider_read_num+1, len(sequence_list), len(reads_set), verify, best_flag, junction_flag)
         os.system(f"rm -rf {contig_dir}")
-        return verify, best_flag, junction_flag 
+        return verify, best_flag, junction_flag, record_map_list
 
     def genetate_fasta(self, file, seq):
         f = open(file, 'w')
@@ -370,7 +377,7 @@ def write_fasta_file(filename, seq_name, sequence):
     with open(filename, "w") as f:
         f.write(f">{seq_name}\n{sequence}\n")
 
-def minimap2_align(seq1, seq2, name):
+def minimap2_align(seq1, seq2, name, record_map_list):
     # Example sequences
     seq1_file = workdir + "/seq1.fasta"
     seq2_file = workdir + "/seq2.fasta"
@@ -386,9 +393,9 @@ def minimap2_align(seq1, seq2, name):
     cmd = f"minimap2 -t 10 -x map-ont {seq2_file} {seq1_file} -o {paf} 2> {standard_output}"
     os.system(cmd)
     # os.system(f"cat {paf}|cut -f 1-4")
-    return parse_paf(paf, name)
+    return parse_paf(paf, name, record_map_list)
 
-def parse_paf(paf_file, name):
+def parse_paf(paf_file, name, record_map_list):
     """Parse a PAF file and extract the Target start and end positions"""
     start_flag = False
     end_flag = False
@@ -403,6 +410,9 @@ def parse_paf(paf_file, name):
             target_end = int(fields[3])
             target_len = int(fields[1])
             read_len = int(fields[6])
+
+            for z in range(target_start-1, target_end):  # record the map pos
+                record_map_list[z] = 1
 
             start_junc = [window-junc_len, window+junc_len] 
             end_junc = [target_len - window - junc_len, target_len-window + junc_len]
@@ -424,7 +434,7 @@ def parse_paf(paf_file, name):
                 break
     # print (start_flag, end_flag)
     # print (name, "<<<<<<<<<<<<<<<<<<<<<<")
-    return start_flag, end_flag, best_flag, start_match_interval, end_match_interval
+    return start_flag, end_flag, best_flag, start_match_interval, end_match_interval, record_map_list
 
 if __name__ == "__main__":
 
@@ -475,6 +485,7 @@ if __name__ == "__main__":
     # df.to_csv(verified_result, sep=',')
 
 
+    ############################################################################################
     database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
     workdir = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/"
     meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
