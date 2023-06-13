@@ -136,7 +136,7 @@ class Map():
         self.ref = database 
         self.ref_fasta = Fasta(self.ref)
         self.window = window
-        self.max_length = 8000
+        self.max_length = 8000 # longer than this len, check whether the reads map two junctions have overlap
 
     def extract_ref_seq(self, scaffold_name, start, end):
         # self.ref_fasta = Fasta(self.ref)
@@ -182,7 +182,7 @@ class Map():
         skip_hgt_event_num = 0
 
         for hgt_event in sorted(list(hgt_event_dict[sample])):
-            # if hgt_event[0] != "GUT_GENOME247421_191":
+            # if hgt_event[0] != "GUT_GENOME130774_9":
             #     continue
             # if "GENOME036763" != hgt_event[0].split("_")[1]:
             #     continue
@@ -205,9 +205,10 @@ class Map():
             record_gene_map_list = record_map_list[self.window: len(record_map_list) - self.window]
             gene_map_ratio = sum(record_gene_map_list)/len(record_gene_map_list)
             print ("gene map ratio", gene_map_ratio)
-            # print (insert_left)
-            # print (delete_seq)
-            # print (insert_right)
+
+            if 2*self.window + delete_len != len(merged_seq): # extracted len shorter than expected
+                skip_hgt_event_num += 1
+                continue               
             if not junction_flag: # the two junctions not supported by long reads 
                 skip_hgt_event_num += 1
                 continue
@@ -382,26 +383,27 @@ class Map():
                 good_interval_2 = []
                 return gene_map_flag, good_interval_1, good_interval_2
 
-        for i in range(len(mapped_targed_intervals)):
-            for j in range(i+1, len(mapped_targed_intervals)):
-                fir_interval = mapped_targed_intervals[i]
-                sec_interval = mapped_targed_intervals[j]
-                if fir_interval[0] >= sec_interval[0] and fir_interval[0] <= sec_interval[1]:
-                    start = sec_interval[0]
-                    end = max([fir_interval[1], sec_interval[1]])
-                    if start <= self.window and end >= len(merged_seq) - self.window:
-                        gene_map_flag = True
-                        good_interval_1 = fir_interval
-                        good_interval_2 = sec_interval
-                        break
-                elif sec_interval[0] >= fir_interval[0] and sec_interval[0] <= fir_interval[1]:
-                    start = fir_interval[0]
-                    end = max([fir_interval[1], sec_interval[1]])
-                    if start <= self.window and end >= len(merged_seq) - self.window:
-                        gene_map_flag = True
-                        good_interval_1 = fir_interval
-                        good_interval_2 = sec_interval
-                        break
+        if len(merged_seq) > self.max_length:
+            for i in range(len(mapped_targed_intervals)):
+                for j in range(i+1, len(mapped_targed_intervals)):
+                    fir_interval = mapped_targed_intervals[i]
+                    sec_interval = mapped_targed_intervals[j]
+                    if fir_interval[0] >= sec_interval[0] and fir_interval[0] <= sec_interval[1]:
+                        start = sec_interval[0]
+                        end = max([fir_interval[1], sec_interval[1]])
+                        if start <= self.window and end >= len(merged_seq) - self.window:
+                            gene_map_flag = True
+                            good_interval_1 = fir_interval
+                            good_interval_2 = sec_interval
+                            break
+                    elif sec_interval[0] >= fir_interval[0] and sec_interval[0] <= fir_interval[1]:
+                        start = fir_interval[0]
+                        end = max([fir_interval[1], sec_interval[1]])
+                        if start <= self.window and end >= len(merged_seq) - self.window:
+                            gene_map_flag = True
+                            good_interval_1 = fir_interval
+                            good_interval_2 = sec_interval
+                            break
 
         return gene_map_flag, good_interval_1, good_interval_2
 
@@ -488,9 +490,8 @@ def parse_paf(paf_file, name, record_map_list):
     # print (name, "<<<<<<<<<<<<<<<<<<<<<<")
     return start_flag, end_flag, best_flag, start_match_interval, end_match_interval, record_map_list
 
+
 if __name__ == "__main__":
-
-
     final_total = 0
     final_verified = 0
     best_verified = 0
@@ -520,7 +521,7 @@ if __name__ == "__main__":
     # final_data = []
 
     # for sample in hgt_event_dict:
-    #     if sample != "SRR18491277":
+    #     if sample != "SRR18491118":
     #         continue
     #     bamfile = tgs_bam_dir + "/%s.bam"%(ngs_tgs_pair[sample])
     #     baifile = tgs_bam_dir + "/%s.bam.bai"%(ngs_tgs_pair[sample])
