@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from mechanism_taxonomy import Taxonomy
+import pandas as pd
  
 def read_meta():
     
@@ -16,6 +17,8 @@ def read_meta():
             continue
         array = line.strip().split(',')
         if array[0] != 'Run':
+            if array[-6] != "ILLUMINA":
+                continue
             sra_id = array[0]
             sample_id = array[-2]
             if re.search("_", sample_id):
@@ -181,7 +184,7 @@ class Time_Lines():
             sample1 = sample_list[i]
             ind_1 = sample_individual_dict[sra_sample_dict[sample1]]
             single_dict = {}
-            for j in range(0, len(sample_list)):
+            for j in range(i+1, len(sample_list)):
                 if i == j:
                     continue
 
@@ -189,15 +192,15 @@ class Time_Lines():
                 ind_2 = sample_individual_dict[sra_sample_dict[sample2]]
                 # if ind_1 != ind_2:
                 #     continue
-                if ind_2 in single_dict and ind_2 != ind_1:
-                    continue
-                if ind_2 != ind_1:
-                    single_dict[ind_2] = 1
+                # if ind_2 in single_dict and ind_2 != ind_1:
+                #     continue
+                # if ind_2 != ind_1:
+                #     single_dict[ind_2] = 1
                 # print (sra_sample_dict[sample1], sra_sample_dict[sample2])
                 # pearson = stats.pearsonr(self.sample_array_dict[sample1], self.sample_array_dict[sample2])
                 # correlation = pearson[0]
                 
-                res = stats.spearmanr(self.sample_array_dict[sample1], self.sample_array_dict[sample2])
+                res = stats.    r(self.sample_array_dict[sample1], self.sample_array_dict[sample2])
                 correlation = res.correlation
 
                 # correlation = self.remove_both_zero(self.sample_array_dict[sample1], self.sample_array_dict[sample2])
@@ -221,6 +224,14 @@ class Time_Lines():
         U1, p = mannwhitneyu(same_individual, diff_individual)
         print (p, np.mean(same_individual), np.mean(diff_individual), np.median(same_individual), np.median(diff_individual), len(same_individual), len(diff_individual))
         # print (np.mean(same_individual), np.median(same_individual), len(same_individual))
+
+        data = []
+        for value in same_individual:
+            data.append([value, "same"])
+        for value in diff_individual:
+            data.append([value, "different"])
+        df = pd.DataFrame(data, columns = ["correlation", "group"])
+        df.to_csv("/mnt/d/R_script_files/time_line_correlation.csv", sep=',')
 
         # for diff_time in diff_time_points:
         #     print (diff_time, np.mean(diff_time_points[diff_time]), np.median(diff_time_points[diff_time]), len(diff_time_points[diff_time]))
@@ -504,8 +515,146 @@ class Time_Lines():
             print (individual, p)
 
 
+class Event(object):
 
+    def __init__(self, array):
+        self.sample = array[1]
+        self.ins_genome = array[2]
+        self.ins_pos = int(array[3])
+        self.del_genome = array[4]
+        self.del_start = int(array[5])
+        self.del_end = int(array[6])
+        self.reverse_flag = array[7]
 
+class Transfer():
+
+    def __init__(self, TD_sample_list):
+        self.HGT_event_dict = {}
+        self.max_diff = 50
+        self.TD_sample_list = TD_sample_list
+
+    def read_events(self, identified_hgt):
+        for line in open(identified_hgt):
+            array = line.strip().split(",")
+            if array[1] == "sample":
+                continue
+            event = Event(array)
+
+            ###### classify intra and inter-genera HGT events
+            # genus_ins = taxonomy.taxonomy_dict["_".join(event.ins_genome.split("_")[:-1])].split(";")[5]
+            # genus_del = taxonomy.taxonomy_dict["_".join(event.del_genome.split("_")[:-1])].split(";")[5]
+            # # print (genus_ins, genus_del)
+            # if genus_ins == "g__" or genus_del == "g__":
+            #     continue
+            # if genus_ins == genus_del:
+            #     continue
+
+            sample = array[1]
+            if sample not in self.HGT_event_dict:
+                self.HGT_event_dict[sample] = []
+            self.HGT_event_dict[sample].append(event)
+    
+    def get_jaccard_dist(self, sample1, sample2):
+        share_num = 0
+        total_num = len(self.HGT_event_dict[sample1])
+        for event2 in self.HGT_event_dict[sample2]:
+            share_flag = False
+            for event1 in self.HGT_event_dict[sample1]:
+                if event1.ins_genome == event2.ins_genome and event1.del_genome == event2.del_genome and abs(event1.ins_pos - event2.ins_pos) < self.max_diff \
+                    and abs(event1.del_start - event2.del_start) < self.max_diff and abs(event1.del_end - event2.del_end) < self.max_diff \
+                    and event1.reverse_flag == event2.reverse_flag:
+                    share_flag = True
+                    break
+            if share_flag:
+                share_num += 1
+            else:
+                total_num += 1
+        return share_num/total_num ## jacard distance
+
+    def compare(self):
+        same_individual = []
+        diff_individual = []
+        diff_time_points = {}
+        individual_diff_time_points = {}
+        sample_list = self.TD_sample_list
+
+        for i in range(len(sample_list)):
+            sample1 = sample_list[i]
+            ind_1 = sample_individual_dict[sra_sample_dict[sample1]]
+            single_dict = {}
+            for j in range(i+1, len(sample_list)):
+                if i == j:
+                    continue
+                sample2 = sample_list[j]
+                ind_2 = sample_individual_dict[sra_sample_dict[sample2]]
+
+                # if ind_2 in single_dict and ind_2 != ind_1:
+                #     continue
+                # if ind_2 != ind_1:
+                #     single_dict[ind_2] = 1
+
+                if sample1 not in self.HGT_event_dict or sample2 not in self.HGT_event_dict:
+                    continue 
+                # print (sample1, sample2)
+
+                jac_dist = self.get_jaccard_dist(sample1, sample2)
+                if ind_1 == ind_2:
+                    same_individual.append(jac_dist)
+                    time_1 = sample_time_point[sra_sample_dict[sample1]]
+                    time_2 = sample_time_point[sra_sample_dict[sample2]]
+                    diff_time = abs(time_1 - time_2)
+                    # print (sra_sample_dict[sample1], sra_sample_dict[sample2], diff_time)
+                    if diff_time not in diff_time_points:
+                        diff_time_points[diff_time] = []
+                    diff_time_points[diff_time].append(jac_dist)
+                    if ind_1 not in individual_diff_time_points:
+                        individual_diff_time_points[ind_1] = [[],[],[],[],[],[],[],[],[]]
+                    individual_diff_time_points[ind_1][diff_time-1] += [jac_dist]
+                else:
+                    diff_individual.append(jac_dist)
+        U1, p = mannwhitneyu(same_individual, diff_individual)
+        print (p, np.mean(same_individual), np.mean(diff_individual), np.median(same_individual), np.median(diff_individual), len(same_individual), len(diff_individual))
+        data = []
+        for value in same_individual:
+            data.append([value, "same"])
+        for value in diff_individual:
+            data.append([value, "different"])
+        df = pd.DataFrame(data, columns = ["jaccard", "group"])
+        df.to_csv("/mnt/d/R_script_files/time_line_jaccard.csv", sep=',')
+
+class Country(Transfer):
+
+    def __init__(self, TD_sample_list):
+        super(Transfer, self).__init__(TD_sample_list)
+    
+def read_phenotype():
+    phenotype_dict = {}
+    pheno_result = "/mnt/d/HGT/association/phenotype.csv"
+    for line in open(pheno_result):
+        array = line.strip().split(",")
+        ID = array[1]
+        if ID == "sample":
+            continue
+        pheno = array[2:5]
+        phenotype_dict[ID] = pheno
+        cohort = array[2]
+    return phenotype_dict
+
+def get_samples_for_single():
+    individual_dict = {}
+    for name in sample_individual_dict:
+        individual  = sample_individual_dict[name]
+        if individual not in individual_dict:
+            individual_dict[individual] = []
+        for sra in sra_sample_dict:
+            if sra_sample_dict[sra] ==  name:
+                individual_dict[individual].append(sra)
+    TD_sample_list = []
+    for individual in individual_dict:
+        # print (individual, individual_dict[individual])
+        if len(individual_dict[individual]) > 1:
+            TD_sample_list += individual_dict[individual]
+    return TD_sample_list
 
 def get_pure_genome(del_genome):
     return "_".join(del_genome.split("_")[:-1])
@@ -515,6 +664,9 @@ if __name__ == "__main__":
     design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
     result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
     hgt_table = "/mnt/d/HGT/time_lines/SRP366030.HGT.table.csv"
+    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+
+    all_identified_hgt = "/mnt/d/HGT/seq_ana/bk/identified_event.csv"
 
     bin_size = 500
     sample_cutoff = 8  # 8
@@ -526,14 +678,32 @@ if __name__ == "__main__":
     #         for sample_cutoff in range(2, 11, 2):
     sra_sample_dict = read_meta()
     sample_individual_dict, sample_time_point = read_design()
-    # print (sample_individual_dict)
-    tim = Time_Lines()
-    tim.read_samples()
-    # print (tim.cohort_data.keys())
-    tim.get_HGT_table()
-    tim.get_pearson()
-    print (len(tim.cohort_data), len(tim.all_hgt))
-    print (bin_size, sample_cutoff)
+
+
+
+
+    #################  HGT event jaccard between samples
+    TD_sample_list = get_samples_for_single()
+    transfer = Transfer(TD_sample_list)
+    transfer.read_events(identified_hgt)
+    transfer.compare()
+
+
+
+
+
+    ############### breakpoint correlation between samples
+    # tim = Time_Lines()
+    # tim.read_samples()
+    # tim.get_HGT_table()
+    # tim.get_pearson()
+    # print (len(tim.cohort_data), len(tim.all_hgt))
+    # print (bin_size, sample_cutoff)
+
+
+
+
+
     # tim.print_table()
     # tim.get_distribution()
     # tim.find_conserve_HGT()

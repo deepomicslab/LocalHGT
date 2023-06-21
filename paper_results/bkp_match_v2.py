@@ -10,6 +10,7 @@ import pandas as pd
 import pickle
 from pyfaidx import Fasta
 from sklearn.cluster import DBSCAN
+import random
  
 def read_meta():
     
@@ -105,14 +106,12 @@ class Match():
         
         for line in open(all_acc_file):
             acc_file = line.strip()
-            sra_id = acc_file.split("/")[-1].split(".")[0]
-            
-            td_id = sra_sample_dict[sra_id]
+            sra_id = acc_file.split("/")[-1].split(".")[0]   
+
+            # td_id = sra_sample_dict[sra_id]
             # if td_id[:2] != "CD":
             #     continue
             # print (sample_individual_dict[td_id])
-            # if int(sample_individual_dict[td_id]) not in [1, 2, 3, 4,5, 6, 7, 8, 9, 10]:
-            #     continue
             
             my_bkps = self.read_bkp(acc_file)
             self.cohort_data[sra_id] = my_bkps
@@ -252,8 +251,9 @@ class Match():
 
             # match_num = self.remove_ambiguity(event_data)
             match_num = self.remove_ambiguity_pop(event_data)
+            # match_num = 2
             print (ID, receptor,insert_pos,donor,delete_start,delete_end, match_num)
-            if match_num == 2:
+            if match_num <= 2:
                 result_data.append(event_data)
             else:
                 flag = False
@@ -280,7 +280,9 @@ class Match():
         ## ID, receptor,insert_pos,donor,delete_start,delete_end
         ID = event_data[0]
         pos = []
-        for ID in self.cohort_data:
+        sample_list = list(self.cohort_data.keys())
+        random.shuffle(sample_list)
+        for ID in sample_list[:200]:
             for bkp in self.cohort_data[ID]:
                 if bkp.from_ref == event_data[1] and abs(bkp.from_bkp - event_data[2]) < max_diff: # ins 
                     if bkp.to_ref == event_data[3]:
@@ -292,6 +294,8 @@ class Match():
                         pos.append(bkp.from_bkp)
         # if len(pos) > 2:
         # print (pos)
+        if len(pos) == 0:
+            return 0
         dbscan = DBSCAN(eps=bin_size, min_samples=1)
         dbscan.fit(np.array(pos).reshape(-1, 1))
         cluster_num = max(dbscan.labels_) + 1
@@ -398,12 +402,26 @@ class Match():
 
 if __name__ == "__main__":
 
-    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
-    result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    # result_dir = "/mnt/d/breakpoints/script/analysis/homo_filter/"
-    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    bin_size = 100
+    window = 200
+    split_cutoff = 0  #10
+    sample_cutoff = 0  # 8
+    abun_cutoff = 0   #1e-7 #1e-7  5e-8
+    result_data = []
+    max_diff = 20
+    min_hgt_len = 500
+
+    result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
+    identified_hgt = "/mnt/d/HGT/seq_ana/identified_event.csv"
     database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
+
+    # meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    # design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
+    # result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    # database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
+    # sra_sample_dict = read_meta()
+    # sample_individual_dict, sample_time_point = read_design()
 
     # meta_data = "//mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/SRP366030.csv.txt"
     # design_file =  "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid//sample_design.tsv"
@@ -411,22 +429,7 @@ if __name__ == "__main__":
     # identified_hgt = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/Hybrid/match/SRP366030.identified_event.csv"
     # database = "/mnt/delta_WS_1/wangshuai/02.HGT/detection/reference/UHGG_reference.formate.fna"
 
-    bin_size = 100
-    window = 200
-    split_cutoff = 0  #10
-    sample_cutoff = 0  # 8
-    abun_cutoff =  1e-7 #1e-7  5e-8
-    result_data = []
-    max_diff = 20
-    min_hgt_len = 500
 
-
-    # for bin_size in [100, 200, 500, 1000]:
-    #     for split_cutoff in range(6, 20, 2):
-    #         for sample_cutoff in range(2, 11, 2):
-    sra_sample_dict = read_meta()
-    sample_individual_dict, sample_time_point = read_design()
-    # print (sample_individual_dict)
     tim = Match()
     tim.read_samples()
     print ("load is done.")
@@ -437,7 +440,6 @@ if __name__ == "__main__":
     for sample in sample_list:
         tim.match_each_sample(sample)
     # tim.match_each_sample('SRR18491328')
-
 
     df = pd.DataFrame(result_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "reverse_flag"])
     df.to_csv(identified_hgt, sep=',')

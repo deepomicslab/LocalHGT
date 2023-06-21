@@ -41,6 +41,7 @@ class Acc_Bkp(object):
         self.score = float(list[11])
 
         self.hgt_tag = self.from_ref + "&" + str(int(self.from_bkp/bin_size)) + "&" + self.to_ref + "&" + str(int(self.to_bkp/bin_size))
+        self.pair_tag = "&".join(sorted([self.from_ref_genome, self.to_ref_genome]))
         self.abundance = None
         self.split_abundance = None
 
@@ -126,6 +127,30 @@ class Basic_count():
 
         df = pd.DataFrame(data, columns = ["Sample", "Bkp_count"])
         df.to_csv('/mnt/d/R_script_files/basic_stasitcis_count.csv', sep=',')
+
+    def count_genome_pair(self):
+        # genome_pair_dict = {}
+        # for sample in self.cohort_data:
+        #     sample_bkp_list = self.cohort_data[sample]
+        #     sample_genome_pair = {}
+        #     for bkp in sample_bkp_list:
+        #         if bkp.pair_tag not in sample_genome_pair:
+        #             sample_genome_pair[bkp.pair_tag] = 0
+        #         sample_genome_pair[bkp.pair_tag] += 1
+        #     for pair_tag in sample_genome_pair:
+        #         if pair_tag not in genome_pair_dict:
+        #             genome_pair_dict[pair_tag] = []
+        #         genome_pair_dict[pair_tag].append(sample_genome_pair[pair_tag]/len(sample_bkp_list))
+
+        genome_pair_dict = {}
+        for sample in self.cohort_data:
+            sample_bkp_list = self.cohort_data[sample]
+            sample_genome_pair = {}
+            for bkp in sample_bkp_list:
+                if bkp.pair_tag not in genome_pair_dict:
+                    genome_pair_dict[bkp.pair_tag] = 0
+                genome_pair_dict[bkp.pair_tag] += 1
+        return genome_pair_dict
       
     def compare_intra_inter(self, level):
         # count the intra-taxa HGT frequency in each sample
@@ -410,6 +435,63 @@ def count_pair(cohort_data, extracted_genome_dict, connection_flag):
         
         print (f"{g1},{g2},{pair_dict[pair_name]},{color},normal,", file = connection_flag)
 
+def cal_corr(genome_pair_dict):
+    t = Tree("/mnt/d/HGT/time_lines/distribution/bac120_iqtree.nwk")
+    data = []
+    dist_list, freq_list = [], []
+    dist_bin_dict = {}
+
+    total_num = sum(list(genome_pair_dict.values()))
+    genome_pair_freq = {}
+    for genome_pair in genome_pair_dict:
+        freq = genome_pair_dict[genome_pair]/total_num  # the frequency of HGT between genome 1 and genome 2
+
+        genome_pair_freq[genome_pair] = freq
+        genome_arr = genome_pair.split("&")
+        genome1 = genome_arr[0]
+        genome2 = genome_arr[1]
+        ### cal the phylogenetic distance between genome 1 and genome 2
+
+        if len(t.search_nodes(name=genome1)) == 0 or len(t.search_nodes(name=genome2)) == 0: # genome not in a tree
+            continue
+
+        # Get the distance between two nodes
+        node1 = t.get_leaves_by_name(genome1)[0]
+        node2 = t.get_leaves_by_name(genome2)[0]
+        distance = node1.get_distance(node2)
+
+        # print (genome1, genome2, distance, freq)
+        dist_list.append(distance)
+        freq_list.append(freq)
+        data.append([genome1, genome2, distance, freq])
+
+        dist_bin = int(distance/0.5) 
+        if dist_bin not in dist_bin_dict:
+            dist_bin_dict[dist_bin] = 0
+        dist_bin_dict[dist_bin] += genome_pair_dict[genome_pair]
+        # break
+
+    res = stats.spearmanr(dist_list, freq_list)
+    correlation = res.correlation
+    print (res, "spearmanr correlation", correlation)
+    df = pd.DataFrame(data, columns = ["genome1", "genome2", "distance", "frequency"])
+    df.to_csv('/mnt/d/R_script_files/distance_frequency.csv', sep=',')
+
+    res = stats.spearmanr(list(dist_bin_dict.keys()), list(dist_bin_dict.values()))
+    correlation = res.correlation
+    print (res, "spearmanr correlation", correlation)
+
+    res = stats.spearmanr((np.array(list(dist_bin_dict.keys())))*0.5, list(dist_bin_dict.values()))
+    correlation = res.correlation
+    print (res, "spearmanr correlation", correlation)
+
+    data = []
+    for dist_bin in  dist_bin_dict:
+        data.append([dist_bin, 0.25+(dist_bin)*0.5, dist_bin_dict[dist_bin], dist_bin_dict[dist_bin]/total_num])
+    df = pd.DataFrame(data, columns = ["index", "distance", "count", "frequency"])
+    df.to_csv('/mnt/d/R_script_files/distance_frequency_bin.csv', sep=',')
+
+
 if __name__ == "__main__":
     bin_size = 100
     abun_cutoff = 1e-7  #1e-7
@@ -430,20 +512,27 @@ if __name__ == "__main__":
     # ba.count()  
     # ba.count_inter_taxa_HGT()
 
+    # ################## cal the correlation between HGT frequency and phylogenetic distance
+    genome_pair_dict = ba.count_genome_pair()
+    cal_corr(genome_pair_dict)
+
+
+
+
 
     # ######## just sort taxa by HGT freq
-    taxa_sort_data = []
-    for level in range(1, 7):
-        sorted_dict = ba.sort_taxa_by_freq(level)
-        top_sum = 0
-        for i in range(5):
-            print (i, sorted_dict[i][0], sorted_dict[i][1])
-            taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
-            top_sum += sorted_dict[i][1]
-        taxa_sort_data.append([level_list[level-1][0]+"__other", 1-top_sum, level_list[level-1]])
+    # taxa_sort_data = []
+    # for level in range(1, 7):
+    #     sorted_dict = ba.sort_taxa_by_freq(level)
+    #     top_sum = 0
+    #     for i in range(5):
+    #         print (i, sorted_dict[i][0], sorted_dict[i][1])
+    #         taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
+    #         top_sum += sorted_dict[i][1]
+    #     taxa_sort_data.append([level_list[level-1][0]+"__other", 1-top_sum, level_list[level-1]])
 
-    df = pd.DataFrame(taxa_sort_data, columns = ["Taxa", "Frequency", "Level"])
-    df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')
+    # df = pd.DataFrame(taxa_sort_data, columns = ["Taxa", "Frequency", "Level"])
+    # df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')
 
     #### prepare count tree
     # prepare_tree()
