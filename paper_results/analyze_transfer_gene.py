@@ -12,6 +12,41 @@ from pyfaidx import Fasta
 from sklearn.cluster import DBSCAN
 
 
+class Acc_Bkp(object):
+
+    def __init__(self, list):
+
+        self.from_ref = list[0]
+        self.from_bkp = int(list[1])
+        self.from_side = list[2]
+        self.from_strand = list[3]
+        self.from_split_reads = int(list[12])
+
+        self.to_ref = list[4]
+        self.to_bkp = int(list[5])
+        self.to_side = list[6]
+        self.to_strand = list[7]
+        self.to_split_reads = int(list[13])
+
+        self.if_reverse = list[8]
+        
+        self.cross_split_reads = int(list[14])
+        self.pair_end = int(list[15])
+
+        
+        self.from_ref_genome = "_".join(self.from_ref.split("_")[:-1])
+        self.to_ref_genome = "_".join(self.to_ref.split("_")[:-1])
+        self.abundance = None
+        self.split_abundance = None
+
+        self.read = None
+        self.score = float(list[11])
+
+        # self.hgt_tag = self.from_ref + "&" + str(int(self.from_bkp/bin_size)) + "&" + self.to_ref + "&" + str(int(self.to_bkp/bin_size))
+        # self.pair_tag = "&".join(sorted([self.from_ref_genome, self.to_ref_genome]))
+
+
+
 class Event(object):
 
     def __init__(self, array):
@@ -370,7 +405,7 @@ class Extract_KO():
         for genome in self.transfer_regions:
             self.transfer_regions[genome] = merge_intervals(self.transfer_regions[genome])
 
-    def classify_kos(self):
+    def classify_kos(self):  # gene in transfer region, or not
         for genome in self.transfer_regions:
             ### for each genome
             if genome not in annotation.gene_annotation:
@@ -393,6 +428,124 @@ class Extract_KO():
         print (len(self.transfer_kos), len(self.no_transfer_kos))
         print_data(self.transfer_kos, transfer_ko_file)
         print_data(self.no_transfer_kos, no_transfer_ko_file)
+
+    def collect_all_ko(self):
+        all_ko = []
+        for genome in annotation.gene_annotation:
+            gene_intervals = annotation.gene_annotation[genome]["intervals"]
+            for gene_interval in gene_intervals:
+                gene_anno_dict = annotation.gene_annotation[genome][str(gene_interval[0]) + "_" + str(gene_interval[1])]
+                if "KEGG" not in gene_anno_dict:
+                    continue
+                KEGG_list = gene_anno_dict["KEGG"].split(",")
+                all_ko += KEGG_list
+        print_data(all_ko, all_kos_file)
+
+    def classify_kos_insert(self):  # gene in insert site, or not
+        for genome in self.insert_sites:
+            ### for each genome
+            if genome not in annotation.gene_annotation:
+                continue  # skip the genome without genes
+            gene_intervals = annotation.gene_annotation[genome]["intervals"]
+            insert_list = sorted(self.insert_sites[genome])
+            for gene_interval in gene_intervals:
+                gene_anno_dict = annotation.gene_annotation[genome][str(gene_interval[0]) + "_" + str(gene_interval[1])]
+                if "KEGG" not in gene_anno_dict:
+                    continue
+                KEGG_list = gene_anno_dict["KEGG"].split(",")
+
+                #### check if the gene locates in insert site
+                locate_insert_flag = False
+                for site in insert_list:
+                    if site > gene_interval[0] and site < gene_interval[1]:
+                        locate_insert_flag = True
+                        break
+                if locate_insert_flag:
+                    self.insert_kos += KEGG_list
+                else:
+                    self.no_insert_kos += KEGG_list
+                # print (KEGG_list, locate_insert_flag)
+            # break
+        print (len(self.insert_kos), len(self.no_insert_kos))
+        print_data(self.insert_kos, insert_ko_file)
+        print_data(self.no_insert_kos, no_insert_ko_file)
+
+    def classify_bkp_kos(self):
+        all_acc_file = hgt_result_dir + "/acc.list"
+        os.system(f"ls {hgt_result_dir}/*acc.csv |grep -v repeat >{all_acc_file}")
+        bkp_dict = {}
+
+        for line in open(all_acc_file):
+            acc_file = line.strip()
+            sra_id = acc_file.split("/")[-1].split(".")[0]
+            my_bkps = self.read_bkp(acc_file)
+            for bkp in my_bkps:
+                if bkp.from_ref not in bkp_dict:
+                    bkp_dict[bkp.from_ref] = []
+                bkp_dict[bkp.from_ref].append(bkp.from_bkp)
+                if bkp.to_ref not in bkp_dict:
+                    bkp_dict[bkp.to_ref] = []
+                bkp_dict[bkp.to_ref].append(bkp.to_bkp)
+        
+        bkp_ko = []
+        no_bkp_ko = []
+        for genome in bkp_dict:
+            ### for each genome
+            if genome not in annotation.gene_annotation:
+                continue  # skip the genome without genes
+            gene_intervals = annotation.gene_annotation[genome]["intervals"]
+            insert_list = sorted(bkp_dict[genome])
+            for gene_interval in gene_intervals:
+                gene_anno_dict = annotation.gene_annotation[genome][str(gene_interval[0]) + "_" + str(gene_interval[1])]
+                if "KEGG" not in gene_anno_dict:
+                    continue
+                KEGG_list = gene_anno_dict["KEGG"].split(",")
+
+                #### check if the gene locates in insert site
+                locate_insert_flag = False
+                for site in insert_list:
+                    if site > gene_interval[0] and site < gene_interval[1]:
+                        locate_insert_flag = True
+                        break
+                if locate_insert_flag:
+                    bkp_ko += KEGG_list
+                else:
+                    no_bkp_ko += KEGG_list
+        print_data(bkp_ko, bkp_ko_file)
+        print_data(no_bkp_ko, no_bkp_ko_file)
+    def read_bkp(self, bkp_file):
+        my_bkps = []
+        f = open(bkp_file)
+        all_rows = csv.reader(f)
+        total_HGT_split_num = 0
+        reads_num = 0
+        for row in all_rows:
+            if row[0][0] == "#":
+                reads_num = int(row[0].split(";")[0].split(":")[1])
+                # print (row, self.reads_num)
+                pass
+            elif row[0] == "from_ref":
+                pass
+            else:
+                if reads_num == 0:
+                    print ("old bkp", bkp_file)
+                    # os.system("rm %s"%(bkp_file))
+                    break
+                eb = Acc_Bkp(row)
+                eb.abundance = eb.cross_split_reads/reads_num
+                if eb.from_ref_genome == eb.to_ref_genome:
+                    continue
+                if eb.abundance < abun_cutoff:
+                    continue
+                # if self.get_genome_taxa(eb.from_ref_genome) == self.get_genome_taxa(eb.to_ref_genome): # classify intra-genus and inter-genus HGTs
+                #     continue
+                total_HGT_split_num += eb.cross_split_reads
+                # if eb.hgt_tag not in self.all_hgt:
+                my_bkps.append(eb)
+        for eb in my_bkps:
+            eb.split_abundance = eb.cross_split_reads/total_HGT_split_num
+        f.close()
+        return my_bkps    
 
 def check_overlap(A, intervals, min_gene_frac):
     # Calculate the length of interval A
@@ -420,13 +573,22 @@ def print_data(my_set, file):
 
 
 if __name__ == "__main__":
+    abun_cutoff = 1e-7 
 
-    # identified_hgt = "/mnt/d/HGT/seq_ana/identified_event.csv"
+    # identified_hgt = "/mnt/d/HGT/seq_ana/bk/identified_event.csv"
     identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
     gff = "/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.gff"
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
+    all_kos_file = "/mnt/d/HGT/seq_ana/all_kos.txt"
 
     transfer_ko_file = "/mnt/d/HGT/seq_ana/transfer_ko.txt"
     no_transfer_ko_file = "/mnt/d/HGT/seq_ana/no_transfer_ko.txt"
+
+    insert_ko_file = "/mnt/d/HGT/seq_ana/insert_ko.txt"
+    no_insert_ko_file = "/mnt/d/HGT/seq_ana/no_insert_ko.txt"
+
+    bkp_ko_file = "/mnt/d/HGT/seq_ana/bkp_ko.txt"
+    no_bkp_ko_file = "/mnt/d/HGT/seq_ana/no_bkp_ko.txt"
 
     annotation = Annotation(gff)
     annotation.read_gff()
@@ -435,8 +597,11 @@ if __name__ == "__main__":
     trans.read_events(identified_hgt)
 
     extract = Extract_KO(trans.HGT_event_dict)
-    extract.classify_regions()
-    extract.classify_kos()
+    extract.classify_bkp_kos()
+    # extract.collect_all_ko()
+    # extract.classify_regions()
+    # extract.classify_kos()
+    # extract.classify_kos_insert()
 
 
 

@@ -411,7 +411,8 @@ if __name__ == "__main__":
     max_diff = 20
     min_hgt_len = 500
 
-    result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
+    # result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
+    result_dir = "/mnt/d/HGT/seq_ana/homo_filter/"
     identified_hgt = "/mnt/d/HGT/seq_ana/identified_event.csv"
     database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
 
@@ -437,8 +438,13 @@ if __name__ == "__main__":
     # sample_list = ["SRR18491248", "SRR18490939", "SRR18491317", "SRR18491328", "SRR18491254"]
     # sample_list = ["SRR18491277"] # , "SRR18490984"
     # print (sample_list)
+    sample_index = 0
     for sample in sample_list:
+        if sample != "ERR1018219":
+            continue
+        print ("processed %s sample."%(sample_index))
         tim.match_each_sample(sample)
+        sample_index += 1
     # tim.match_each_sample('SRR18491328')
 
     df = pd.DataFrame(result_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "reverse_flag"])

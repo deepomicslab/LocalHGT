@@ -159,6 +159,8 @@ def main(result_dir, sample_num):
             continue
         if re.search("repeat.acc.csv", acc_file):
             continue
+        if acc_file != "ERR1018219.acc.csv":
+            continue
         # if hgt_result_dir + acc_file != "/mnt/d/breakpoints/script/analysis/hgt_results/CCIS98832363ST-4-0.acc.csv":
         #     continue
         # print (hgt_result_dir + acc_file)
@@ -173,13 +175,15 @@ if __name__ == "__main__":
     blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
     genome_homo_dict_file = "/mnt/d/HGT/time_lines/ref_repeat.npy"
 
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
-    tgs_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    wenkui_dir = "/mnt/d/breakpoints/HGT/CRC/wenkui/"
+    # hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
+    # tgs_dir = "/mnt/d/HGT/time_lines/SRP366030/"
+    # wenkui_dir = "/mnt/d/breakpoints/HGT/CRC/wenkui/"
 
-    filter_hgt_result_dir = "/mnt/d/breakpoints/script/analysis/homo_filter/"
+    hgt_results = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
 
-    min_identity = 98
+    filter_hgt_result_dir = "/mnt/d/HGT/seq_ana/homo_filter/"
+
+    min_identity = 75
 
     # if os.path.isfile(genome_homo_dict_file):
     #     genome_homo_dict = np.load(genome_homo_dict_file, allow_pickle='TRUE').item()
@@ -194,6 +198,7 @@ if __name__ == "__main__":
     # intervals = genome_homo_dict["GUT_GENOME123416"]["GUT_GENOME147678_1"]
     # print (is_position_in_intervals(1690584, intervals), is_position_in_intervals(1958707, intervals))
 
-    main(tgs_dir, 0)
+    # main(tgs_dir, 0)
     # main(hgt_result_dir, 0)
     # main(wenkui_dir, 0)
+    main(hgt_results, 0)
