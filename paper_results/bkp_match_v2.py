@@ -85,8 +85,6 @@ class Match():
 
     def __init__(self):
         self.cohort_data = {}
-        self.all_hgt = {}
-        self.hgt_count = {} # record the hgt exists in how many samples
         self.sample_array_dict = {}
         self.hgt_array_dict = {}
         self.HGT_list = []
@@ -97,7 +95,6 @@ class Match():
         self.correlation_matrix = {} # edge weigth by correlation in all samples
         self.matched_bkp_pairs = set()
         self.ref_fasta = Fasta(database)
-        self.pair_dict = {}
         
     def read_samples(self):
 
@@ -108,6 +105,9 @@ class Match():
             acc_file = line.strip()
             sra_id = acc_file.split("/")[-1].split(".")[0]   
 
+            # if sra_id != "SRR18490938":
+            #     continue
+
             # td_id = sra_sample_dict[sra_id]
             # if td_id[:2] != "CD":
             #     continue
@@ -115,7 +115,6 @@ class Match():
             
             my_bkps = self.read_bkp(acc_file)
             self.cohort_data[sra_id] = my_bkps
-        self.filter_hgt()
         
     def read_bkp(self, bkp_file):
         my_bkps = []
@@ -138,8 +137,8 @@ class Match():
                 eb.abundance = eb.cross_split_reads/reads_num
                 if eb.from_ref_genome == eb.to_ref_genome:
                     continue
-                if eb.cross_split_reads < split_cutoff:
-                    continue
+                # if eb.cross_split_reads < split_cutoff:
+                #     continue
                 # if eb.abundance < abun_cutoff:
                 #     continue
                 total_HGT_split_num += eb.cross_split_reads
@@ -147,26 +146,12 @@ class Match():
                 # focus = ['GUT_GENOME000147_82', 'GUT_GENOME096083_15']
                 # if not (eb.from_ref in focus and eb.to_ref in focus):
                 #     continue
-
-                # if eb.hgt_tag not in self.all_hgt:
                 sample_dict[eb.hgt_tag] = 1
                 my_bkps.append(eb)
         for eb in my_bkps:
             eb.split_abundance = eb.cross_split_reads/total_HGT_split_num
         f.close()
-        for hgt_tag in sample_dict:
-            if hgt_tag not in self.hgt_count:
-                self.hgt_count[hgt_tag] = 0
-            self.hgt_count[hgt_tag] += 1
         return my_bkps
-
-    def filter_hgt(self):
-        for hgt_tag in self.hgt_count:
-            if self.hgt_count[hgt_tag] >= sample_cutoff:
-                hgt_index = len(self.all_hgt)
-                self.all_hgt[hgt_tag] = hgt_index
-        print ("All HGT", len(self.all_hgt))
-
 
     def check_point_share(self, hgt_tag_1, hgt_tag_2):
         array_1 = hgt_tag_1.split("&")
@@ -192,18 +177,15 @@ class Match():
         return delete_start, delete_end, dir_flag
 
     def check_if_match(self, bkp_obj_1, bkp_obj_2, ID):
-        
         flag = False
+        if not ((bkp_obj_1.from_ref == bkp_obj_2.from_ref and bkp_obj_1.to_ref == bkp_obj_2.to_ref) or (bkp_obj_1.to_ref == bkp_obj_2.from_ref and bkp_obj_1.from_ref == bkp_obj_2.to_ref)):
+            return False
         if bkp_obj_1.from_ref == bkp_obj_2.from_ref and abs(bkp_obj_1.from_bkp - bkp_obj_2.from_bkp) < max_diff:
             if bkp_obj_1.to_ref == bkp_obj_2.to_ref and abs(bkp_obj_1.to_bkp - bkp_obj_2.to_bkp) > max_diff:
                 receptor = bkp_obj_1.from_ref
                 insert_pos = bkp_obj_1.from_bkp
                 donor = bkp_obj_1.to_ref
-
                 delete_start, delete_end, dir_flag = self.delete_direction([bkp_obj_1.to_bkp, bkp_obj_1.to_side, bkp_obj_1.to_strand, bkp_obj_2.to_bkp, bkp_obj_2.to_side, bkp_obj_2.to_strand])
-                # delete_start = min([bkp_obj_1.to_bkp, bkp_obj_2.to_bkp])
-                # delete_end = max([bkp_obj_1.to_bkp, bkp_obj_2.to_bkp])
-                # print (bkp_obj_1.from_ref, bkp_obj_1.from_bkp, bkp_obj_1.to_ref, bkp_obj_1.to_bkp, bkp_obj_2.from_ref, bkp_obj_2.from_bkp, bkp_obj_2.to_ref, bkp_obj_2.to_bkp)
                 flag = True and dir_flag
 
         elif bkp_obj_1.to_ref == bkp_obj_2.from_ref and abs(bkp_obj_1.to_bkp - bkp_obj_2.from_bkp) < max_diff:
@@ -212,31 +194,22 @@ class Match():
                 insert_pos = bkp_obj_1.to_bkp
                 donor = bkp_obj_1.from_ref
                 delete_start, delete_end, dir_flag = self.delete_direction([bkp_obj_1.from_bkp, bkp_obj_1.from_side, bkp_obj_1.from_strand, bkp_obj_2.to_bkp, bkp_obj_2.to_side, bkp_obj_2.to_strand])
-                # delete_start = min([bkp_obj_1.from_bkp, bkp_obj_2.to_bkp])
-                # delete_end = max([bkp_obj_1.from_bkp, bkp_obj_2.to_bkp])
-                # print (bkp_obj_1.from_ref, bkp_obj_1.from_bkp, bkp_obj_1.to_ref, bkp_obj_1.to_bkp, bkp_obj_2.from_ref, bkp_obj_2.from_bkp, bkp_obj_2.to_ref, bkp_obj_2.to_bkp)
                 flag = True and dir_flag
 
         elif bkp_obj_1.from_ref == bkp_obj_2.to_ref and abs(bkp_obj_1.from_bkp - bkp_obj_2.to_bkp) < max_diff:
             if bkp_obj_1.to_ref == bkp_obj_2.from_ref and abs(bkp_obj_1.to_bkp - bkp_obj_2.from_bkp) > max_diff:
-                # print (bkp_obj_1.from_ref, bkp_obj_1.from_bkp, bkp_obj_1.to_ref, bkp_obj_1.to_bkp, bkp_obj_2.from_ref, bkp_obj_2.from_bkp, bkp_obj_2.to_ref, bkp_obj_2.to_bkp)
                 receptor = bkp_obj_1.from_ref
                 insert_pos = bkp_obj_1.from_bkp
                 donor = bkp_obj_1.to_ref
                 delete_start, delete_end, dir_flag = self.delete_direction([bkp_obj_1.to_bkp, bkp_obj_1.to_side, bkp_obj_1.to_strand, bkp_obj_2.from_bkp, bkp_obj_2.from_side, bkp_obj_2.from_strand])
-                # delete_start = min([bkp_obj_1.to_bkp, bkp_obj_2.from_bkp])
-                # delete_end = max([bkp_obj_1.to_bkp, bkp_obj_2.from_bkp])
                 flag = True and dir_flag
 
         elif bkp_obj_1.to_ref == bkp_obj_2.to_ref and abs(bkp_obj_1.to_bkp - bkp_obj_2.to_bkp) < max_diff:
             if bkp_obj_1.from_ref == bkp_obj_2.from_ref and abs(bkp_obj_1.from_bkp - bkp_obj_2.from_bkp) > max_diff:
-                # print (bkp_obj_1.from_ref, bkp_obj_1.from_bkp, bkp_obj_1.to_ref, bkp_obj_1.to_bkp, bkp_obj_2.from_ref, bkp_obj_2.from_bkp, bkp_obj_2.to_ref, bkp_obj_2.to_bkp)
                 receptor = bkp_obj_1.to_ref
                 insert_pos = bkp_obj_1.to_bkp
                 donor = bkp_obj_1.from_ref
                 delete_start, delete_end, dir_flag = self.delete_direction([bkp_obj_1.from_bkp, bkp_obj_1.from_side, bkp_obj_1.from_strand, bkp_obj_2.from_bkp, bkp_obj_2.from_side, bkp_obj_2.from_strand])
-                # delete_start = min([bkp_obj_1.from_bkp, bkp_obj_2.from_bkp])
-                # delete_end = max([bkp_obj_1.from_bkp, bkp_obj_2.from_bkp])
                 flag = True and dir_flag
 
         flag = flag and bkp_obj_1.if_reverse == bkp_obj_2.if_reverse
@@ -280,18 +253,24 @@ class Match():
         ## ID, receptor,insert_pos,donor,delete_start,delete_end
         ID = event_data[0]
         pos = []
-        sample_list = list(self.cohort_data.keys())
+        sample_list = list(self.cohort_data.keys()) 
+        
         random.shuffle(sample_list)
-        for ID in sample_list[:200]:
+        select_samples = sample_list[:200] + [ID]
+        select_samples = list(set(select_samples)) # get unique samples
+
+        for ID in select_samples:
             for bkp in self.cohort_data[ID]:
                 if bkp.from_ref == event_data[1] and abs(bkp.from_bkp - event_data[2]) < max_diff: # ins 
                     if bkp.to_ref == event_data[3]:
                     # if bkp.to_ref.split("_")[1] == event_data[3].split("_")[1]:
                         pos.append(bkp.to_bkp)
-                if bkp.to_ref == event_data[1] and abs(bkp.to_bkp - event_data[2]) < max_diff: # ins
+                elif bkp.to_ref == event_data[1] and abs(bkp.to_bkp - event_data[2]) < max_diff: # ins
                     if bkp.from_ref == event_data[3]:
                     # if bkp.from_ref.split("_")[1] == event_data[3].split("_")[1]:
                         pos.append(bkp.from_bkp)
+                else:
+                    continue
         # if len(pos) > 2:
         # print (pos)
         if len(pos) == 0:
@@ -313,40 +292,7 @@ class Match():
             return abs(int(array_1[3]) - int(array_2[3]))
         if array_1[3] == array_2[3] :
             return abs(int(array_1[1]) - int(array_2[1]))
-
-    def check_match_in_sample(self):
-        for sra_id in self.cohort_data:
-            ref_pair_dict = {}
-            genome_pair_dict = {}
-            ref_genome_relation = {}
-            for hgt in self.cohort_data[sra_id]:
-                if hgt.hgt_tag not in self.all_hgt:
-                    continue
-                ref_pair = "&".join(sorted([hgt.from_ref, hgt.to_ref]))
-                genome_pair = "&".join(sorted([hgt.from_ref_genome, hgt.to_ref_genome]))
-                ref_genome_relation[ref_pair] = genome_pair
-
-                if ref_pair not in ref_pair_dict:
-                    ref_pair_dict[ref_pair] = []
-                ref_pair_dict[ref_pair].append(hgt.hgt_tag)
-
-                if genome_pair not in genome_pair_dict:
-                    genome_pair_dict[genome_pair] = []
-                genome_pair_dict[genome_pair].append(hgt.hgt_tag)
-
-            for ref_pair in ref_pair_dict:
-                # if len(genome_pair_dict[ref_genome_relation[ref_pair]]) == 2 and len(ref_pair_dict[ref_pair]) == 2 and self.check_point_share(ref_pair_dict[ref_pair][0], ref_pair_dict[ref_pair][1]):
-                if len(ref_pair_dict[ref_pair]) == 2 and self.check_point_share(ref_pair_dict[ref_pair][0], ref_pair_dict[ref_pair][1]):
-                   # print (sra_id, ref_pair, ref_pair_dict[ref_pair])
-                    bkp_pair = self.get_bkp_pair_name(ref_pair_dict[ref_pair][0], ref_pair_dict[ref_pair][1])
-                    if bkp_pair not in self.edge_weight_sample:
-                        self.edge_weight_sample[bkp_pair] = 0
-                    self.edge_weight_sample[bkp_pair] += 1
     
-    def get_bkp_pair_name(self, bkp1, bkp2):
-        bkp_pair = "%".join(sorted([bkp1, bkp2]))
-        return bkp_pair
-
     def draw(self, G):
         # # Compute the bipartite layout
         pos = nx.bipartite_layout(G, linked_bkp)
@@ -372,32 +318,37 @@ class Match():
     def match_each_sample(self, ID):
         possible_match_num = 0
         sample_bkps = self.cohort_data[ID]
-        self.pair_dict = self.count_pair(sample_bkps)
+        
+        valid_num = 0
+        for bkp in sample_bkps:
+            # if bkp.abundance >= abun_cutoff:
+            #     valid_num += 1
+            if bkp.cross_split_reads > 1:
+                valid_num += 1
+        print ("%s: raw bkp num is %s, filtered bkp num is %s."%(ID, len(sample_bkps), valid_num))
 
         for i in range(len(sample_bkps)):
+            if not self.check_if_bkp_at_ends(sample_bkps[i]): # the bkp should not in reference ends
+                continue
+            # if sample_bkps[i].abundance < abun_cutoff:
+            #     continue
+            if sample_bkps[i].cross_split_reads < 2:
+                continue
             for j in range(i+1, len(sample_bkps)):
-                if sample_bkps[i].abundance < abun_cutoff or sample_bkps[j].abundance < abun_cutoff:
+                if not self.check_if_bkp_at_ends(sample_bkps[j]): # the bkp should not in reference ends
+                    continue
+                # if sample_bkps[j].abundance < abun_cutoff:
+                #     continue
+                if sample_bkps[j].cross_split_reads < 2:
                     continue
                 bkp1 = sample_bkps[i].hgt_tag
                 bkp2 = sample_bkps[j].hgt_tag
-                if not self.check_if_bkp_at_ends(sample_bkps[i]) or not self.check_if_bkp_at_ends(sample_bkps[j]):
-                    continue
                 flag = self.check_if_match(sample_bkps[i], sample_bkps[j], ID)
                 if flag:
                     # print (bkp1, bkp2)
                     possible_match_num += 1
-        print (possible_match_num)
+        print ("%s has %s bkps and its match num is %s"%(ID, len(sample_bkps), possible_match_num))
 
-    def count_pair(self, sample_bkps): # count_pair_num_for_each_breakpoint
-        pair_dict = {}
-        for bkp in sample_bkps:
-            if bkp.bk_1_tag not in pair_dict:
-                pair_dict[bkp.bk_1_tag] = {}
-            pair_dict[bkp.bk_1_tag][bkp.bk_2_tag] = 1
-            if bkp.bk_2_tag not in pair_dict:
-                pair_dict[bkp.bk_2_tag] = {}
-            pair_dict[bkp.bk_2_tag][bkp.bk_1_tag] = 1
-        return pair_dict
 
 
 if __name__ == "__main__":
@@ -406,13 +357,13 @@ if __name__ == "__main__":
     window = 200
     split_cutoff = 0  #10
     sample_cutoff = 0  # 8
-    abun_cutoff = 0   #1e-7 #1e-7  5e-8
+    abun_cutoff = 5e-8   #1e-7 #1e-7  5e-8
     result_data = []
     max_diff = 20
     min_hgt_len = 500
 
-    # result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
-    result_dir = "/mnt/d/HGT/seq_ana/homo_filter/"
+    result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
+    # result_dir = "/mnt/d/HGT/seq_ana/homo_filter/"
     identified_hgt = "/mnt/d/HGT/seq_ana/identified_event.csv"
     database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
 
@@ -440,8 +391,8 @@ if __name__ == "__main__":
     # print (sample_list)
     sample_index = 0
     for sample in sample_list:
-        if sample != "ERR1018219":
-            continue
+        # if sample != "CCIS15704761ST-4-0":
+        #     continue
         print ("processed %s sample."%(sample_index))
         tim.match_each_sample(sample)
         sample_index += 1

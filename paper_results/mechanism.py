@@ -25,7 +25,6 @@ def countN(sequence):
             count += 1
     return count
 
-
 def get_reverse_complement_seq(sequence):
     sequence = sequence[::-1]
     trantab = str.maketrans('ACGTacgtRYMKrymkVBHDvbhd', 'TGCAtgcaYRKMyrkmBVDHbvdh')
@@ -58,7 +57,7 @@ class Acc_Bkp(object):
         self.to_ref_genome = "_".join(self.to_ref.split("_")[:-1])
         self.score = float(list[11])
 
-        self.hgt_tag = self.from_ref + "&" + str(int(self.from_bkp/bin_size)) + "&" + self.to_ref + "&" + str(int(self.to_bkp/bin_size))
+        self.hgt_tag = self.from_ref + "&" + str(round(self.from_bkp/bin_size)) + "&" + self.to_ref + "&" + str(round(self.to_bkp/bin_size))
         self.abundance = None
         self.split_abundance = None
 
@@ -375,9 +374,9 @@ def read_verified(verified_result):
         array[5] = int(array[5])
         array[6] = int(array[6])
 
-        insert = array[2] + "&" + str(int(array[3]/bin_size))
-        delete1 = array[4] + "&" + str(int(array[5]/bin_size))
-        delete2 = array[4] + "&" + str(int(array[6]/bin_size))
+        insert = array[2] + "&" + str(round(array[3]/bin_size))
+        delete1 = array[4] + "&" + str(round(array[5]/bin_size))
+        delete2 = array[4] + "&" + str(round(array[6]/bin_size))
 
         verified_HGT_dict[sample][index] = {}
 
@@ -385,16 +384,15 @@ def read_verified(verified_result):
         verified_HGT_dict[sample][index][delete1] = "del"
         verified_HGT_dict[sample][index][delete2] = "del"
 
-        record_HGT[sample][array[2] + "&" + str(int(array[3]/bin_size)) + "&" + array[4] + "&" + str(int(array[5]/bin_size))] = index
-        record_HGT[sample][array[4] + "&" + str(int(array[5]/bin_size)) + "&" + array[2] + "&" + str(int(array[3]/bin_size))] = index
+        record_HGT[sample][array[2] + "&" + str(round(array[3]/bin_size)) + "&" + array[4] + "&" + str(round(array[5]/bin_size))] = index
+        record_HGT[sample][array[4] + "&" + str(round(array[5]/bin_size)) + "&" + array[2] + "&" + str(round(array[3]/bin_size))] = index
 
-        record_HGT[sample][array[2] + "&" + str(int(array[3]/bin_size)) + "&" + array[4] + "&" + str(int(array[6]/bin_size))] = index
-        record_HGT[sample][array[4] + "&" + str(int(array[6]/bin_size)) + "&" + array[2] + "&" + str(int(array[3]/bin_size))] = index
+        record_HGT[sample][array[2] + "&" + str(round(array[3]/bin_size)) + "&" + array[4] + "&" + str(round(array[6]/bin_size))] = index
+        record_HGT[sample][array[4] + "&" + str(round(array[6]/bin_size)) + "&" + array[2] + "&" + str(round(array[3]/bin_size))] = index
 
         index += 1
 
     return verified_HGT_dict, record_HGT
-
 
 def extract_insertion(ref_alignment):
     insertion_list = []
@@ -445,14 +443,10 @@ def extract_homology(alignment):
         return 0
 
 
-
-    
-    
 if __name__ == "__main__":
     bin_size = 100
     split_cutoff = 0  #10
-    sample_cutoff = 8  # 8
-    abun_cutoff = 1e-7  #1e-7
+    abun_cutoff = 0 #1e-7  #1e-7
 
     # result_dir = "/mnt/d/HGT/time_lines/"
     # bkp_dir = "/mnt/d/HGT/time_lines/SRP366030/"
@@ -484,7 +478,6 @@ if __name__ == "__main__":
 
     ref_fasta = Fasta(database_dir + "/UHGG_reference.formate.fna")
     for sample in verified_HGT_dict:
-
         # if sample != "SRR18491253":
         #     continue
         sample_mechanism_freq_dict = {"NHEJ":0, "alt-EJ":0, "TEI":0, "VNTR":0, "NAHR":0, "FoSTeS/MMBIR":0}
@@ -503,8 +496,8 @@ if __name__ == "__main__":
             if bkp.hgt_tag in record_HGT[sample]:
                 # print (bkp.from_ref, bkp.from_bkp)
                 event_index = record_HGT[sample][bkp.hgt_tag]
-                from_type = verified_HGT_dict[sample][event_index][bkp.from_ref + "&" + str(int(bkp.from_bkp/bin_size))]
-                to_type = verified_HGT_dict[sample][event_index][bkp.to_ref + "&" + str(int(bkp.to_bkp/bin_size))]
+                from_type = verified_HGT_dict[sample][event_index][bkp.from_ref + "&" + str(round(bkp.from_bkp/bin_size))]
+                to_type = verified_HGT_dict[sample][event_index][bkp.to_ref + "&" + str(round(bkp.to_bkp/bin_size))]
 
                 if event_index not in event_dict:
                     event_dict[event_index] = {"del":[], "ins":[]}

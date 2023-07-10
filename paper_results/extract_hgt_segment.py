@@ -51,8 +51,12 @@ def read_event():
 if __name__ == "__main__":
 
     database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
-    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-    identified_hgt_seq = "/mnt/d/HGT/time_lines/SRP366030.identified_event.fasta"
+
+    # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
+    # identified_hgt_seq = "/mnt/d/HGT/time_lines/SRP366030.identified_event.fasta"
+
+    identified_hgt = "/mnt/d/HGT/seq_ana/identified_event.csv"
+    identified_hgt_seq = "/mnt/d/HGT/seq_ana/identified_event.fasta"
 
     ref_fasta = Fasta(database)
     hgt_event_dict = read_event()

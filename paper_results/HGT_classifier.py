@@ -19,6 +19,8 @@ from random import shuffle
 import sklearn
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
+from statsmodels.stats.multitest import multipletests
+from scipy.stats import fisher_exact
 
 from mechanism_taxonomy import Taxonomy
 
@@ -239,21 +241,23 @@ class Marker():
     def __init__(self, group1, group2, sample_obj_list):
         self.group1 = group1
         self.group2 = group2
-        self.all_HGTs = {}
+        self.all_HGTs = None
         self.sample_count = None 
         self.marker_num = marker_num
-        self.markers = {}
-        self.split_data_dict = {}
+        self.markers = None
+        self.split_data_dict = None
         self.sample_obj_list = sample_obj_list
 
     def extract_HGT(self):
+        self.all_HGTs = {}
         self.sample_count = {self.group1:0, self.group2:0}
+        sample_num = 0
         for sample in self.sample_obj_list:
             if sample.ID not in  self.split_data_dict:
                 continue
             elif self.split_data_dict[sample.ID] == "validation": #  Feature ranking was performed internally to each training fold to avoid overfitting.
                 continue
-
+            sample_num += 1
             self.sample_count[sample.disease] += 1
             sample_dict = {}
             for bkp in sample.bkps:
@@ -265,6 +269,9 @@ class Marker():
                     self.all_HGTs[bkp.hgt_tag] = {self.group1:0, self.group2:0}
                 sample_dict[bkp.hgt_tag] = 1
                 self.all_HGTs[bkp.hgt_tag][sample.disease] += 1
+        
+        # print (sample_num, self.sample_count)
+
         filtered_HGT = {}
         # print ("Bkp num in the two groups", len(self.all_HGTs))
         for hgt_tag in self.all_HGTs:
@@ -278,22 +285,49 @@ class Marker():
 
     def select_diff_HGT(self):
         hgt_p_value_dict = {}
+        data = []
         for hgt_tag in self.all_HGTs:
-            g1_array = self.all_HGTs[hgt_tag][self.group1] * [1] + [0] * (self.sample_count[self.group1] - self.all_HGTs[hgt_tag][self.group1])
-            g2_array = self.all_HGTs[hgt_tag][self.group2] * [1] + [0] * (self.sample_count[self.group2] - self.all_HGTs[hgt_tag][self.group2])
-            U1, p = mannwhitneyu(g1_array, g2_array)
-            # if p < 0.01:
-            hgt_p_value_dict[hgt_tag] = p
+
+            a = self.all_HGTs[hgt_tag][self.group1]
+            b = self.sample_count[self.group1] - self.all_HGTs[hgt_tag][self.group1]
+            c = self.all_HGTs[hgt_tag][self.group2]
+            d = self.sample_count[self.group2] - self.all_HGTs[hgt_tag][self.group2]
+
+            group1_freq = a/(a+b)
+            group2_freq = c/(c+d)
+            # print (self.group1, self.sample_count[self.group1], self.group2, self.sample_count[self.group2], a, b, c, d)
+            oddsratio, p_value = fisher_exact([[a, b], [c, d]])
+            data.append([hgt_tag, p_value, oddsratio, a, group1_freq, group2_freq])
+
+            # g1_array = self.all_HGTs[hgt_tag][self.group1] * [1] + [0] * (self.sample_count[self.group1] - self.all_HGTs[hgt_tag][self.group1])
+            # g2_array = self.all_HGTs[hgt_tag][self.group2] * [1] + [0] * (self.sample_count[self.group2] - self.all_HGTs[hgt_tag][self.group2])
+            # U1, p = mannwhitneyu(g1_array, g2_array)
+            # # if p < 0.01:
+            # hgt_p_value_dict[hgt_tag] = p
             # print (hgt_tag, p)
+        df = pd.DataFrame(data, columns = ["genus_pair", "p_value", "oddsratio", "gp_num", self.group1, self.group2])
+        reject, pvals_corrected, _, alphacBonf = multipletests(list(df["p_value"]), alpha=0.05, method='bonferroni')
+        df["p.adj"] = pvals_corrected
+
+        filtered_df = df[df['p.adj'] < 0.05]
+        for index, row in filtered_df.iterrows():
+            hgt_p_value_dict[row["genus_pair"]] = row["p.adj"]
+
         sorted_hgt_p_value = sorted(hgt_p_value_dict.items(), key=lambda item: item[1], reverse = False)
+        self.markers = {}
         if len(hgt_p_value_dict) < self.marker_num:
-            self.marker_num = len(hgt_p_value_dict)
-            print ("***only has %s features."%(self.marker_num))
-        for i in range(self.marker_num):
+            real_marker_num = len(hgt_p_value_dict)
+            print ("***only has %s features."%(real_marker_num))
+        else:
+            real_marker_num = self.marker_num
+
+        for i in range(real_marker_num):
             marker = sorted_hgt_p_value[i][0]
             p = sorted_hgt_p_value[i][1]
             self.markers[marker] = i
             # print ("marker", marker, p)
+        print (f"real marker number is {len(filtered_df)}")
+        # return len(filtered_df) # total marker number
 
     def training(self):
         data, label = [], []
@@ -382,6 +416,7 @@ class Marker():
 
 
     def mark_data(self, selected_samples, start_index, end_index):
+        self.split_data_dict = {}
         for i in range(len(selected_samples)):
             if i >= start_index and i < end_index:
                 self.split_data_dict[selected_samples[i]] = "validation"
@@ -417,14 +452,14 @@ if __name__ == "__main__":
     group_auc = []
     group_list = ["control", "CRC", "T2D",  "IBD"]
     # group_list = ["control", "CRC", "adenoma", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
-    for marker_num in range(5, 101, 5):
+    for marker_num in range(5, 51, 5):
         for i in range(len(group_list)):
             for j in range(i+1, len(group_list)):
                 replicate_result = []
                 group1 = group_list[i]
                 group2 = group_list[j]
                 combination = group1 + " vs. " + group2
-
+                
                 for z in range(replication):
                     mar = Marker(group1, group2, dat.sample_obj_list)
                     mean_auc = mar.split_data()
@@ -436,8 +471,10 @@ if __name__ == "__main__":
                 if combination not in combination_dict:
                     combination_dict[combination] = []
                 combination_dict[combination].append(np.mean(replicate_result))
+
         print ("#########", marker_num, np.mean(group_auc))
         print ("---------------\n")
+        # break
 
     df = pd.DataFrame(data, columns = ["Feature_number", "AUC", "Classification"])
     df.to_csv('/mnt/d/R_script_files/classifier_feature_num.csv', sep=',')
