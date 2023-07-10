@@ -75,8 +75,8 @@ class Acc_Bkp(object):
             self.hgt_tag = "NA"
         else:
             self.hgt_tag = "&".join(sorted([taxa1, taxa2]))
-        self.bk1_tag = self.from_ref + "&" + str(int(self.from_bkp/bin_size)) 
-        self.bk2_tag = self.to_ref + "&" + str(int(self.to_bkp/bin_size))
+        self.bk1_tag = self.from_ref + "&" + str(round(self.from_bkp/bin_size)) 
+        self.bk2_tag = self.to_ref + "&" + str(round(self.to_bkp/bin_size))
         
 def get_genome_taxa(genome, level):
     # g1 = get_pure_genome(genome)
@@ -653,7 +653,7 @@ class Marker():
                         locate_insert_flag = True
                         # break
                         # get all sites 
-                        tag = genome + "&" + str(int(site/bin_size)) 
+                        tag = genome + "&" + str(round(site/bin_size)) 
                         breakpoint_tag[tag] = 1
 
                 if not locate_insert_flag:

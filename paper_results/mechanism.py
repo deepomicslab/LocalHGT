@@ -510,6 +510,7 @@ if __name__ == "__main__":
         # print (event_dict)   
         for event_index in event_dict:
             event = event_dict[event_index]
+            print ("### my event", event)
             mac = Mechanism(event, ref_fasta)
 
             del_mechanism, ins_mechanism, del_homo = mac.main()
