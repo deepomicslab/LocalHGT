@@ -444,7 +444,7 @@ def extract_homology(alignment):
 
 
 if __name__ == "__main__":
-    bin_size = 100
+    bin_size = 200
     split_cutoff = 0  #10
     abun_cutoff = 0 #1e-7  #1e-7
 
@@ -510,7 +510,10 @@ if __name__ == "__main__":
         # print (event_dict)   
         for event_index in event_dict:
             event = event_dict[event_index]
-            print ("### my event", event)
+            
+            if len(event["del"]) != 2:
+                print ("### cannot find exact locus for", event, event_index)
+                continue
             mac = Mechanism(event, ref_fasta)
 
             del_mechanism, ins_mechanism, del_homo = mac.main()

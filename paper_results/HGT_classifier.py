@@ -327,7 +327,7 @@ class Marker():
             self.markers[marker] = i
             # print ("marker", marker, p)
         print (f"real marker number is {len(filtered_df)}")
-        # return len(filtered_df) # total marker number
+        return len(filtered_df) # total marker number
 
     def training(self):
         data, label = [], []
@@ -399,6 +399,7 @@ class Marker():
 
 
     def split_data(self):
+        marker_flag = True # indicate enough marker
         selected_samples = self.select_sample()
         cv = 5
         batch_num = int(len(selected_samples)/cv)
@@ -408,11 +409,13 @@ class Marker():
             end_index = (i+1) * batch_num
             self.mark_data(selected_samples, start_index, end_index)
             self.extract_HGT()
-            self.select_diff_HGT()
+            real_marker_num = self.select_diff_HGT()
             auc_score = self.training()
             auc_list.append(auc_score)
+            if real_marker_num < self.marker_num :
+                marker_flag = False
         # print (self.group1, self.group2, self.marker_num, np.mean(auc_score), "<<<<<<<<<<<<<\n")
-        return np.mean(auc_score)
+        return np.mean(auc_score), marker_flag
 
 
     def mark_data(self, selected_samples, start_index, end_index):
@@ -452,7 +455,7 @@ if __name__ == "__main__":
     group_auc = []
     group_list = ["control", "CRC", "T2D",  "IBD"]
     # group_list = ["control", "CRC", "adenoma", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
-    for marker_num in range(5, 51, 5):
+    for marker_num in range(2, 21, 2):
         for i in range(len(group_list)):
             for j in range(i+1, len(group_list)):
                 replicate_result = []
@@ -460,17 +463,21 @@ if __name__ == "__main__":
                 group2 = group_list[j]
                 combination = group1 + " vs. " + group2
                 
+                total_marker_flag = True
                 for z in range(replication):
                     mar = Marker(group1, group2, dat.sample_obj_list)
-                    mean_auc = mar.split_data()
+                    mean_auc, marker_flag = mar.split_data()
+                    if marker_flag == False:
+                        total_marker_flag = False
                     replicate_result.append(mean_auc)
 
-                data.append([marker_num, np.mean(replicate_result), combination])
-                print (marker_num, np.mean(replicate_result), combination)
-                group_auc.append(np.mean(replicate_result))
-                if combination not in combination_dict:
-                    combination_dict[combination] = []
-                combination_dict[combination].append(np.mean(replicate_result))
+                if total_marker_flag:
+                    data.append([marker_num, np.mean(replicate_result), combination])
+                    print (marker_num, np.mean(replicate_result), combination)
+                    group_auc.append(np.mean(replicate_result))
+                    if combination not in combination_dict:
+                        combination_dict[combination] = []
+                    combination_dict[combination].append(np.mean(replicate_result))
 
         print ("#########", marker_num, np.mean(group_auc))
         print ("---------------\n")
