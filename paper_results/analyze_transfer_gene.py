@@ -10,7 +10,7 @@ import pandas as pd
 import pickle
 from pyfaidx import Fasta
 from sklearn.cluster import DBSCAN
-from collections import Counter
+from collections import Counter, defaultdict
 from statsmodels.stats.multitest import multipletests
 from scipy.stats import fisher_exact
 from Bio import SeqIO
@@ -80,6 +80,10 @@ class Event(object):
         self.IS_flag = None
         self.Transposon_flag = None
 
+        bin_size = 100
+        self.tag = self.ins_genome + "&" + str(round(self.ins_pos/bin_size)) + "&" + self.del_genome + "&" + \
+            str(round(self.del_start/bin_size)) + "&" + str(round(self.ins_pos/bin_size))
+
     def check_IS(self, min_gene_frac, annotation):
         transfer_interval = [self.del_start, self.del_end]
         if self.del_genome in annotation.gene_annotation:
@@ -122,11 +126,11 @@ def get_gene_lengths(identified_hgt):
     print (np.mean(contig_lengths), np.median(contig_lengths), len(contig_lengths), min(contig_lengths), max(contig_lengths), sum(contig_lengths))
     print (sorted(contig_lengths)[-10:])
 
-    # data = []
-    # for a in contig_lengths:
-    #     data.append([a, "mm"])
-    # df = pd.DataFrame(data, columns = ["Length", "mm"])
-    # df.to_csv("/mnt/d/R_script_files//gene_len.csv", sep=',')   
+    data = []
+    for a in contig_lengths:
+        data.append([a, "mm"])
+    df = pd.DataFrame(data, columns = ["Length", "mm"])
+    df.to_csv("/mnt/d/R_script_files//gene_len.csv", sep=',')   
 
     print ("Finish reading events, num is", len(HGT_event_list))
     return HGT_event_list
@@ -292,74 +296,67 @@ class Transfer_times():
         self.max_diff = 50
 
     def read_events(self, identified_hgt):
+        i = 0
         for line in open(identified_hgt):
             array = line.strip().split(",")
             if array[1] == "sample":
                 continue
             event = Event(array)
-
             sample = array[1]
+            # if phenotype_dict[sample][0] == "Time-series":
+            #     continue
+            # print (phenotype_dict[sample][0])
+            i += 1
+
             if sample not in self.HGT_event_dict:
                 self.HGT_event_dict[sample] = []
             self.HGT_event_dict[sample].append(event) 
-    
-    def count_times(self):
-        ## count how many times the sequence is transferred in each sample
+        print ("sample num ", len(self.HGT_event_dict), "kept HGTs num is", i)
+
+    def main_count_times(self):
         final_data = []
+        final_data = self.count_times(final_data, "different")
+        final_data = self.count_times(final_data, "same")
+        df = pd.DataFrame(final_data, columns = ["times", "count", "frequency", "group"])
+        df.to_csv("/mnt/d/R_script_files/transfer_times.csv", sep=',')  
 
-        data = []
-        for sample in self.HGT_event_dict:
-            trans_times_dict = {}
-            for event in self.HGT_event_dict[sample]:
-                recorded_already = False
-                for segment_tag in trans_times_dict:
-                    array = segment_tag.split("&")
-                    if array[0] == event.del_genome and abs(int(event.del_start) - int(array[1])) < self.max_diff and \
-                        abs(int(event.del_end) - int(array[2])) < self.max_diff :#and array[3] == event.ins_genome_pure:
-                        recorded_already = True
-                        trans_times_dict[segment_tag] += 1
-                        break
-                if not recorded_already:
-                    segment_tag = "&".join([event.del_genome, str(event.del_start), str(event.del_end), event.ins_genome_pure])
-                    trans_times_dict[segment_tag] = 1
-            #print (sample, list(trans_times_dict.values()))
-            data += list(trans_times_dict.values())
-        num = len(data)
-        multiple_trans_num = 0
-        counts = {}
-        for item in data:
-            if item in counts:
-                counts[item] += 1
-            else:
-                counts[item] = 1
-            if item > 1 :
-                multiple_trans_num += 1
+    def count_times(self, final_data, trans_type):
+        ## count how many times the sequence is transferred in each sample
         
-        for item in counts:
-            final_data.append([item, counts[item], counts[item]/num, "different"])
-        print ("%s of segments are transferred multiple times."%(multiple_trans_num/num), multiple_trans_num, num)  
-
+        trans_times_dict_sample_count = defaultdict(set)
+        record = defaultdict(int)
 
         data = []
-        multi_segment_tag = []
         for sample in self.HGT_event_dict:
             trans_times_dict = {}
             for event in self.HGT_event_dict[sample]:
                 recorded_already = False
                 for segment_tag in trans_times_dict:
                     array = segment_tag.split("&")
-                    if array[0] == event.del_genome and abs(int(event.del_start) - int(array[1])) < self.max_diff and \
-                        abs(int(event.del_end) - int(array[2])) < self.max_diff and array[3] == event.ins_genome_pure:
-                        recorded_already = True
-                        trans_times_dict[segment_tag] += 1
-                        break
+                    if trans_type == "different":
+                        if array[0] == event.del_genome and abs(int(event.del_start) - int(array[1])) < self.max_diff and \
+                            abs(int(event.del_end) - int(array[2])) < self.max_diff :#and array[3] == event.ins_genome_pure:
+                            recorded_already = True
+                            trans_times_dict[segment_tag] += 1
+                            break
+
+                    elif trans_type == "same":
+                        if array[0] == event.del_genome and abs(int(event.del_start) - int(array[1])) < self.max_diff and \
+                            abs(int(event.del_end) - int(array[2])) < self.max_diff and array[3] == event.ins_genome_pure:
+                            recorded_already = True
+                            trans_times_dict[segment_tag] += 1
+                            break
+                    else:
+                        print ("wrong trans_type", trans_type)
+
                 if not recorded_already:
                     segment_tag = "&".join([event.del_genome, str(event.del_start), str(event.del_end), event.ins_genome_pure])
                     trans_times_dict[segment_tag] = 1
             #print (sample, list(trans_times_dict.values()))
             for segment_tag in trans_times_dict:
-                if trans_times_dict[segment_tag] > 1:  ## the segment exists at least that times in one sample
-                    multi_segment_tag.append(segment_tag)
+                if trans_times_dict[segment_tag] > 1:
+                    trans_times_dict_sample_count[segment_tag].add(sample)
+                    record[segment_tag] += trans_times_dict[segment_tag]
             data += list(trans_times_dict.values())
         num = len(data)
         multiple_trans_num = 0
@@ -371,15 +368,23 @@ class Transfer_times():
                 counts[item] = 1
             if item > 1 :
                 multiple_trans_num += 1
-
-        for item in counts:
-            final_data.append([item, counts[item], counts[item]/num, "same"])
-        print ("%s of segments are transferred multiple times."%(multiple_trans_num/num), multiple_trans_num, num)   
-
-        df = pd.DataFrame(final_data, columns = ["times", "count", "frequency", "group"])
-        df.to_csv("/mnt/d/R_script_files/transfer_times.csv", sep=',')  
         
-        self.check_gene_type(multi_segment_tag)
+        for item in counts:
+            final_data.append([item, counts[item], counts[item]/num, trans_type])
+        print ("%s of segments are transferred multiple times."%(multiple_trans_num/num), multiple_trans_num, num-multiple_trans_num, num, sum(data)) 
+        single_trans_num = num - multiple_trans_num
+        print (sum(data)-single_trans_num, single_trans_num, (sum(data)-single_trans_num)/sum(data) )
+
+        multiple_persons_HGT_num = 0
+        all_HGT_num = 0
+        for segment_tag in trans_times_dict_sample_count:
+            HGT_num = record[segment_tag] 
+            if len(trans_times_dict_sample_count[segment_tag]) > 1:
+                multiple_persons_HGT_num += HGT_num
+            all_HGT_num += HGT_num
+        print ("uniq samples", multiple_persons_HGT_num, all_HGT_num, all_HGT_num - multiple_persons_HGT_num, 1-multiple_persons_HGT_num/all_HGT_num)
+        return final_data
+
 
     def check_gene_type(self, multi_segment_tag):
         annotation = Annotation(gff)
@@ -442,9 +447,10 @@ def count_product():
     print (prod_type_dict)
 
 def count_transfer_times():
-    trans = Transfer_times()
+    # get_gene_lengths(identified_hgt)  #  get transfer seq length distribution
+    trans = Transfer_times()  
     trans.read_events(identified_hgt)
-    trans.count_times()
+    trans.main_count_times()
 
 def merge_intervals(intervals):
     # Sort the intervals by their start time
@@ -574,6 +580,15 @@ class Extract_KO():
         for line in open(all_acc_file):
             acc_file = line.strip()
             sra_id = acc_file.split("/")[-1].split(".")[0]
+
+            if only_healthy: # only check healthy persons
+                pheno = phenotype_dict[sra_id]
+                disease = pheno[1]  
+                full_disease = pheno[2].split(";")
+
+                if disease != "control" or full_disease[0] != "healthy":
+                    continue
+
             my_bkps = self.read_bkp(acc_file)
             for bkp in my_bkps:
                 if bkp.from_ref not in bkp_dict:
@@ -764,7 +779,7 @@ class Extract_COG(Extract_KO):
                     for i in range(len(cog)):
                         self.no_bkp_cog += [cog[i]]
         print (len(self.bkp_cog), len(self.no_bkp_cog))
-        self.data = enrichment_analysis(self.bkp_cog, self.no_bkp_cog, "bkp", self.data)
+        self.data = enrichment_analysis(self.bkp_cog, self.no_bkp_cog, "BKP", self.data)
 
     def main(self):
         self.classify_regions()
@@ -1070,7 +1085,51 @@ class Classify(): # check the composition of transferred sequences
 
             # break
         print (IS_num, total_num, IS_num/total_num, trans_num, trans_num/total_num, IS_num/trans_num)
-                    
+
+def read_meta(meta_data):
+    sra_sample_dict = {}
+    for line in open(meta_data):
+        if line.strip() == '':
+            continue
+        array = line.strip().split(',')
+        if array[0] != 'Run':
+            sra_id = array[0]
+            sample_id = array[-2]
+            if re.search("_", sample_id):
+                sample_id = sample_id.split("_")[1]
+            sra_sample_dict[sra_id] = sample_id
+    return sra_sample_dict
+
+def count_uniq_event_ratio(HGT_event_dict): # cal the ratio of uniq HGT events which occur only in one sample
+    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    sra_sample_dict = read_meta(meta_data)
+
+    uniq_event_dict = defaultdict(set)
+    for sample in HGT_event_dict:
+        for event in HGT_event_dict[sample]:
+            if sample in sra_sample_dict:
+                sample = sra_sample_dict[sample]
+            uniq_event_dict[event.tag].add(sample)
+    all_event_num = len(uniq_event_dict)
+    uniq_event_num = 0
+    for event_tag in uniq_event_dict:
+        if len(uniq_event_dict[event_tag]) == 1:
+            uniq_event_num += 1
+    print (uniq_event_num, all_event_num, uniq_event_num/all_event_num)
+
+def read_phenotype():
+    phenotype_dict = {}
+    pheno_result = "/mnt/d/HGT/association/phenotype.csv"
+    for line in open(pheno_result):
+        array = line.strip().split(",")
+        ID = array[1]
+        if ID == "sample":
+            continue
+        pheno = array[2:5]
+        phenotype_dict[ID] = pheno
+    return phenotype_dict
+
+
 if __name__ == "__main__":
     abun_cutoff = 1e-7 
     min_gene_frac = 0.5
@@ -1103,14 +1162,20 @@ if __name__ == "__main__":
     # cog_insert = "/mnt/d/R_script_files/cog_insert.csv"
 
     COG_dict, COG_profile_dict = get_COG_dict()
+    phenotype_dict = read_phenotype()
 
     remove_transposon_flag = False
+    only_healthy = False  # only check healthy persons
 
     annotation = Annotation(gff)
     annotation.read_gff()
 
-    trans = Transfer_times()
-    trans.read_events(identified_hgt)
+    count_transfer_times()
+
+    # trans = Transfer_times()
+    # trans.read_events(identified_hgt)
+
+    # count_uniq_event_ratio(trans.HGT_event_dict)
 
     # extract_seq = Extract_seq(trans.HGT_event_dict)
     # extract_seq.transfer_cds()
@@ -1126,20 +1191,20 @@ if __name__ == "__main__":
     # print (oddsratio, p_value)
 
 
-    extract = Extract_KO(trans.HGT_event_dict)
-    extract.classify_bkp_kos()
-    extract.collect_all_ko()
-    extract.classify_regions()
-    extract.classify_kos()
-    extract.classify_kos_insert()
+    # extract = Extract_KO(trans.HGT_event_dict)
+    # extract.classify_bkp_kos()
+    # # extract.collect_all_ko()
+    # extract.classify_regions()
+    # extract.classify_kos()
+    # extract.classify_kos_insert()
 
-    data = []
-    cog = Extract_COG(trans.HGT_event_dict)
-    cog.main()
+    # data = []
+    # cog = Extract_COG(trans.HGT_event_dict)
+    # cog.main()
 
-    data = []
-    prod = Extract_product(trans.HGT_event_dict)
-    prod.main()
+    # data = []
+    # prod = Extract_product(trans.HGT_event_dict)
+    # prod.main()
 
 
 

@@ -11,9 +11,11 @@ from scipy.stats import mannwhitneyu
 from scipy import stats
 import scipy 
 from statsmodels.stats.multitest import multipletests
-
+from collections import defaultdict
+import powerlaw
 
 from mechanism_taxonomy import Taxonomy
+
 
 level_list = ["phylum", "class", "order", "family", "genus", "species", "genome"]
 
@@ -76,6 +78,8 @@ class Sample():
         self.ID = ID  
         self.cohort = pheno[0]  
         self.disease = pheno[1]  
+        if self.disease == "acute_diarrhoea":
+            self.disease = "diarrhoea"
         self.full_disease = pheno[2].split(";")
 
     def get_HGT_matrix(self, level, edge_num):
@@ -150,6 +154,29 @@ class Sample():
         return [round(density,3), round(transitivity,3), round(algebraic_connectivity,3),\
          round(assortativity,3), int(node_num), int(edge_num)], total_edge_num
 
+    def judge_scale_free(self, level, edge_num):
+        HGT_matrix, total_edge_num =  self.get_HGT_matrix(level, edge_num)
+        HGT_matrix = nx.from_numpy_matrix(HGT_matrix)
+        p1, p2, p3 = infer_scale_free(HGT_matrix)
+        return p1, p2, p3, total_edge_num
+
+def infer_scale_free(g):
+    d= g.degree()
+    d = [x[1] for x in list(d)]
+    # print (d)
+    result = powerlaw.Fit(d)
+    R1, p1 = result.distribution_compare('power_law', 'lognormal_positive')
+
+    # result = powerlaw.Fit(d)
+    # p2=result.distribution_compare('power_law', 'lognormal')
+
+    result = powerlaw.Fit(d)
+    R2, p2 = result.distribution_compare('power_law', 'exponential', normalized_ratio=True)
+
+    result = powerlaw.Fit(d)
+    R3, p3 = result.distribution_compare('power_law', 'stretched_exponential',normalized_ratio=True)  #Weibull
+    return R1, R2, R3
+
 class Data_load():
 
     def __init__(self):
@@ -218,7 +245,7 @@ class Network():
     def __init__(self, all_data):
         self.data = all_data
 
-    def compare_network(self):
+    def compare_network(self): 
         group1 = "CRC"
         group2 = "IBD"
         properties = ['density', 'transitivity', 'algebraic_connectivity', 'assortativity', 'Node', "Edge"]
@@ -324,6 +351,7 @@ class Network():
                 # p_values is a list/array of unadjusted p-values
                 print (p_values)
                 rejected, adjusted_pvalues, _, _ = multipletests(p_values, method='fdr_bh')
+                # rejected, adjusted_pvalues, _, _ = multipletests(p_values, alpha=0.05, method='bonferroni')
                 print (adjusted_pvalues)
                 z = 0
                 new_matrix_dat = []
@@ -343,17 +371,13 @@ class Network():
         df = pd.DataFrame(data, columns = ["Property", "Value", "Group", "Cohort", "Level", "Origin"])
         df.to_csv('/mnt/d/R_script_files/network_comparison_normalized.csv', sep=',')
 
-
-
-        
-
-
     def infer_sale(self):
         # detect scale free
         data = []
+        new_data = []
         # edge_num_list = [10, 10, 30, 40, 100, 120]
-        f = open("scale_free_count.txt", 'w')
-        edge_num_list = [17, 24, 21, 63, 88, 460]
+        f = open("/mnt/d/R_script_files/scale_free_count.txt", 'w')
+        edge_num_list = [10, 12, 20, 30, 40, 50]
         for level in range(1, 7):
             edge_num = edge_num_list[level-1]
             network_num = 0
@@ -370,9 +394,14 @@ class Network():
                 if p1 >0 and p2>0 and p3>0:
                     scale_free_num += 1
             print (level, level_list[level-1], scale_free_num, network_num, scale_free_num/network_num, file = f)
+            print (level, level_list[level-1], scale_free_num, network_num, scale_free_num/network_num)
+            new_data.append([level, level_list[level-1], scale_free_num, network_num, scale_free_num/network_num])
+
         f.close()
-        df = pd.DataFrame(data, columns = ["ratio", "Comparison", "Group", "Cohort", "Level"])
-        df.to_csv('/mnt/c/Users/user/Desktop/HGT/HGT_R_plot_files//scale_free.csv', sep=',')
+        # df = pd.DataFrame(data, columns = ["ratio", "Comparison", "Group", "Cohort", "Level"])
+        # df.to_csv('/mnt/c/Users/user/Desktop/HGT/HGT_R_plot_files//scale_free.csv', sep=',')
+        df = pd.DataFrame(new_data, columns = ["level_index", "level", "scale_free_num", "network_num", "Frequency"])
+        df.to_csv('/mnt/d/R_script_files//scale_free.csv', sep=',')
 
 def read_phenotype():
     phenotype_dict = {}
@@ -386,13 +415,160 @@ def read_phenotype():
         phenotype_dict[ID] = pheno
     return phenotype_dict
 
+class FR_matrix(Data_load):
+
+    def __init__(self, group):
+        self.group = group
+        self.all_bkps = {}
+        self.level = 6
+        self.node_index = {}
+        self.read_samples()
+        self.sample_num = len(self.all_bkps)
+        self.matrix = None
+        self.matrix_sample_dict ={} 
+        self.nodes_list = []
+
+    def get_node_index(self):
+        for sra_id in self.all_bkps:
+            for bkp in self.all_bkps[sra_id]:
+                from_taxon = bkp.from_ref_lineage.split(";")[self.level]
+                to_taxon = bkp.to_ref_lineage.split(";")[self.level]
+                for taxa in [from_taxon, to_taxon]:
+                    if taxa not in self.node_index:
+                        self.node_index[taxa] = len(self.node_index)
+        print ("node number", len(self.node_index))
+        self.get_node_list()
+    
+    def get_matrix(self):
+        #= np.zeros((len(self.node_index), len(self.node_index)))    
+        for sra_id in self.all_bkps:
+            for bkp in self.all_bkps[sra_id]:
+                from_taxon = bkp.from_ref_lineage.split(";")[self.level]
+                to_taxon = bkp.to_ref_lineage.split(";")[self.level]  
+
+                # from_index =  self.node_index[from_taxon]
+                # to_index =  self.node_index[to_taxon]
+                if from_taxon not in self.matrix_sample_dict:
+                    self.matrix_sample_dict[from_taxon] = defaultdict(set)
+                if to_taxon not in self.matrix_sample_dict:
+                    self.matrix_sample_dict[to_taxon] = defaultdict(set)
+
+                self.matrix_sample_dict[from_taxon][to_taxon].add(sra_id)
+                self.matrix_sample_dict[to_taxon][from_taxon].add(sra_id)
+        
+        self.matrix = np.zeros((len(self.node_index), len(self.node_index)))  
+        for taxon_1 in self.matrix_sample_dict:
+            for taxon_2 in self.matrix_sample_dict[taxon_1]:
+                support_sample_num = len(self.matrix_sample_dict[taxon_1][taxon_2])
+                support_freq = round(support_sample_num/self.sample_num, 3)
+
+                taxon_1_index = self.node_index[taxon_1]
+                taxon_2_index = self.node_index[taxon_2]
+
+                self.matrix[taxon_1_index][taxon_2_index] = support_freq
+                self.matrix[taxon_2_index][taxon_1_index] = support_freq
+
+        df = pd.DataFrame(self.matrix, index=self.nodes_list, columns=self.nodes_list)
+        df.to_csv("/mnt/d/HGT/seq_ana/species_matrix_%s.csv"%(self.group))
+        
+    def get_node_list(self):
+        self.nodes_list = [""] * len(self.node_index)
+        for node in self.node_index:
+            self.nodes_list[self.node_index[node]] = node
+
+    def read_samples(self):
+
+        all_acc_file = hgt_result_dir + "/acc.list"
+        os.system(f"ls {hgt_result_dir}/*acc.csv |grep -v repeat >{all_acc_file}")
+        # os.system(f"ls {tgs_dir}/*acc.csv |grep -v repeat >>{all_acc_file}")
+        # os.system(f"ls {wenkui_dir}/*acc.csv |grep -v repeat >>{all_acc_file}")
+        
+        for line in open(all_acc_file):
+            acc_file = line.strip()
+            sra_id = acc_file.split("/")[-1].split(".")[0]
+            my_bkps = self.read_bkp(acc_file)
+            sample = Sample(my_bkps, sra_id, phenotype_dict[sra_id])
+            if self.group != "all":
+                if sample.disease == "control" and sample.full_disease[0] != "healthy":
+                    continue
+                if sample.disease != self.group:
+                    continue
+            if len(my_bkps) > 0 and sra_id in phenotype_dict:
+                self.all_bkps[sra_id] = my_bkps
+
+        print ("data is loaded, number of sample is %s in %s"%(len(self.all_bkps), self.group))
+
+    def get_genus_phylum(self):
+        genus_phylum_pair = {}
+        taxa_count = defaultdict(int)
+        for sra_id in self.all_bkps:
+            sample_dict = defaultdict(int)
+            for bkp in self.all_bkps[sra_id]:
+
+                from_taxon = bkp.from_ref_lineage.split(";")[self.level]
+                if len(from_taxon) == 3:
+                    from_phylum = "p__"
+                else:
+                    from_phylum = bkp.from_ref_lineage.split(";")[1]
+
+                to_taxon = bkp.to_ref_lineage.split(";")[self.level] 
+                if len(to_taxon) == 3:
+                    to_phylum = "p__"
+                else:
+                    to_phylum = bkp.to_ref_lineage.split(";")[1]
+
+                genus_phylum_pair[from_taxon] = from_phylum
+                genus_phylum_pair[to_taxon] = to_phylum
+
+                sample_dict[from_taxon] += 1
+                sample_dict[to_taxon] += 1
+            for taxon in sample_dict:
+                taxa_count[taxon] += 1
+        
+        sorted_taxa_count = sorted(taxa_count.items(), key=lambda item: item[1], reverse = True)
+        top_taxa = dict(sorted_taxa_count[:600])
+
+        dark2=['#1B9E77', '#D95F02', '#7570B3', '#E7298A', '#66A61E', '#E6AB02', '#A6761D']
+        set1=['#E41A1C', '#377EB8','#FFFF33', '#984EA3', '#FF7F00',  '#A65628', '#F781BF', '#999999', '#4DAF4A']
+        color_palette = dark2 + set1
+        index_dict = {'Firmicutes_A': 0, 'Bacteroidota': 1, 'Firmicutes': 2, 'Proteobacteria': 3, 'Actinobacteriota': 4, 'Firmicutes_C': 5, \
+        'Verrucomicrobiota': 6, 'Firmicutes_B': 7, "Cyanobacteria":8, "Fusobacteriota":9}      
+        data = []
+        phylum_set = set()
+        for taxon in genus_phylum_pair:
+            if taxon not in top_taxa or len(taxon) == 3:
+                continue
+            phylum = genus_phylum_pair[taxon]
+            if phylum[3:] not in index_dict:
+                phylum = "other"
+            phylum_set.add(phylum)
+            data.append([taxon, phylum])
+
+        df = pd.DataFrame(data, columns=[level_list[self.level-1], "phylum"])
+        df.to_csv("/mnt/d/HGT/seq_ana/%s_phylum_pair.csv"%(level_list[self.level-1]))
+        print ("phylum count", len(phylum_set))
+        print (phylum_set)
+
+
 if __name__ == "__main__":
+
     abun_cutoff = 1e-7  #1e-7
     hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
     phenotype_dict = read_phenotype()
     taxonomy = Taxonomy()
+
     dat = Data_load()
     dat.read_samples()
-    # dat.get_cohort_num()
+    dat.get_cohort_num()
     net = Network(dat.sample_obj_list)
     net.compare_network_mul_group()
+    # net.infer_sale()
+
+    # group_list = ["control", "CRC", "adenoma", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
+    # for group in group_list:
+    #     fr = FR_matrix(group)
+    #     fr.get_node_index()
+    #     fr.get_matrix()
+
+    # fr = FR_matrix("all")
+    # fr.get_genus_phylum()

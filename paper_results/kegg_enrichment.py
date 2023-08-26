@@ -65,15 +65,22 @@ def enrichment_analysis(input_counts, background_counts):
         # else:
         #     print(f'{pathway_name} ({first_class}): depleted, p={p_value:.3f}, input={a}/{len(input_ko_ids)}, background={c}/{len(background_ko_ids)}, fold_enrichment={oddsratio:.3f}')
 
-        data.append([pathway_name, pathway_id, p_value, a, oddsratio, first_class, second_class])
+        data.append([pathway_name, pathway_id, p_value, a, oddsratio, first_class, second_class, a/(a+b), c/(c+d)])
 
-    df = pd.DataFrame(data, columns = ["pathway_name", "pathway_id", "p_value", "gene_num", "fold", "first_class", "second_class"])
+    df = pd.DataFrame(data, columns = ["pathway_name", "pathway_id", "p_value", "gene_num", "fold", "first_class", "second_class", "fir_freq", "sec_freq"])
     reject, pvals_corrected, _, alphacBonf = multipletests(list(df["p_value"]), alpha=0.05, method='bonferroni')
     df["p.adj"] = pvals_corrected
     df = df[df['p.adj'] < 0.05]
+
+    enriched_num, depleted_num = 0, 0
+    for index, row in df.iterrows():
+        if row["fir_freq"] > row["sec_freq"]:
+            enriched_num += 1
+        else:
+            depleted_num += 1
     
     df.to_csv(output, sep=',')
-    print ("enriched pathway num", len(df))
+    print (f"pathway num: {len(df)}, enriched num is {enriched_num}, depleted num is {depleted_num}, depleted ratio is {depleted_num/len(df)}" )
 
 
 if __name__ == "__main__":

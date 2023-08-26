@@ -14,3 +14,4 @@ analysis/use
 src
 test/output
 test/ref.fa.*
+paper_results/nohup.out

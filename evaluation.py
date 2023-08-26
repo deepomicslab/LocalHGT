@@ -28,17 +28,20 @@ class Read_bed(object):
         self.ref_len = 0
 
     def read(self, interval_file):
-        f = open(interval_file)
-        for line in f:
-            line = line.strip()
-            if line == '':
-                continue
-            chr_name = line.split(":")[0]
-            start = int(line.split(":")[1].split("-")[0])
-            end = int(line.split(":")[1].split("-")[1])   
-            self.ref_len += (end - start)
-            self.add(chr_name, start, end)  
-        f.close()   
+        if os.path.isfile(interval_file):
+            f = open(interval_file)
+            for line in f:
+                line = line.strip()
+                if line == '':
+                    continue
+                chr_name = line.split(":")[0]
+                start = int(line.split(":")[1].split("-")[0])
+                end = int(line.split(":")[1].split("-")[1])   
+                self.ref_len += (end - start)
+                self.add(chr_name, start, end)  
+            f.close()   
+        else:
+            print ("cannot find", interval_file)
 
     def add(self, chr_name, start, end):
         if chr_name in self.true_interval:
@@ -184,6 +187,42 @@ class Performance():
         self.ref_accuracy = ref_accuracy
         self.ref_len = ref_len
 
+
+def extract_time(time_file): #log file obtained by /usr/bin/time -v
+        #if no time available
+    for line in open(time_file):
+        time_re = re.search('User time \(seconds\):(.*?)$', line)
+        if time_re:
+            user_time =  time_re.group(1).strip()
+
+        time_sys = re.search('System time \(seconds\):(.*?)$', line)
+        if time_sys:
+            sys_time = time_sys.group(1).strip()
+    # print (user_time, sys_time)
+    all_time = float(user_time) + float(sys_time)
+    final_time = round(all_time/3600, 2)
+    return final_time
+
+def extract_wall_clock_time(time_file): #log file obtained by /usr/bin/time -v
+        #if no time available
+    for line in open(time_file):
+        time_re = re.search('Elapsed \(wall clock\) time \(h:mm:ss or m:ss\):(.*?)$', line)
+        if time_re:
+            wall_block_time = time_re.group(1).strip()
+    array = wall_block_time.split(":")
+    hours = int(array[0].strip()) + float(array[1].strip())/60
+    return hours
+
+def extract_mem(time_file):
+    used_mem = 0 #if no time available
+    for line in open(time_file):
+        time_re = re.search('Maximum resident set size \(kbytes\):(.*?)$', line)
+        if time_re:
+            used_mem =  time_re.group(1).strip()
+    final_mem = round(float(used_mem)/1000000, 2)
+    return final_mem
+
+
 class Sample():
     def __init__(self, ID, true_dir):
         self.ID = ID
@@ -207,34 +246,10 @@ class Sample():
             bkp = read_localHGT(acc_file)
         accuracy, FDR, F1_score = compare(self.true_bkp, bkp)
         time_file = tool_dir + '/' + self.ID + '.time'
-        tool_time = self.extract_time(time_file)
-        tool_mem = self.extract_mem(time_file)
+        tool_time = extract_time(time_file)
+        tool_mem = extract_mem(time_file)
         pe = Performance(accuracy, FDR, tool_time, tool_mem, F1_score, self.complexity)
         return pe
-
-    def extract_time(self, time_file): #log file obtained by /usr/bin/time -v
-         #if no time available
-        for line in open(time_file):
-            time_re = re.search('User time \(seconds\):(.*?)$', line)
-            if time_re:
-                user_time =  time_re.group(1).strip()
-
-            time_sys = re.search('System time \(seconds\):(.*?)$', line)
-            if time_sys:
-                sys_time = time_sys.group(1).strip()
-        # print (user_time, sys_time)
-        all_time = float(user_time) + float(sys_time)
-        final_time = round(all_time/3600, 2)
-        return final_time
-
-    def extract_mem(self, time_file):
-        used_mem = 0 #if no time available
-        for line in open(time_file):
-            time_re = re.search('Maximum resident set size \(kbytes\):(.*?)$', line)
-            if time_re:
-                used_mem =  time_re.group(1).strip()
-        final_mem = round(float(used_mem)/1000000, 2)
-        return final_mem
 
     def eva_ref(self, tool_dir):
         interval_file = tool_dir + '/%s.interval.txt.bed'%(self.ID)
@@ -318,8 +333,10 @@ class Figure():
         self.df.to_csv('analysis/cami_comparison.csv', sep=',')
 
 def cami():
+    time_list, mem_list = [], []
     fi = Figure()
     ba = Parameters()
+    ba.depth = 100
     ba.get_dir(true_dir)
     fi.variation = "Mutation Rate"
     for snp_rate in [0.01, 0.02, 0.03, 0.04, 0.05]:
@@ -333,16 +350,50 @@ def cami():
             sa.change_ID(cami_ID)
             sa.complexity = level
             ref_accuracy, ref_len = sa.eva_ref(local_dir)
-            local_pe = sa.eva_tool(local_dir) 
+            local_pe = sa.eva_tool(local_dir, "LocalHGT") 
             local_pe.add_ref(ref_accuracy, ref_len)
             
             fi.add_local_sample(local_pe, snp_rate)
-            lemon_pe = sa.eva_tool(lemon_dir)
+            lemon_pe = sa.eva_tool(lemon_dir, "LEMON")
             fi.add_lemon_sample(lemon_pe, snp_rate)
             print ("#",cami_ID, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.F1_score, local_pe.complexity)
             print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy ,lemon_pe.accuracy)
+            time_list.append(local_pe.user_time)
+            mem_list.append(local_pe.max_mem)
     fi.plot_cami()
-            
+
+    print ("CPU time", np.mean(time_list), np.median(time_list))
+    print ("PEAK mem", np.mean(mem_list), np.median(mem_list))
+
+def cal_cami_time_MEM(): # cal avergae Run time and Peak MEM with CAMI data
+    time_list, mem_list, cpu_list = [], [], []
+
+    ba = Parameters()
+    ba.depth = 100
+    ba.get_dir(true_dir)
+    for snp_rate in [0.01, 0.02, 0.03, 0.04, 0.05]:
+    # for snp_rate in [0.05]:
+        ba.change_snp_rate(snp_rate)
+        index = 0
+        ba.get_ID(index)
+
+        for level in ba.complexity_level:
+            cami_ID = ba.sample + '_' + level
+            time_file = lemon_dir + '/' + cami_ID + '.time'
+
+            tool_time = extract_wall_clock_time(time_file)
+            cpu_time = extract_time(time_file)
+            tool_mem = extract_mem(time_file)
+
+            time_list.append(tool_time)
+            mem_list.append(tool_mem)
+            cpu_list.append(cpu_time)
+
+
+    print ("wall-clock time", np.mean(time_list), np.median(time_list))
+    print ("CPU time", np.mean(cpu_list), np.median(cpu_list))
+    print ("PEAK mem", np.mean(mem_list), np.median(mem_list))
+
 def snp():
     fi = Figure()
     ba = Parameters()
@@ -501,6 +552,7 @@ if __name__ == "__main__":
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results_paper/"
+
     print ("evaluation")
     # cami()
     # snp()
@@ -508,7 +560,7 @@ if __name__ == "__main__":
     # depth()
     # pure_length()
     # pure_donor()
-    pure_frag()
-
+    # pure_frag()
+    cal_cami_time_MEM()
 
 

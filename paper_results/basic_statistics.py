@@ -185,8 +185,8 @@ class Basic_count():
             for bkp in sample_bkp_list:
                 s1 = get_genome_taxa(bkp.from_ref_genome, level)
                 s2 = get_genome_taxa(bkp.to_ref_genome, level)
-                if s1[1:] == '__' or  s2[1:] == '__':
-                    continue
+                # if s1[1:] == '__' or  s2[1:] == '__':
+                #     continue
                 if s1 not in sample_count:
                     sample_count[s1] = 0
                 if s2 not in sample_count:
@@ -201,6 +201,12 @@ class Basic_count():
                 total_freq_dict[taxa].append(sample_freq[taxa])
         sample_num = len(self.cohort_data)
         sorted_dict = count_mean_freq(total_freq_dict, sample_num)
+
+        if len(sorted_dict[0][0]) == 3:  ## no annotation
+            sorted_dict.append(sorted_dict.pop(0))
+
+        for i in range(5):
+            print ("genome with highest HGT freq", sorted_dict[i])
         return sorted_dict
 
     def count_inter_taxa_HGT(self):
@@ -277,56 +283,6 @@ def count_mean_freq(raw_dict, sample_num):
 
     return sorted_dict
 
-def prepare_tree_bk(): # rename genome to species name
-    sorted_dict = ba.sort_taxa_by_freq(8) # 8 means genome level
-    print ("total genome number is", len(sorted_dict))
-    extracted_genome = []
-    freq_dict = {}
-    for i in range(300):
-        extracted_genome.append(sorted_dict[i][0])
-        freq_dict[sorted_dict[i][0]] = float(sorted_dict[i][1])
-    # Load a tree structure from a newick file.
-    f = open("/mnt/d/HGT/time_lines/distribution/hgt_tree.nwk", 'w')
-    a = open("/mnt/d/HGT/time_lines/distribution/tree_annotation.txt", 'w')
-    b = open("/mnt/d/HGT/time_lines/distribution/bar_annotation.txt", 'w')
-    c = open("/mnt/d/HGT/time_lines/distribution/connection.txt", 'w')
-    t = Tree("/mnt/d/HGT/time_lines/distribution/bac120_iqtree.nwk")
-    t.prune(extracted_genome) # only keep the nodes with top HGT freq
-    dark2=['#1B9E77', '#D95F02', '#7570B3', '#E7298A', '#66A61E', '#E6AB02', '#A6761D']
-    set1=['#E41A1C', '#377EB8', '#4DAF4A', '#984EA3', '#FF7F00', '#FFFF33', '#A65628', '#F781BF', '#999999']
-    color_palette = dark2 + set1
-    phylum_dict = {}
-    index_dict = {'Firmicutes_A': 0, 'Bacteroidota': 1, 'Firmicutes': 2, 'Proteobacteria': 3, 'Actinobacteriota': 4, 'Firmicutes_C': 5, 'Verrucomicrobiota': 6}
-    print ("TREE_COLORS\nSEPARATOR SPACE\nDATA\n", file = a)
-    print ("DATASET_SIMPLEBAR\nSEPARATOR COMMA\nDATASET_LABEL,my_data\nCOLOR,#45818e\nDATA\n", file = b)
-    node_name_dict = {}
-
-    for node in t.traverse("postorder"):
-        print (node.name)
-        if node.name == '':
-            continue
-        genome_name = node.name
-        species = get_genome_taxa(node.name, 6)
-        phylum = get_genome_taxa(node.name, 1)[3:]
-        if phylum not in phylum_dict:
-            phylum_dict[phylum] = len(phylum_dict)
-        if species[1:] == '__':
-            species = node.name
-        else:
-            species = species[3:]
-            species = "_".join(species.split())
-        node.name = species
-        node_name_dict[genome_name] = node.name
-        print (f"{species} range {color_palette[index_dict[phylum]]} {phylum}", file = a)
-        print (f"{node.name},{freq_dict[genome_name]},label1", file = b)
-    # print (t)
-    print (t.write(), file = f)
-    f.close()
-    a.close()
-    b.close()
-    c.close()
-    print (phylum_dict)
-
 def read_file_to_string(file_path):
     with open(file_path, 'r') as f:
         file_contents = f.read()
@@ -389,6 +345,14 @@ def prepare_tree(): # just use genome name
     c.close()
     g.close()
     print (index_dict, len(index_dict))
+
+    ## generate used colors for network eigen analysis
+    color_dict = {'eigen': 'black', 'other': '#AAAAAA'}
+    for phylum in index_dict:
+        color = color_palette[index_dict[phylum]]
+        phylum = "p__" + phylum
+        color_dict[phylum] = color
+    print (color_dict)
     
 def count_pair(cohort_data, extracted_genome_dict, connection_flag):
     print ("DATASET_CONNECTION\nSEPARATOR COMMA\nDATASET_LABEL,example connections\nCOLOR,#ff0ff0\nDRAW_ARROWS,0\nARROW_SIZE,20\nLOOP_SIZE,100\nMAXIMUM_LINE_WIDTH,10\nCURVE_ANGLE,0\nCENTER_CURVES,1\nALIGN_TO_LABELS,1\nDATA\n", file =connection_flag )
@@ -513,26 +477,28 @@ if __name__ == "__main__":
     # ba.count_inter_taxa_HGT()
 
     # ################## cal the correlation between HGT frequency and phylogenetic distance
-    genome_pair_dict = ba.count_genome_pair()
-    cal_corr(genome_pair_dict)
+    # genome_pair_dict = ba.count_genome_pair()
+    # cal_corr(genome_pair_dict)
 
 
 
 
 
     # ######## just sort taxa by HGT freq
-    # taxa_sort_data = []
-    # for level in range(1, 7):
-    #     sorted_dict = ba.sort_taxa_by_freq(level)
-    #     top_sum = 0
-    #     for i in range(5):
-    #         print (i, sorted_dict[i][0], sorted_dict[i][1])
-    #         taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
-    #         top_sum += sorted_dict[i][1]
-    #     taxa_sort_data.append([level_list[level-1][0]+"__other", 1-top_sum, level_list[level-1]])
+    taxa_sort_data = []
+    for level in range(1, 7):
+        sorted_dict = ba.sort_taxa_by_freq(level)
+        top_sum = 0
+        for i in range(5):
+            print (i, sorted_dict[i][0], sorted_dict[i][1])
+            taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
+            # taxa_sort_data.append([sorted_dict[i][0][3:], sorted_dict[i][1], level_list[level-1]])
+            top_sum += sorted_dict[i][1]
+        taxa_sort_data.append([level_list[level-1][0]+"__other", 1-top_sum, level_list[level-1]])
+        # taxa_sort_data.append(["other", 1-top_sum, level_list[level-1]])
 
-    # df = pd.DataFrame(taxa_sort_data, columns = ["Taxa", "Frequency", "Level"])
-    # df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')
+    df = pd.DataFrame(taxa_sort_data, columns = ["Taxa", "Frequency", "Level"])
+    df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')
 
     #### prepare count tree
     # prepare_tree()

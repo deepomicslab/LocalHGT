@@ -34,7 +34,7 @@ Run `python main.py` like
 ```
 usage: main.py -h
 
-Detect HGT events from metagenomics sequencing data.
+Detect HGT breakpoints from metagenomics sequencing data.
 
 required arguments:
   -r             <str> Reference file. (default: None)
@@ -57,6 +57,23 @@ A command example:
 python ./main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
 ```
 
+Infer complete HGT events by matching breakpoints after detecting HGT breakpoints for all the samples.
+```
+usage: infer_HGT_event.py -h
+
+Infer complete HGT events by matching breakpoint pairs.
+
+required arguments:
+  -r        <str> Reference file. (default: None)
+  -b        <str> Folder saves all the breakpoint results from all samples.
+              (default: None)
+  -f        <str> Output file to save all inferred HGT events. (default: ./)
+
+optional arguments:
+  -m        <int> minimum transfer sequence length (default: 500)
+  -h, --help
+```
+
 ## Output interpretion
 The HGT breakpoints would be saved in the `*acc.csv` file. Here is an example:
 ```
@@ -76,7 +93,7 @@ Interpret each column as:
 | to_pos  | to reference breakpoint position  |
 | to_side  | to reference side  |
 | to_strand  | to reference strand  |
-| if_reverse  | if the transferred gene is reverse inserted to receptor  |
+| if_reverse  | if the transferred gene is reversely inserted to receptor  |
 | read_seq  | used reads sequence in local alignment  |
 | ref_seq  | aligned reference sequence in local alignment  |
 | similarity  | alignment similarity in local alignment  |
@@ -84,6 +101,26 @@ Interpret each column as:
 | to_split_reads  | number of split reads mapped to the to_pos  |
 | cross_split_reads  | number of split reads supported the breakpoint pair  |
 |pair_end| number of paired-end reads supported the breakpoint pair     |
+
+
+HGT event result is like
+```
+sample,receptor,insert_locus,donor,delete_start,delete_end,reverse_flag
+species20_snp0,GUT_GENOME000149_2,369882,GUT_GENOME000537_12,40443,91965,True
+species20_snp0,GUT_GENOME000189_7,22927,GUT_GENOME000534_3,78150,79127,True
+species20_snp0,GUT_GENOME001261_3,336654,GUT_GENOME000202_1,72162,123917,False
+```
+Interpret each column as:
+| Header  | Description |
+| :-------------:| :-------------: |
+| sample  | Sample ID  |
+| receptor  | receptor genome  |
+| insert_locus  | the transfer sequence is inserted at this locus |
+| donor  | donor genome  |
+| delete_start  | the start site of the transfer sequence on donor genome  |
+| delete_end  | the end site of the transfer sequence on donor genome  |
+| reverse_flag  | if the transferred gene is reversely inserted to receptor  |
+
 
 ## Dependency
 We recommand construct the environment using `conda` with the `environment.yml`.

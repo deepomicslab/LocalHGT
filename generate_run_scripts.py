@@ -46,6 +46,12 @@ class Batch(Parameters):
         self.fq1, self.fq2, self.sample, self.result_dir, self.hit, self.perfect_hit)
         return order 
 
+    def get_new_order(self):
+        order = "/usr/bin/time -v -o %s/%s.time bash %s %s %s %s %s %s %s %s 32 5"%(self.result_dir, self.sample,\
+         self.localHGT, self.origin_ref, \
+        self.fq1, self.fq2, self.sample, self.result_dir, self.hit, self.perfect_hit)
+        return order 
+
     def get_lemon_order(self):
         order = f"/usr/bin/time -v -o {self.lemon_outdir}/{self.sample}.time bash {self.LEMON} {self.origin_ref}\
          {self.fq1} {self.fq2} {self.sample} {self.lemon_outdir}"
@@ -409,14 +415,37 @@ def batch_frag():
     f.close()
     h.close()
 
+def batch_depth_test_event_accuracy():
+    ba = Batch()
+    ba.get_fq_dir("/mnt/d/breakpoints/HGT/uhgg_depth/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/depth_for_event/")
+    ba.change_lemon_dir("/mnt/e/HGT/lemon_depth/")
+
+    h = open("/mnt/d/breakpoints/HGT/run_localHGT_depth_event.sh", 'w')
+
+    i = 1
+    index = 0
+    for depth in [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]:
+        ba.change_depth(depth)
+        for index in range(10):
+            ba.get_ID(index)
+            ba.get_fq()
+            ba.change_ref()
+            order = ba.get_new_order()
+            # print (order)
+            print (order, file = h)
+            ba.get_ID(index) # refresh ID
+
+    h.close()
 
 if __name__ == "__main__":
-    batch_frag()
+    # batch_frag()
     # batch_donor()
     # batch_snp_pure()
     # batch_length_pure()
     # batch_cami()
     # batch_depth()
+    batch_depth_test_event_accuracy()
     # batch_germany()
     # batch_japan()
     # batch_USA()

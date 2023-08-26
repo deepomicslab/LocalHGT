@@ -318,7 +318,7 @@ def get_pheno_for_wenkui_CRC(wenkui_dir):
     status_dict = read_meta_wenkui(wenkui_meta_file)
     add_data = []
     files = os.listdir(wenkui_dir)
-    cohort = "Yang_2020"
+    cohort = "YangJ_2020"
     for acc_file in files:
         if not re.search("acc.csv", acc_file):
             continue

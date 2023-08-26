@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from mechanism_taxonomy import Taxonomy
 import pandas as pd
+from statsmodels.stats.multitest import multipletests
+from scipy.stats import fisher_exact
+from collections import defaultdict
  
 def read_meta():
     
@@ -200,7 +203,7 @@ class Time_Lines():
                 # pearson = stats.pearsonr(self.sample_array_dict[sample1], self.sample_array_dict[sample2])
                 # correlation = pearson[0]
                 
-                res = stats.    r(self.sample_array_dict[sample1], self.sample_array_dict[sample2])
+                res = stats.spearmanr(self.sample_array_dict[sample1], self.sample_array_dict[sample2])
                 correlation = res.correlation
 
                 # correlation = self.remove_both_zero(self.sample_array_dict[sample1], self.sample_array_dict[sample2])
@@ -306,11 +309,13 @@ class Time_Lines():
 
         record_conseve_species = {}
         converve_hgt_count = []
+        conserve_hgt_tag = defaultdict(set)
         for individual in individual_hgt_dict:
             record_conseve_species[individual] = {}
             num = 0
             for hgt_tag in individual_hgt_dict[individual]:
                 if individual_hgt_dict[individual][hgt_tag] == 10:
+                    
                     num += 1
                     # print ("individual:", individual, "conserved HGT:", hgt_tag)
                     hgt_array = hgt_tag.split("&")
@@ -318,12 +323,16 @@ class Time_Lines():
                     g2 = get_pure_genome(hgt_array[2])
                     s1 = taxonomy.taxonomy_dict[g1].split(";")[6]
                     s2 = taxonomy.taxonomy_dict[g2].split(";")[6]
+                    genus1 = taxonomy.taxonomy_dict[g1].split(";")[6]
+                    genus2 = taxonomy.taxonomy_dict[g2].split(";")[6]
                     # print ("individual:", individual, s1, s2)
+                    species_pair = "&".join(sorted([genus1, genus2]))
+                    conserve_hgt_tag[species_pair].add(individual)
 
                     record_conseve_species[individual][s1] = 1
                     record_conseve_species[individual][s2] = 1
             converve_hgt_count.append(num)
-            print (list(record_conseve_species[individual].keys()))
+            # print (list(record_conseve_species[individual].keys()))
         print ("conserve HGT count distribution", np.mean(converve_hgt_count), sorted(converve_hgt_count) )
         # get the conserve species that are common cross individuals
         species_dict = {}
@@ -333,13 +342,19 @@ class Time_Lines():
                     species_dict[species] = 0
                 species_dict[species] += 1
         sorted_dict = sorted(species_dict.items(), key=lambda item: item[1], reverse = True)
+        conserve_hgt_tag_count = {}
+        for species_pair in conserve_hgt_tag:
+            conserve_hgt_tag_count[species_pair] = len(conserve_hgt_tag[species_pair])
+        sorted_conserve_hgt_tag = sorted(conserve_hgt_tag_count.items(), key=lambda item: item[1], reverse = True)
+        print ("sorted species_pair", sorted_conserve_hgt_tag[:5])
 
         common_species = 0
         uniq_species = 0
         for e in sorted_dict:
-            print (e[0], e[1])
+            # 
             if e[1] > 5:
                 common_species += 1
+                print (e[0], e[1])
             if e[1] == 1:
                 uniq_species += 1
         species_num = len(species_dict) - 1
@@ -361,6 +376,7 @@ class Time_Lines():
             ind_time_dict[individual][time_point] = self.sample_array_dict[sra_id]
 
         diff_dict = {} # record the genus pair that show diff in at least one sample
+        data = []
         for individual in ind_time_dict:
             diff = np.array(ind_time_dict[individual][1]) - np.array(ind_time_dict[individual][10])
             species_array = {}
@@ -373,7 +389,7 @@ class Time_Lines():
                 s2 = taxonomy.taxonomy_dict[g2].split(";")[5]
                 species_tag = "&".join(sorted([s1, s2]))
 
-                if s1 == 'g__' or  s2 == 'g__':
+                if len(s1) == 3 or  len(s2) == 3:
                     continue
 
                 if ind_time_dict[individual][1][i] == 1 or ind_time_dict[individual][10][i] == 1:
@@ -382,21 +398,35 @@ class Time_Lines():
                     species_array[species_tag][0].append(ind_time_dict[individual][1][i])
                     species_array[species_tag][1].append(ind_time_dict[individual][10][i])
 
-            p_species = {}
+            # p_species = {}
             for species in species_array:
                 U1, p = mannwhitneyu(species_array[species][0], species_array[species][1])
-                p_species[species] = p
-                if p < 0.01:
-                    if species not in diff_dict:
-                        diff_dict[species] = []
-                    diff_dict[species].append(p)
-            sorted_dict = sorted(p_species.items(), key=lambda item: item[1])
+                # p_species[species] = p
+                data.append([species, p, individual])
+                # if p < 0.01:
+                #     if species not in diff_dict:
+                #         diff_dict[species] = []
+                #     diff_dict[species].append(p)
+            # sorted_dict = sorted(p_species.items(), key=lambda item: item[1])
             # print (list(diff_species.keys()))
             # print (individual, sorted_dict[:10])
+
+        df = pd.DataFrame(data, columns = ["species", "p_value", "individual"])
+        # print (df)
+        reject, pvals_corrected, _, alphacBonf = multipletests(list(df["p_value"]), alpha=0.05, method='bonferroni')
+        df["p.adj"] = pvals_corrected
+
+        for index, row in df.iterrows():
+            if row["p.adj"]  < 0.05:
+                species = row["species"]
+                if species not in diff_dict:
+                    diff_dict[species] = []
+                diff_dict[species].append(row["p.adj"])
+        
         for genus_pair in diff_dict:
-            if len(diff_dict[genus_pair]) < 3:
+            if len(diff_dict[genus_pair]) < 1:
                 continue
-            print (genus_pair, len(diff_dict[genus_pair]), np.mean(diff_dict[genus_pair]))
+            print (genus_pair, len(diff_dict[genus_pair]), np.mean(diff_dict[genus_pair]), max(diff_dict[genus_pair]))
         print (len(diff_dict))
 
     def intra_inter_genus_HGT(self, level):
@@ -683,19 +713,19 @@ if __name__ == "__main__":
 
 
     #################  HGT event jaccard between samples
-    TD_sample_list = get_samples_for_single()
-    transfer = Transfer(TD_sample_list)
-    transfer.read_events(identified_hgt)
-    transfer.compare()
+    # TD_sample_list = get_samples_for_single()
+    # transfer = Transfer(TD_sample_list)
+    # transfer.read_events(identified_hgt)
+    # transfer.compare()
 
 
 
 
 
     ############### breakpoint correlation between samples
-    # tim = Time_Lines()
-    # tim.read_samples()
-    # tim.get_HGT_table()
+    tim = Time_Lines()
+    tim.read_samples()
+    tim.get_HGT_table()
     # tim.get_pearson()
     # print (len(tim.cohort_data), len(tim.all_hgt))
     # print (bin_size, sample_cutoff)
@@ -707,7 +737,7 @@ if __name__ == "__main__":
     # tim.print_table()
     # tim.get_distribution()
     # tim.find_conserve_HGT()
-    # tim.find_diff_HGT()
+    tim.find_diff_HGT()
     # tim.comprare_intra_genus()
     # for level in range(1, 6):
     #     tim.intra_inter_genus_HGT(level)

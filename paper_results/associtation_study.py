@@ -271,8 +271,6 @@ class Marker():
         self.diff_bk = defaultdict(list)
         self.normal_bk = defaultdict(list)
 
-
-
     def extract_HGT(self):
         self.sample_count = {self.group1:0, self.group2:0}
         for sample in self.sample_obj_list:
@@ -314,6 +312,8 @@ class Marker():
         for hgt_tag in self.all_HGTs:
             # if self.all_HGTs_family[hgt_tag][0] !=  "f__Lachnospiraceae" and self.all_HGTs_family[hgt_tag][1] !=  "f__Lachnospiraceae":
             #     continue
+            # if not re.search("g__Escherichia", hgt_tag):
+            #     continue
             a = self.all_HGTs[hgt_tag][self.group1]
             b = self.sample_count[self.group1] - self.all_HGTs[hgt_tag][self.group1]
             c = self.all_HGTs[hgt_tag][self.group2]
@@ -330,65 +330,30 @@ class Marker():
 
         filtered_df = df[df['p.adj'] < 0.05]
 
-        self.print_diff_pair(filtered_df, name)
+        if len(filtered_df) > 100:
+            max_pair_num = 100   # the figure has bug if there are too many genera, so limit the genus pair number
+        else:
+            max_pair_num = 10000
+        self.print_diff_pair(filtered_df, name, max_pair_num)  # prepare files to plot
 
+        ## functional analysis
+        # """
         group1_df = filtered_df[filtered_df[self.group1] > filtered_df[self.group2]]
         group2_df = filtered_df[filtered_df[self.group1] < filtered_df[self.group2]]
+        group1_df = group1_df.sort_values(by='p.adj')
+        group2_df = group2_df.sort_values(by='p.adj')
         print ("differential genus pairs enriched for each group", len(group1_df), len(group2_df))
         # print (filtered_df)
         print ("\n<<<<<<<<<<<<<<<%s enriched:"%(self.group1), len(group1_df))
-        self.classify_breakpoints_pair(group1_df, f"/mnt/d/R_script_files/group1_{name}.csv")
+        self.classify_breakpoints_pair(group1_df, f"/mnt/d/R_script_files/association/group1_{name}.csv")
+        print ("most %s-enriched pathway is"%(self.group1), group1_df.iloc[0, :])
 
         print ("\n<<<<<<<<<<<<<<<%s enriched:"%(self.group2), len(group2_df))
-        self.classify_breakpoints_pair(group2_df, f"/mnt/d/R_script_files/group2_{name}.csv")
+        self.classify_breakpoints_pair(group2_df, f"/mnt/d/R_script_files/association/group2_{name}.csv")
+        print ("most %s-enriched pathway is"%(self.group2), group2_df.iloc[0, :])
+        # """
 
-    def print_diff_pair_bk(self, diff_pairs):
-        colors = ["#F7C530", "#95CC5E", "#D0DFE6","pink","#4169E1","#F0DB4F","#226F54","#FF7F50","#FFA500","#6EE2FF","lightgrey"]*4
-        genus2family = get_taxa_dict()
-        family_index = {}
-
-        index_dict = {}
-        for pair in diff_pairs:
-            array = pair.split("&")
-            for a in array:
-                
-                family = genus2family[a]
-                index_dict[a] = family
-                if family not in family_index:
-                    family_index[family] = len(family_index)
-
-        print ("family count", len(family_index))
-        index_dict = dict(sorted(index_dict.items(), key=lambda x: x[1]))
-        names = list(index_dict.keys())
-
-        index_dict = {}
-        my_color = []
-        family_list = []
-        for i in range(len(names)):
-            index_dict[names[i]] = i
-            family = genus2family[names[i]]
-            color = colors[family_index[family]]
-            family_list.append(family)
-        my_color.append(color)
-            
-        print (index_dict)
-        print (family_list)
-        print (my_color)
-        matrix = np.zeros((len(index_dict), len(index_dict)))
-        for pair in diff_pairs:
-            array = pair.split("&")
-            matrix[index_dict[array[0]]][index_dict[array[1]]] = 1    
-            matrix[index_dict[array[1]]][index_dict[array[0]]] = 1  
-       
-        df = pd.DataFrame(matrix, index=names, columns=names)  
-        print (df)
-        df.to_csv("/mnt/d/R_script_files/diff_pair_matrix.csv", sep=',')
-        with open('/mnt/d/R_script_files/diff_pair_matrix_color.csv', 'w') as f:
-            # iterate over the list and write each element to a new line in the file
-            for item in my_color:
-                f.write("%s," % item)
-
-    def print_diff_pair(self, filtered_df, name):
+    def print_diff_pair(self, filtered_df, name, max_pair_num):
 
         # colors = ["#F7C530", "#95CC5E", "#D0DFE6","pink","#4169E1","#F0DB4F","#226F54","#FF7F50","#FFA500","#6EE2FF","lightgrey"]*5
         # colors = ["red", "green", "blue", "purple", "yellow", "orange", "pink", "brown", "black", "gray"]*10
@@ -397,43 +362,63 @@ class Marker():
                 "indigo", "lavender", "coral", "violet", "beige", "khaki", "salmon", "tan", "fuchsia", 
                 "lime", "aqua", "chartreuse", "crimson", "orchid", "plum"] * 4
         # print (colors)
+        filtered_df = filtered_df.sort_values(by='p.adj')
+        filtered_df = filtered_df.iloc[:max_pair_num, :]
+
         genus2family = get_taxa_dict()
         family_index = {}
 
+        Lachnospiraceae_involved_pair_num = 0
         index_dict = {}
         link_times = defaultdict(int)
+        if_Escherichia_list = []
         for index, row in filtered_df.iterrows():
             # diff_pairs[row["genus_pair"]] = row
+            print (row["genus_pair"], row["p.adj"], row[self.group1], row[self.group2])
             pair = row["genus_pair"]
-        # for pair in diff_pairs:
+            family_list = []
             array = pair.split("&")
+            if "g__Escherichia" in array:
+                if_Escherichia_list.append('Yes')
+            else:
+                if_Escherichia_list.append('No')
             for a in array:
+                b = a[3:]  # remove front g__
                 family = genus2family[a]
-                index_dict[a] = family
-                link_times[a] += 1
+                index_dict[b] = family
+                link_times[b] += 1
                 if family not in family_index:
                     family_index[family] = len(family_index)
+                family_list.append(family)
+            # print ("family", family_list)
+            if "f__Lachnospiraceae" in family_list:
+                Lachnospiraceae_involved_pair_num += 1
+        
+        filtered_df["Escherichia"] = if_Escherichia_list
+
 
         print ("involved genus count", len(index_dict))
         print ("involved family count", len(family_index))
-        print (family_index)
+        # print (family_index)
+        print ("Lachnospiraceae_involved_pair_num", Lachnospiraceae_involved_pair_num)
 
 
         index_dict = dict(sorted(index_dict.items(), key=lambda x: x[1]))
         names = list(index_dict.keys())
 
+        
         family_counts = defaultdict(int)
         index_dict = {}
         data = []
         hist_data = []
         for i in range(len(names)):
             index_dict[names[i]] = i
-            family = genus2family[names[i]]
+            family = genus2family["%s__"%(level_list[level-1][0]) + names[i]]
             family_counts[family] += 1
             color = colors[family_index[family]]
-            print (names[i], 3, family, color)
-            data.append([names[i], 3, family, color])
-            hist_data.append([names[i], 0, 3, link_times[names[i]]])
+            # print (names[i], 3, family, color)
+            data.append([names[i], 4, family, color])
+            hist_data.append([names[i], 0, 4, link_times[names[i]]])
 
         family_counts = dict(sorted(family_counts.items(), key=lambda x: x[1]))
         print ("family count", len(family_counts), family_counts)
@@ -444,31 +429,35 @@ class Marker():
         for index, row in filtered_df.iterrows():
             pair = row["genus_pair"]
             array = pair.split("&")
+            a = array[0][3:] # remove front g__
+            b = array[1][3:]
 
-            if row[self.group1] > row[self.group2]:
-                bed1.append([array[0], 1.5])
-                bed2.append([array[1], 1.5])
-            else:
-                bed3.append([array[0], 1.5])
-                bed4.append([array[1], 1.5])               
+            if row[self.group1] > row[self.group2]:  # group1 enriched
+                bed1.append([a, 2])
+                bed2.append([b, 2])
+            else:   # group2 enriched
+                bed3.append([a, 2])
+                bed4.append([b, 2])               
        
+        filtered_df.to_csv("/mnt/d/R_script_files/association/real_diff_pair_%s_%s.csv"%(level_list[level-1], name), sep=',')
+
         df = pd.DataFrame(data, columns=["genus", "length", "family", "color"] )  
-        df.to_csv("/mnt/d/R_script_files/diff_pair_genus_%s.csv"%(name), sep=',')
+        df.to_csv("/mnt/d/R_script_files/association/diff_pair_genus_%s.csv"%(name), sep=',')
 
         df = pd.DataFrame(hist_data, columns=["genus", "start", "end", "value1"] )  
-        df.to_csv("/mnt/d/R_script_files/diff_pair_genus_hist_%s.csv"%(name), sep=',', index=False)
+        df.to_csv("/mnt/d/R_script_files/association/diff_pair_genus_hist_%s.csv"%(name), sep=',', index=False)
 
         df = pd.DataFrame(bed1, columns=["chrom", "mid"] )  
-        df.to_csv("/mnt/d/R_script_files/diff_pair_genus_bed1_%s.csv"%(name), sep=',', index=False)
+        df.to_csv("/mnt/d/R_script_files/association/diff_pair_genus_bed1_%s.csv"%(name), sep=',', index=False)
     
         df = pd.DataFrame(bed2, columns=["chrom", "mid"] )  
-        df.to_csv("/mnt/d/R_script_files/diff_pair_genus_bed2_%s.csv"%(name), sep=',', index=False)
+        df.to_csv("/mnt/d/R_script_files/association/diff_pair_genus_bed2_%s.csv"%(name), sep=',', index=False)
 
         df = pd.DataFrame(bed3, columns=["chrom", "mid"] )  
-        df.to_csv("/mnt/d/R_script_files/diff_pair_genus_bed3_%s.csv"%(name), sep=',', index=False)
+        df.to_csv("/mnt/d/R_script_files/association/diff_pair_genus_bed3_%s.csv"%(name), sep=',', index=False)
     
         df = pd.DataFrame(bed4, columns=["chrom", "mid"] )  
-        df.to_csv("/mnt/d/R_script_files/diff_pair_genus_bed4_%s.csv"%(name), sep=',', index=False)
+        df.to_csv("/mnt/d/R_script_files/association/diff_pair_genus_bed4_%s.csv"%(name), sep=',', index=False)
 
     def get_tree(self):
         involved_genomes = {}
@@ -482,7 +471,6 @@ class Marker():
     def select_diff_breakpoint(self):
         data = []
         for bkp_tag in self.all_breakpoints:
-
             a = self.all_breakpoints[bkp_tag][self.group1]
             b = self.sample_count[self.group1] - self.all_breakpoints[bkp_tag][self.group1]
             c = self.all_breakpoints[bkp_tag][self.group2]
@@ -508,14 +496,84 @@ class Marker():
         for index, row in filtered_df.iterrows():
 
             pure_genome = "_".join(row["breakpoint"].split("_")[:-1]) 
+            genome = row["breakpoint"].split("&")[0]
+            locus = int(row["breakpoint"].split("&")[1]) * bin_size
 
             lineage = taxonomy.taxonomy_dict[pure_genome]
-            print ( row["breakpoint"], lineage.split(";")[4], row["oddsratio"])
+            print ( row["breakpoint"], lineage.split(";")[5], lineage.split(";")[6], row["oddsratio"], row["p.adj"], row[self.group1], row[self.group2], genome, locus)
             family = lineage.split(";")[4]
 
             diff_genomes[pure_genome] = family
             diff_breakpoints[row["breakpoint"]] = row
+            bkp_dict = {}
+            bkp_dict[genome] = [locus]
+            anno_dict = self.get_anno(bkp_dict)
+            # print (anno_dict["product"])
+            Shigellosis_flag = False
+            # for ko in anno_dict["ko"]:
+            #     if ko[3:] in Shigellosis_related_kos:
+            #         Shigellosis_flag = True
+            for product in anno_dict["product"]:
+                if re.search("Shiga", product):
+                    Shigellosis_flag = True
+            if Shigellosis_flag:
+                print ( row["breakpoint"], lineage.split(";")[5], lineage.split(";")[6], row["oddsratio"], row["p.adj"], row[self.group1], row[self.group2], genome, locus)
+                self.get_precise_bkp(row)
+
         return diff_genomes, diff_breakpoints
+
+    def compare_gene_freq(self):
+        # shiga-toxin-related BKP frequency in different groups
+
+        sample_with_gene_count = {self.group1:0, self.group2:0}
+        sample_without_gene_count = {self.group1:0, self.group2:0}
+        focus_genome = {"GUT_GENOME143747_2":0, "GUT_GENOME144544_1":0}
+        for sample in self.sample_obj_list:
+            if sample.ID not in self.selected_samples:
+                continue
+            sample_dict = {}
+            bkp_dict = {}
+            Shigellosis_flag = False
+            for bkp in sample.bkps:
+
+                if not re.search("g__Escherichia", bkp.from_ref_lineage) and not re.search("g__Escherichia", bkp.to_ref_lineage):
+                    continue
+
+                if bkp.from_ref in focus_genome:
+                    bkp_dict[bkp.from_ref] = [bkp.from_bkp]
+                    anno_dict = self.get_anno(bkp_dict)
+                    for product in anno_dict["product"]:
+                        if re.search("Shiga", product):
+                            Shigellosis_flag = True
+
+                if bkp.to_ref in focus_genome:
+                    bkp_dict[bkp.to_ref] = [bkp.to_bkp]
+                    anno_dict = self.get_anno(bkp_dict)
+                    for product in anno_dict["product"]:
+                        if re.search("Shiga", product):
+                            Shigellosis_flag = True
+            # print (sample.ID, sample.disease, Shigellosis_flag)
+
+            if Shigellosis_flag:
+                sample_with_gene_count[sample.disease] += 1
+            else:
+                sample_without_gene_count[sample.disease] += 1
+        print (sample_with_gene_count, sample_without_gene_count)
+        a = sample_with_gene_count[self.group1]
+        b = sample_without_gene_count[self.group1]
+        c = sample_with_gene_count[self.group2]
+        d = sample_without_gene_count[self.group2]     
+        oddsratio, p_value = fisher_exact([[a, b], [c, d]]) 
+        print (oddsratio, p_value)  
+
+    def get_precise_bkp(self, row):
+
+        for sample in self.sample_obj_list:
+            if sample.ID not in self.selected_samples:
+                continue
+            for bkp in sample.bkps:
+                if bkp.bk1_tag == row["breakpoint"] or bkp.bk2_tag == row["breakpoint"]:
+                    print (sample.ID, sample.disease, bkp.from_ref, bkp.from_bkp, bkp.to_ref, bkp.to_bkp)
 
     def classify_breakpoints(self):
         diff_genomes, diff_breakpoints = self.select_diff_breakpoint()
@@ -594,6 +652,8 @@ class Marker():
 
         diff_pairs = {}
         for index, row in group1_df.iterrows():
+            # if not re.search("g__Escherichia", row["genus_pair"]):
+            #     continue
             diff_pairs[row["genus_pair"]] = row
             # print (row["genus_pair"], row[self.group1], row[self.group2])
 
@@ -703,7 +763,7 @@ class Marker():
 
     def get_anno(self, bkp_dict):
         
-        anno_dict = {"ko":[], "cog":[]}
+        anno_dict = {"ko":[], "cog":[], "product":[]}
 
         for genome in bkp_dict:
             ### for each genome
@@ -724,16 +784,27 @@ class Marker():
                 else:
                     cog = gene_anno_dict["COG"]
 
+                if "product" not in gene_anno_dict:
+                    product = ""
+                else:
+                    product = gene_anno_dict["product"]
+
                 #### check if the gene locates in insert site
                 locate_insert_flag = False
                 for site in insert_list:
                     if site > gene_interval[0] - self.near and site < gene_interval[1] + self.near:
                         locate_insert_flag = True
+                        bkp_site = site
                         break
                 if locate_insert_flag:
                     anno_dict["ko"] += KEGG_list
+                    anno_dict["product"].append(product)
                     for i in range(len(cog)):
                         anno_dict["cog"] += [cog[i]]
+
+                    # for ko in KEGG_list:
+                    #     if ko[3:] in Shigellosis_related_kos:
+                    #         print (locate_insert_flag, "Shigellosis_related_kos", ko, genome, gene_intervals, bkp_site)
 
         return anno_dict
 
@@ -822,8 +893,7 @@ def enrichment_analysis_cog(my_list, background_list):
     print (filtered_df)
     print ("differential COG", len(filtered_df))
 
-def enrichment_analysis_kegg(input_ko_ids, background_ko_ids):
-    
+def enrichment_analysis_kegg(input_ko_ids, background_ko_ids): 
     input_counts = get_pathways(input_ko_ids)
     background_counts = get_pathways(background_ko_ids)
     print ("pathway count num", len(input_counts), len(background_counts))
@@ -853,14 +923,23 @@ def enrichment_analysis_kegg(input_ko_ids, background_ko_ids):
     reject, pvals_corrected, _, alphacBonf = multipletests(list(df["p_value"]), alpha=0.05, method='bonferroni')
     df["p.adj"] = pvals_corrected
 
-    for index, row in df.iterrows():
+    # for index, row in df.iterrows():
         # diff_pairs[row["genus_pair"]] = row
-        if row["pathway_id"] == "map00650":
-            print ("<<<<<<<<<<<<\n", row)
+        # if row["pathway_id"] == "map00650":
+        #     print ("<<<<<<<<<<<<\n", row)
 
     filtered_df = df[df['p.adj'] < 0.05]
-    print (filtered_df)
-    print ("differential pathway", len(filtered_df))
+    if len(filtered_df) > 1:
+        filtered_df = filtered_df.sort_values(by='p.adj')
+    # print (filtered_df)
+    print ("differential pathway num", len(filtered_df))
+    print ("most differential pathway is", filtered_df.iloc[0, :])
+
+    enriched_path = filtered_df[filtered_df["fold"] > 1]
+    for index, row in enriched_path.iterrows():
+        print ("enriched", row["pathway_name"], row["fold"], row["p.adj"])
+
+    
     return filtered_df
 
 def enrichment_analysis_scfa(input_ko_ids, background_ko_ids, group1, group2):
@@ -896,8 +975,6 @@ def enrichment_analysis_scfa(input_ko_ids, background_ko_ids, group1, group2):
 
     df.to_csv("/mnt/d/R_script_files/scfa_freq.csv", sep=',', index=False)
 
-
-
 def get_scfa(input_ko_ids):
     anno_dict = defaultdict(int)
     for ko in input_ko_ids:
@@ -905,7 +982,6 @@ def get_scfa(input_ko_ids):
             anno_dict["SCFA"] +=1
             anno_dict[scfa_dict[ko[3:]]] += 1
     return anno_dict
-
 
 def get_pathways(input_ko_ids):
 
@@ -919,6 +995,16 @@ def get_pathways(input_ko_ids):
             input_counts[pathway_id] += 1
     return input_counts
 
+def get_Shigellosis_kos():
+    Shigellosis_related_kos = set()
+    Shigellosis = "map05131"
+    for ko_id in ko_pathway_dict:
+        if Shigellosis in ko_pathway_dict[ko_id]:
+            Shigellosis_related_kos.add(ko_id)
+    print (Shigellosis_related_kos)
+    return Shigellosis_related_kos
+
+
 def get_support_kos(input_ko_ids, pathway_id):
     support_ko = {}
     for ko_id in input_ko_ids:
@@ -931,7 +1017,7 @@ def get_support_kos(input_ko_ids, pathway_id):
 def get_taxa_dict():
     genus2family = {}
     for lineage in taxonomy.taxonomy_dict.values():
-        genus = lineage.split(";")[5]
+        genus = lineage.split(";")[level]
         family = lineage.split(";")[4]
         genus2family[genus] = family
     return genus2family
@@ -960,7 +1046,7 @@ if __name__ == "__main__":
     cutoff = 0.1
     level = 5
 
-    bin_size = 1000
+    bin_size = 5000
 
     hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
     gff = "/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.gff"
@@ -974,6 +1060,8 @@ if __name__ == "__main__":
     f = open('/mnt/d/HGT/seq_ana/ko_pathway_dict.pickle', 'rb')
     ko_pathway_dict = pickle.load(f)
     print ("pathway dict loaded", len(ko_pathway_dict))
+    # Shigellosis_related_kos = get_Shigellosis_kos()
+    Shigellosis_related_kos = {'K04551', 'K12785', 'K03221', 'K02977', 'K13450', 'K07345', 'K13285', 'K13792', 'K13085', 'K12679', 'K13743', 'K13284', 'K13791', 'K02927', 'K12800', 'K22487', 'K03094', 'K08738', 'K13286', 'K05692', 'K10704', 'K12757', 'K02580', 'K00844', 'K02406', 'K13520', 'K08770', 'K13287'}
 
     annotation = Annotation(gff)
     annotation.read_gff()
@@ -998,20 +1086,26 @@ if __name__ == "__main__":
 
     group1 = "acute_diarrhoea"
     group2 = "control"
+
+    # for group1 in  ["CRC", "IGT", "adenoma", "T2D", "acute_diarrhoea", "IBD"]:
+
     combination = group1 + " vs. " + group2
     name = group1 + "_" + group2
     # kegg_diff_pair = f"/mnt/d/R_script_files/{name}.csv"
     print ("\n\n<<<<<<<<<<<<<<<<<<<<<<<", combination)
 
     mar = Marker(group1, group2, dat.sample_obj_list)
+    # mar.select_sample()
     # if not mar.enough_sample_flag:
     #     print ("skip the comparison, because one group is empty.")
     #     continue
     mar.extract_HGT()
-    mar.select_diff_HGT(name)
+    # mar.select_diff_breakpoint()
+    # mar.compare_gene_freq()
+    # mar.select_diff_HGT(name)
     # mar.classify_breakpoints()
     # all_kegg_diff = f"/mnt/d/R_script_files/{name}_all.csv"
     # mar.compare_all_breakpoints(all_kegg_diff)
 
-        #     break
-        # break
+    #     break
+    # break
