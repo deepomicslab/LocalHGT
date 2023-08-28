@@ -11,6 +11,7 @@ from sklearn.cluster import DBSCAN
 import random
 import argparse
 import sys
+import networkx as nx
  
 
 
@@ -70,10 +71,12 @@ class Match():
                 continue
             if re.search(".repeat.acc.csv", each_file):
                 continue
+            
             acc_file = os.path.join(result_dir, each_file)
-            sra_id = acc_file.split("/")[-1].split(".")[0]      
+            sra_id = acc_file.split("/")[-1][:-8]   
             my_bkps = self.read_bkp(acc_file)
-            self.cohort_data[sra_id] = my_bkps
+            self.cohort_data[sra_id] = my_bkps  
+        print ("No. of samples:", len(self.cohort_data))
         
     def read_bkp(self, bkp_file):
         my_bkps = []
@@ -177,12 +180,54 @@ class Match():
             # match_num = self.remove_ambiguity(event_data)
             match_num = self.remove_ambiguity_pop(event_data)
             # match_num = 2
-            print (ID, receptor,insert_pos,donor,delete_start,delete_end, match_num)
+            # print (ID, receptor,insert_pos,donor,delete_start,delete_end, match_num)
             if match_num <= 2:
-                result_data.append(event_data)
+                # result_data.append(event_data)
+                pass
             else:
                 flag = False
         return flag
+
+    def get_event(self, bkp_obj_1, bkp_obj_2, ID):
+        flag = False
+        if not ((bkp_obj_1.from_ref == bkp_obj_2.from_ref and bkp_obj_1.to_ref == bkp_obj_2.to_ref) or (bkp_obj_1.to_ref == bkp_obj_2.from_ref and bkp_obj_1.from_ref == bkp_obj_2.to_ref)):
+            print ("<<<<<<< not matched, impossible.")
+            return False
+        if bkp_obj_1.from_ref == bkp_obj_2.from_ref and abs(bkp_obj_1.from_bkp - bkp_obj_2.from_bkp) < max_diff:
+            if bkp_obj_1.to_ref == bkp_obj_2.to_ref and abs(bkp_obj_1.to_bkp - bkp_obj_2.to_bkp) > max_diff:
+                receptor = bkp_obj_1.from_ref
+                insert_pos = bkp_obj_1.from_bkp
+                donor = bkp_obj_1.to_ref
+                delete_start, delete_end, dir_flag = self.delete_direction([bkp_obj_1.to_bkp, bkp_obj_1.to_side, bkp_obj_1.to_strand, bkp_obj_2.to_bkp, bkp_obj_2.to_side, bkp_obj_2.to_strand])
+                flag = True and dir_flag
+
+        elif bkp_obj_1.to_ref == bkp_obj_2.from_ref and abs(bkp_obj_1.to_bkp - bkp_obj_2.from_bkp) < max_diff:
+            if bkp_obj_1.from_ref == bkp_obj_2.to_ref and abs(bkp_obj_1.from_bkp - bkp_obj_2.to_bkp) > max_diff:
+                receptor = bkp_obj_1.to_ref
+                insert_pos = bkp_obj_1.to_bkp
+                donor = bkp_obj_1.from_ref
+                delete_start, delete_end, dir_flag = self.delete_direction([bkp_obj_1.from_bkp, bkp_obj_1.from_side, bkp_obj_1.from_strand, bkp_obj_2.to_bkp, bkp_obj_2.to_side, bkp_obj_2.to_strand])
+                flag = True and dir_flag
+
+        elif bkp_obj_1.from_ref == bkp_obj_2.to_ref and abs(bkp_obj_1.from_bkp - bkp_obj_2.to_bkp) < max_diff:
+            if bkp_obj_1.to_ref == bkp_obj_2.from_ref and abs(bkp_obj_1.to_bkp - bkp_obj_2.from_bkp) > max_diff:
+                receptor = bkp_obj_1.from_ref
+                insert_pos = bkp_obj_1.from_bkp
+                donor = bkp_obj_1.to_ref
+                delete_start, delete_end, dir_flag = self.delete_direction([bkp_obj_1.to_bkp, bkp_obj_1.to_side, bkp_obj_1.to_strand, bkp_obj_2.from_bkp, bkp_obj_2.from_side, bkp_obj_2.from_strand])
+                flag = True and dir_flag
+
+        elif bkp_obj_1.to_ref == bkp_obj_2.to_ref and abs(bkp_obj_1.to_bkp - bkp_obj_2.to_bkp) < max_diff:
+            if bkp_obj_1.from_ref == bkp_obj_2.from_ref and abs(bkp_obj_1.from_bkp - bkp_obj_2.from_bkp) > max_diff:
+                receptor = bkp_obj_1.to_ref
+                insert_pos = bkp_obj_1.to_bkp
+                donor = bkp_obj_1.from_ref
+                delete_start, delete_end, dir_flag = self.delete_direction([bkp_obj_1.from_bkp, bkp_obj_1.from_side, bkp_obj_1.from_strand, bkp_obj_2.from_bkp, bkp_obj_2.from_side, bkp_obj_2.from_strand])
+                flag = True and dir_flag
+        else:
+            print ("<<<<<<< not matched, impossible.")
+        event_data = [ID, receptor,insert_pos,donor,delete_start,delete_end, bkp_obj_1.if_reverse]
+        return event_data
 
     def remove_ambiguity(self, event_data):
         ## ID, receptor,insert_pos,donor,delete_start,delete_end
@@ -271,6 +316,8 @@ class Match():
                 valid_num += 1
         print ("%s: raw bkp num is %s, filtered bkp num is %s."%(ID, len(sample_bkps), valid_num))
 
+        G = nx.Graph()
+        nodes_set = set()
         for i in range(len(sample_bkps)):
             if not self.check_if_bkp_at_ends(sample_bkps[i]): # the bkp should not in reference ends
                 continue
@@ -291,6 +338,23 @@ class Match():
                 if flag:
                     # print (bkp1, bkp2)
                     possible_match_num += 1
+                    edge_weight = (sample_bkps[i].cross_split_reads + sample_bkps[j].cross_split_reads)/2
+                    G.add_edge(i, j, weight = edge_weight)
+                    nodes_set.add(i)
+                    nodes_set.add(j)
+
+        G.add_nodes_from(nodes_set)
+        matched_bkp_pairs = set()
+        for cc in nx.connected_components(G):
+            G_lcc = G.subgraph(cc)
+            matching = nx.algorithms.matching.max_weight_matching(G_lcc, weight='weight')
+            matched_bkp_pairs = matched_bkp_pairs | matching
+        # print (matched_bkp_pairs,len(matched_bkp_pairs))
+
+        for matched_nodes in matched_bkp_pairs:
+            event_data = self.get_event(sample_bkps[matched_nodes[0]], sample_bkps[matched_nodes[1]], ID)
+            result_data.append(event_data)
+            
         print ("%s has %s bkps and its match num is %s"%(ID, len(sample_bkps), possible_match_num))
 
 
@@ -311,7 +375,6 @@ if __name__ == "__main__":
     required.add_argument("-r", type=str, help="<str> Reference file.", metavar="\b")
     required.add_argument("-b", type=str, help="<str> Folder saves all the breakpoint results from all samples.", metavar="\b")
     required.add_argument("-f", type=str, default="./", help="<str> Output file to save all inferred HGT events.", metavar="\b")
-
     optional.add_argument("-m", type=int, default=500, help="<int> minimum transfer sequence length", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
 
@@ -335,7 +398,6 @@ if __name__ == "__main__":
             print ("%s, process %s."%(sample_index, sample))
             tim.match_each_sample(sample)
             sample_index += 1
-
 
         df = pd.DataFrame(result_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "reverse_flag"])
         df.to_csv(identified_hgt, sep=',', index=False)

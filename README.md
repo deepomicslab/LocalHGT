@@ -30,7 +30,7 @@ sh run.sh
 See `test/output/` for results. 
 
 ## Running
-Run `python main.py` like
+First, infer HGT breakpoints by running `python main.py` like
 ```
 usage: main.py -h
 
@@ -57,7 +57,7 @@ A command example:
 python ./main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
 ```
 
-Infer complete HGT events by matching breakpoints after detecting HGT breakpoints for all the samples.
+Second, infer complete HGT events by matching breakpoints after detecting HGT breakpoints for all the samples.
 ```
 usage: infer_HGT_event.py -h
 

@@ -13,7 +13,7 @@ import pandas as pd
 import seaborn as sns
 import random
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime
 from simulation import Parameters
 from generate_run_scripts import Batch
@@ -85,12 +85,13 @@ def read_all_frag(true):
     return all_pos
 
 def read_true(true):
-    true_bkp = []
+    true_bkp, true_event = [], []
     for line in open(true):
             array = line.strip().split()
             true_bkp.append([array[0], array[1], array[2], array[3]])
             true_bkp.append([array[0], array[1], array[2], array[4]])
-    return true_bkp
+            true_event.append(array)
+    return true_bkp, true_event
 
 def read_lemon(lemon):
     lemon_bkp = []
@@ -228,7 +229,7 @@ class Sample():
         self.ID = ID
         true_ID = self.get_true(ID)
         self.true_file = true_dir + '/' + true_ID + '.true.sv.txt'
-        self.true_bkp = read_true(self.true_file)
+        self.true_bkp, self.true_event = read_true(self.true_file)
         self.complexity = ''
 
     def get_true(self, ID):
@@ -304,8 +305,6 @@ class Figure():
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
         plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))
         
-    
-
     def plot_cami(self):
         self.convert_df()
         print (self.df)
@@ -547,6 +546,68 @@ def pure_frag():
     fi.convert_df()
     fi.df.to_csv('/mnt/c/Users/swang66/Documents/For_methods/pure_frag_comparison.csv', sep=',')
 
+def read_all_event(inferred_event):
+    inferred_event_dict = defaultdict(list)
+    for line in open(inferred_event):
+        array = line.strip().split(',')   
+        if array[0] == "sample":
+            continue
+        sample = array[0]
+        inferred_event_dict[sample].append(array[1:])
+    return inferred_event_dict
+
+def depth_event():
+    ba = Parameters()
+    true_dir = "/mnt/d/breakpoints/HGT/uhgg_depth/"
+    local_dir = "/mnt/d/breakpoints/HGT/depth_for_event/"
+    inferred_event = "/mnt/d/HGT/event_evaluation/uhgg_depth_event.csv"
+    inferred_event_dict = read_all_event(inferred_event)
+    print (len(inferred_event_dict))
+    data = []
+    for depth in [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]:
+        ba.change_depth(depth)
+        for index in range(10):
+            ba.get_ID(index)    
+            sa = Sample(ba.sample, true_dir)
+            sample_true_events = sa.true_event
+            sample_infer_events = []
+            if sa.ID in inferred_event_dict:
+                sample_infer_events = inferred_event_dict[sa.ID]
+            else:
+                print ("no event", sa.ID)
+                continue
+            # print (sample_infer_events)
+            F1_score = compare_event(sample_true_events, sample_infer_events)
+            data.append([sa.ID, F1_score, depth])
+
+    df = pd.DataFrame(data, columns = ["sample", "F1 score", "depth"])
+    df.to_csv("/mnt/d/R_script_files/event_depth.csv", sep=',', index=False)
+    ax = sns.barplot(x="depth", y="F1 score",data=df)   
+        # plt.xticks(rotation=0)
+    give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_depth_event_%s.pdf'%(give_time))
+
+def compare_event(true_list, infer_list):
+    tolerate_diff = 50
+    interact = 0
+    for t_event in true_list:
+        for i_event in infer_list:
+            # print (t_event, i_event )
+            if t_event[0] == i_event[0] and abs(int(t_event[1])-int(i_event[1]))<tolerate_diff and t_event[2] == i_event[2] and abs(int(t_event[3])-int(i_event[3]))<tolerate_diff\
+                and abs(int(t_event[4])-int(i_event[4]))<tolerate_diff and t_event[5] == i_event[5]:
+
+                interact += 1
+    recall = interact/(len(true_list))
+    precision = interact/(len(infer_list))
+
+    if precision > 0 and recall > 0:
+        F1_score = 2/((1/precision) + (1/recall)) 
+    else:
+        F1_score = 0
+    return F1_score
+
+
+
 
 if __name__ == "__main__":
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
@@ -561,6 +622,7 @@ if __name__ == "__main__":
     # pure_length()
     # pure_donor()
     # pure_frag()
-    cal_cami_time_MEM()
+    # cal_cami_time_MEM()
+    depth_event()
 
 
