@@ -20,14 +20,15 @@ Then index the database. First, build `samtools` index
 ```
 samtools faidx ref_database.fasta
 ```
-Second, at the first running, `LocalHGT` will index the database automatically, and it will take several hours.
+Second, at the first running, `LocalHGT` will index the database automatically, and it will take several hours. 
 
 ## Test
 ```
 cd test/
-sh run.sh
+sh run_BKP_detection.sh
+sh run_event_detection.sh
 ```
-See `test/output/` for results. 
+See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_output.csv` for event results.
 
 ## Running
 First, infer HGT breakpoints by running `python main.py` like
@@ -56,12 +57,13 @@ A command example:
 ```
 python ./main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
 ```
+The detected HGT breakpoints would be stored in the `<sample name>.acc.csv` file within the output folder.
 
 Second, infer complete HGT events by matching breakpoints after detecting HGT breakpoints for all the samples.
 ```
 usage: infer_HGT_event.py -h
 
-Infer complete HGT events by matching breakpoint pairs.
+Infer complete HGT events based on the identified HGT breakpoint pairs.
 
 required arguments:
   -r        <str> Reference file. (default: None)
@@ -75,6 +77,8 @@ optional arguments:
 ```
 
 ## Output interpretion
+
+###  HGT breakpoints
 The HGT breakpoints would be saved in the `*acc.csv` file. Here is an example:
 ```
 # the number of reads in the sample is: 41723899; Insert size is 681.
@@ -102,7 +106,7 @@ Interpret each column as:
 | cross_split_reads  | number of split reads supported the breakpoint pair  |
 |pair_end| number of paired-end reads supported the breakpoint pair     |
 
-
+###  HGT events
 HGT event result is like
 ```
 sample,receptor,insert_locus,donor,delete_start,delete_end,reverse_flag

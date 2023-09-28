@@ -11,6 +11,7 @@ from ete3 import Tree
 
 from mechanism_taxonomy import Taxonomy
 from HGT_network import read_phenotype
+from cal_average_abundance import taxa_average_abun
 
 level_list = ["phylum", "class", "order", "family", "genus", "species", "genome"]
 
@@ -201,6 +202,61 @@ class Basic_count():
                 total_freq_dict[taxa].append(sample_freq[taxa])
         sample_num = len(self.cohort_data)
         sorted_dict = count_mean_freq(total_freq_dict, sample_num)
+
+        if len(sorted_dict[0][0]) == 3:  ## no annotation
+            sorted_dict.append(sorted_dict.pop(0))
+
+        for i in range(5):
+            print ("genome with highest HGT freq", sorted_dict[i])
+        return sorted_dict
+
+    def sort_taxa_by_freq_norm(self, level):
+        # sort taxa by its mean frequency in each sample
+        total_freq_dict = {}
+        for sample in self.cohort_data:
+            sample_bkp_list = self.cohort_data[sample]
+            sample_count = {}
+            for bkp in sample_bkp_list:
+                s1 = get_genome_taxa(bkp.from_ref_genome, level)
+                s2 = get_genome_taxa(bkp.to_ref_genome, level)
+                # if s1[1:] == '__' or  s2[1:] == '__':
+                #     continue
+                if s1 not in sample_count:
+                    sample_count[s1] = 0
+                if s2 not in sample_count:
+                    sample_count[s2] = 0
+                sample_count[s1] += 1
+                sample_count[s2] += 1
+
+            sample_freq = get_freq(sample_count)
+            for taxa in sample_freq:
+                if taxa not in total_freq_dict:
+                    total_freq_dict[taxa] = []
+                total_freq_dict[taxa].append(sample_freq[taxa])
+        sample_num = len(self.cohort_data)
+
+
+        mean_freq_dict = {}
+        for taxa in total_freq_dict:
+            if len(total_freq_dict[taxa])/sample_num < 0.1: # the taxa must exists in more than 10% of samples
+                continue
+            mean_freq = np.mean(total_freq_dict[taxa])
+            # taxa = taxa.replace(" ", "_")
+            # print ("1", taxa)
+            taxa = reine_taxa_name(taxa)
+            # print ("2", taxa)
+            if taxa not in taxa_average_abun_dict:
+                print ("not match", taxa)
+                continue
+            else:
+                print ("match", taxa)
+                mean_abundance = taxa_average_abun_dict[taxa]
+            mean_freq_dict[taxa] = mean_freq/mean_abundance
+        sorted_dict = sorted(mean_freq_dict.items(), key=lambda item: item[1], reverse = True)
+        print ("<<<<<<<<<<<<<<<<", len(sorted_dict), len(total_freq_dict))
+        print (taxa_average_abun_dict.keys())
+        print (total_freq_dict.keys())
+
 
         if len(sorted_dict[0][0]) == 3:  ## no annotation
             sorted_dict.append(sorted_dict.pop(0))
@@ -455,6 +511,14 @@ def cal_corr(genome_pair_dict):
     df = pd.DataFrame(data, columns = ["index", "distance", "count", "frequency"])
     df.to_csv('/mnt/d/R_script_files/distance_frequency_bin.csv', sep=',')
 
+def reine_taxa_name(origin_name):
+    array = origin_name.split()
+    for i in range(len(array)):
+        ele = array[i]
+        if re.search("(.*?_[A-Z])$", ele):
+            array[i] = array[i][:-2]
+    return "_".join(array)
+
 
 if __name__ == "__main__":
     bin_size = 100
@@ -482,23 +546,34 @@ if __name__ == "__main__":
 
 
 
-
-
-    # ######## just sort taxa by HGT freq
+    # ##################  try to normalize the HGT frequency by the microbial abundance
+    taxa_average_abun_dict = taxa_average_abun()
+    # print (taxa_average_abun_dict)
     taxa_sort_data = []
-    for level in range(1, 7):
-        sorted_dict = ba.sort_taxa_by_freq(level)
+    for level in range(1, 2):
+        sorted_dict = ba.sort_taxa_by_freq_norm(level)
         top_sum = 0
         for i in range(5):
             print (i, sorted_dict[i][0], sorted_dict[i][1])
             taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
-            # taxa_sort_data.append([sorted_dict[i][0][3:], sorted_dict[i][1], level_list[level-1]])
-            top_sum += sorted_dict[i][1]
-        taxa_sort_data.append([level_list[level-1][0]+"__other", 1-top_sum, level_list[level-1]])
-        # taxa_sort_data.append(["other", 1-top_sum, level_list[level-1]])
 
-    df = pd.DataFrame(taxa_sort_data, columns = ["Taxa", "Frequency", "Level"])
-    df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')
+
+
+    # ######## just sort taxa by HGT freq
+    # taxa_sort_data = []
+    # for level in range(1, 7):
+    #     sorted_dict = ba.sort_taxa_by_freq(level)
+    #     top_sum = 0
+    #     for i in range(5):
+    #         print (i, sorted_dict[i][0], sorted_dict[i][1])
+    #         taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
+    #         # taxa_sort_data.append([sorted_dict[i][0][3:], sorted_dict[i][1], level_list[level-1]])
+    #         top_sum += sorted_dict[i][1]
+    #     taxa_sort_data.append([level_list[level-1][0]+"__other", 1-top_sum, level_list[level-1]])
+    #     # taxa_sort_data.append(["other", 1-top_sum, level_list[level-1]])
+
+    # df = pd.DataFrame(taxa_sort_data, columns = ["Taxa", "Frequency", "Level"])
+    # df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')
 
     #### prepare count tree
     # prepare_tree()

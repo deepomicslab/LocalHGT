@@ -355,6 +355,64 @@ def UHGG_snp(uniq_segs_loci):
                     pa.add_species(species_dict, seq_dict)                  
                     if_success = random_HGT(pa)
 
+def pro_snp(uniq_segs_loci): 
+    species_dict = {} 
+    pa = Parameters(progenomes)
+    # print (pa.seq_len['1105367.SAMN02673274.JFZB01000004'])
+    print (len(pa.seq_len))
+    pa.get_dir("/mnt/d/breakpoints/HGT/pro_snp/")
+    pa.add_segs(uniq_segs_loci)
+    pa.get_uniq_len()
+    pa.iteration_times = 1
+
+    for snp_rate in pa.snp_level:
+        pa.change_snp_rate(snp_rate)
+        for index in range(pa.iteration_times):
+            pa.get_ID(index)
+            if_success = 0
+            while if_success == 0:
+                ############random select scaffold###########
+                all_ref = pa.outdir + '/%s.fa'%(pa.sample)
+                fasta_sequences = SeqIO.parse(open(pa.origin_ref),'fasta')       
+                f = open(all_ref, 'w')
+                select_num = 0
+                for record in fasta_sequences:
+                    if len(record.seq) < pa.min_genome:
+                        continue
+                    if pa.uniq_len[str(record.id)] < pa.min_uniq_len:
+                        continue
+                    if np.random.random() < pa.random_rate:
+                        rec1 = SeqRecord(record.seq, id=str(record.id), description="simulation")
+                        SeqIO.write(rec1, f, "fasta") 
+                        # uniq_segs_loci[str(record.id)] = [[1, len(record.seq)]]
+                        species_dict[str(record.id)] = str(record.id)
+                        select_num += 1
+                    if select_num == pa.scaffold_num + pa.HGT_num:
+                        break
+
+                f.close()
+                print ('%s scaffolds were extracted.'%(select_num))
+                if select_num ==pa.scaffold_num + pa.HGT_num:
+                    seq_dict = read_fasta(all_ref)  
+                    pa.add_species(species_dict, seq_dict)                  
+                    if_success = random_HGT(pa)
+
+def pro_cami(): 
+    pa = Parameters(progenomes)
+    pa.get_dir("/mnt/d/breakpoints/HGT/pro_snp/")
+
+    for snp_rate in pa.snp_level: #[0.02, 0.04]:
+        pa.change_snp_rate(snp_rate)
+        index = 0
+        pa.get_ID(index)
+        for level in pa.complexity_level:
+            cami_ID = pa.sample + '_' + level
+            for j in range(1, 3):
+                combine = "cat %s/%s.%s.fq %s/%s.fq/%s.%s.fq >%s/%s.%s.fq"%(pa.outdir, pa.sample, j, \
+                pa.cami_dir, pa.cami_data[level], pa.cami_data[level], j, pa.outdir, cami_ID, j)
+                print (combine)
+                os.system(combine)
+
 def UHGG_length(uniq_segs_loci): 
     # different read length
     species_dict = {} 
@@ -554,7 +612,7 @@ def UHGG_cami2():
                 os.system(combine)
 
 class Parameters():
-    def __init__(self):
+    def __init__(self, reference):
         self.HGT_num = 20
         self.scaffold_num = self.HGT_num
         self.snp_rate = 0.01
@@ -576,7 +634,7 @@ class Parameters():
         self.species_dict = {}
         self.sample = ''
         self.outdir = ''
-        self.origin_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
+        self.origin_ref = reference  #'/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
         self.cami_dir = '/mnt/d/breakpoints/HGT/CAMI/'
         self.seq_dict = {}
         self.seq_len = {}
@@ -605,12 +663,18 @@ class Parameters():
         self.outdir = outdir
 
     def cal_genome_len(self):
-        for line in open(self.origin_ref+'.fai'):
-            array = line.split()
-            self.seq_len[array[0]] = int(array[1])
+        f = open(self.origin_ref+'.fai')
+        for line in f:
+            array = line.strip().split()
+            self.seq_len[array[0].strip()] = int(array[1].strip())
+        f.close()
+        # print (self.seq_len['1105367.SAMN02673274.JFZB01000004'])
 
     def get_uniq_len(self):
+        print (len(self.seq_len))
         for sca in self.uniq_segs_loci.keys():
+            if sca not in self.seq_len:
+                continue
             sca_len = 0
             for interval in self.uniq_segs_loci[sca]:
                 start = interval[0]
@@ -667,12 +731,16 @@ def generate_complexity():
 if __name__ == "__main__":
 
     t0 = time.time()
-    pa = Parameters()
-    uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
-    blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
+    # pa = Parameters()
 
-    # uniq_segs_file = "/mnt/d/breakpoints/HGT/proGenomes/uniq_region_proGenomes.npy"
-    # blast_file = '/mnt/d/breakpoints/HGT/proGenomes/freeze12.contigs.representatives.fasta.blast.out.xz'
+    # uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
+    # blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
+    uhgg_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
+
+    uniq_segs_file = "/mnt/d/breakpoints/HGT/proGenomes/uniq_region_proGenomes.npy"
+    blast_file = '/mnt/d/breakpoints/HGT/proGenomes/freeze12.contigs.representatives.fasta.blast.out.xz'
+    progenomes = '/mnt/d/breakpoints/HGT/proGenomes/proGenomes_v2.1.fasta'
+
 
     # uniq_segs_loci = extract_uniq_region(blast_file)  
     # np.save(uniq_segs_file, uniq_segs_loci)
@@ -689,8 +757,10 @@ if __name__ == "__main__":
     t1 = time.time()
     print ('Uniq extraction is done.', t1 - t0)
     print ("genome num:", len(uniq_segs_loci))
+    # pro_snp(uniq_segs_loci)
+    pro_cami()
     # UHGG_donor(uniq_segs_loci)
-    UHGG_frag(uniq_segs_loci)
+    # UHGG_frag(uniq_segs_loci)
     # UHGG_length(uniq_segs_loci)
     # UHGG_depth(uniq_segs_loci)
     # """

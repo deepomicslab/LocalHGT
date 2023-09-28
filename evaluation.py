@@ -557,14 +557,14 @@ def read_all_event(inferred_event):
     return inferred_event_dict
 
 def depth_event():
-    ba = Parameters()
+    ba = Parameters(uhgg_ref)
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_depth/"
     local_dir = "/mnt/d/breakpoints/HGT/depth_for_event/"
     inferred_event = "/mnt/d/HGT/event_evaluation/uhgg_depth_event.csv"
     inferred_event_dict = read_all_event(inferred_event)
     print (len(inferred_event_dict))
     data = []
-    for depth in [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]:
+    for depth in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]:
         ba.change_depth(depth)
         for index in range(10):
             ba.get_ID(index)    
@@ -607,12 +607,13 @@ def compare_event(true_list, infer_list):
     return F1_score
 
 
-
-
 if __name__ == "__main__":
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results_paper/"
+
+    uhgg_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
+    progenomes = '/mnt/d/breakpoints/HGT/proGenomes/proGenomes_v2.1.fasta'
 
     print ("evaluation")
     # cami()

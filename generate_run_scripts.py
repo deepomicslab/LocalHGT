@@ -6,13 +6,14 @@ import os
 
 class Batch(Parameters):
 
-    def __init__(self):
-        Parameters.__init__(self)
+    def __init__(self, reference):
+        Parameters.__init__(self, reference)
         self.batch_num = 1
         self.workdir = "/mnt/d/breakpoints/HGT/"
         self.fq_dir = ''
         self.result_dir = ''
         self.localHGT = "/mnt/d/breakpoints/script/pipeline.sh"
+        self.localHGT_main = "/mnt/d/breakpoints/script/main.py"
         self.hit = 0.1
         self.perfect_hit = 0.08
         self.fq1 = ''
@@ -50,6 +51,11 @@ class Batch(Parameters):
         order = "/usr/bin/time -v -o %s/%s.time bash %s %s %s %s %s %s %s %s 32 5"%(self.result_dir, self.sample,\
          self.localHGT, self.origin_ref, \
         self.fq1, self.fq2, self.sample, self.result_dir, self.hit, self.perfect_hit)
+        return order 
+
+    def get_main_order(self):
+        order = f"/usr/bin/time -v -o {self.result_dir}/{self.sample}.time python {self.localHGT_main} \
+        -r {self.origin_ref} -s {self.sample} -o {self.result_dir} --fq1 {self.fq1} --fq2 {self.fq2} --max_peak 600000000"
         return order 
 
     def get_lemon_order(self):
@@ -110,6 +116,36 @@ def batch_cami():
             order = ba.get_lemon_order()
             print (order, file = f)
             order = ba.get_normal_order()
+            print (order, file = h)
+            ba.get_ID(index) # refresh ID
+
+    f.close()
+    h.close()
+
+def batch_pro_cami():
+    ba = Batch(progenomes)
+    ba.get_fq_dir("/mnt/d/breakpoints/HGT/pro_snp/")
+    ba.get_result_dir("/mnt/d/breakpoints/HGT/pro_snp_results/")
+    ba.origin_ref = "/mnt/d/breakpoints/HGT/proGenomes/proGenomes_v2.1.fasta"
+
+    f = open("/mnt/d/breakpoints/lemon/run_lemon_cami_pro.sh", 'w')
+    h = open("/mnt/d/breakpoints/HGT/run_localHGT_cami_pro.sh", 'w')
+
+    i = 1
+    index = 0
+    # for snp_rate in [0.09, 0.07, 0.05, 0.03, 0.01]:
+    for snp_rate in [0.01, 0.02, 0.03, 0.04, 0.05]:
+        ba.change_snp_rate(snp_rate)
+        index = 0
+        ba.get_ID(index)
+        for level in ba.complexity_level:
+            cami_ID = ba.sample + '_' + level
+            ba.change_ID(cami_ID)
+            ba.get_fq()
+            order = ba.get_lemon_order()
+            print (order, file = f)
+            # order = ba.get_normal_order()
+            order = ba.get_main_order()
             print (order, file = h)
             ba.get_ID(index) # refresh ID
 
@@ -439,13 +475,16 @@ def batch_depth_test_event_accuracy():
     h.close()
 
 if __name__ == "__main__":
+    uhgg_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
+    progenomes = '/mnt/d/breakpoints/HGT/proGenomes/proGenomes_v2.1.fasta'
     # batch_frag()
     # batch_donor()
     # batch_snp_pure()
     # batch_length_pure()
     # batch_cami()
     # batch_depth()
-    batch_depth_test_event_accuracy()
+    # batch_depth_test_event_accuracy()
+    batch_pro_cami()
     # batch_germany()
     # batch_japan()
     # batch_USA()

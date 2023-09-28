@@ -21,7 +21,7 @@ class Accept_Parameters:
         self.threads = options.t
 
     def get_order(self):
-        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.k} {self.threads}"
+        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak}"
         print ("Running command:")
         print (self.run_order)
 
@@ -45,6 +45,7 @@ if __name__ == "__main__":
     optional.add_argument("-t", type=int, default=10, help="<int> number of threads", metavar="\b")
     optional.add_argument("--hit_ratio", type=float, default=0.1, help="<float> Minimum approximate kmer match ratio to extract a reference fragment.", metavar="\b")
     optional.add_argument("--match_ratio", type=float, default=0.08, help="<float> Minimum exact kmer match ratio to extract a reference fragment.", metavar="\b")
+    optional.add_argument("--max_peak", type=int, default=300000000, help="<int> Maximum candidate BKP count.", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
 
     options = parser.parse_args()

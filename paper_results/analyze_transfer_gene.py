@@ -14,7 +14,7 @@ from collections import Counter, defaultdict
 from statsmodels.stats.multitest import multipletests
 from scipy.stats import fisher_exact
 from Bio import SeqIO
-
+from collections import Counter
 
 COG_annotation = ["A: RNA processing and modification", "B: Chromatin structure and dynamics", "C: Energy production and conversion", "D: Cell cycle control, cell division, chromosome partitioning", "E: Amino acid transport and metabolism", "F: Nucleotide transport and metabolism", "G: Carbohydrate transport and metabolism", "H: Coenzyme transport and metabolism", "I: Lipid transport and metabolism", "J: Translation, ribosomal structure and biogenesis", "K: Transcription", "L: Replication, recombination and repair", "M: Cell wall/membrane/envelope biogenesis", "N: Cell motility", "O: Posttranslational modification, protein turnover, chaperones", "P: Inorganic ion transport and metabolism", "Q: Secondary metabolites biosynthesis, transport and catabolism", "R: General function prediction only", "S: Function unknown", "T: Signal transduction mechanisms", "U: Intracellular trafficking, secretion, and vesicular transport", "V: Defense mechanisms", "W: Extracellular structures", "Y: Nuclear structure", "Z: Cytoskeleton"]
 
@@ -320,6 +320,100 @@ class Transfer_times():
         df = pd.DataFrame(final_data, columns = ["times", "count", "frequency", "group"])
         df.to_csv("/mnt/d/R_script_files/transfer_times.csv", sep=',')  
 
+    def all_count_times(self): 
+        ## count how many times the sequence is transferred in all samples
+        
+        trans_times_dict_sample_count = defaultdict(set)
+        record = defaultdict(int)
+        trans_times_dict = defaultdict(set)
+        multiple_sites_sequence = {} # record the transferred sequences that have multiple sites
+
+        data = []
+        window = 100
+        for sample in self.HGT_event_dict:
+            for event in self.HGT_event_dict[sample]:
+                segment_tag = "&".join([event.del_genome, str(round(event.del_start/window)), str(round(event.del_end/window))])  #, event.ins_genome_pure
+                insertion_site = event.ins_genome + "&" + str(round(event.ins_pos/window))
+                trans_times_dict[segment_tag].add(insertion_site)
+
+        site_number = []
+        for segment_tag in trans_times_dict:
+            # print (len(trans_times_dict[segment_tag]))
+            site_number.append(len(trans_times_dict[segment_tag]))
+            if len(trans_times_dict[segment_tag]) > 1:
+                multiple_sites_sequence[segment_tag] = 1
+        site_number_count = Counter(site_number)
+        print (len(trans_times_dict), sum(site_number), site_number_count)
+
+        data = []
+        over_ten = 0
+        for count in range(1, max(list(site_number_count.keys()))+1):
+            if count < 11:
+                data.append([count, site_number_count[count]])
+            else:
+                over_ten += site_number_count[count]
+        print ("multiple rario", (len(trans_times_dict)-site_number_count[1])/len(trans_times_dict), (len(trans_times_dict)-site_number_count[1]))
+        data.append([">10", over_ten])
+        df = pd.DataFrame(data, columns = ["count", "number"])
+        df.to_csv("/mnt/d/R_script_files/transfer_times_seq.csv", sep=',')  
+
+
+        individual_multiple_trans = {}
+        individual_multiple_trans_recipient = {}
+
+        individual_multiple_segment_dict = {} # record the transferred sequence that have multiple target sites in an individual
+        for sample in self.HGT_event_dict:
+            sample_set = defaultdict(set)
+            for event in self.HGT_event_dict[sample]:
+                segment_tag = "&".join([event.del_genome, str(round(event.del_start/window)), str(round(event.del_end/window))])  #, event.ins_genome_pure
+                insertion_site = event.ins_genome + "&" + str(round(event.ins_pos/window))
+                sample_set[segment_tag].add(insertion_site)
+
+            for segment in sample_set:
+                if len(sample_set[segment]) > 1:
+                    individual_multiple_segment_dict[segment] = 1
+        print (len(individual_multiple_segment_dict), len(individual_multiple_segment_dict)/len(trans_times_dict))
+
+        individual_multiple_segment_dict = {} # record the transferred sequence that have multiple target sites of a same recipient in an individual
+        for sample in self.HGT_event_dict:
+            sample_set = {}
+            for event in self.HGT_event_dict[sample]:
+                segment_tag = "&".join([event.del_genome, str(round(event.del_start/window)), str(round(event.del_end/window))])  #, event.ins_genome_pure
+                insertion_site = event.ins_genome + "&" + str(round(event.ins_pos/window))
+                if segment_tag not in sample_set:
+                    sample_set[segment_tag] = {}
+                if event.ins_genome_pure not in sample_set[segment_tag]:
+                    sample_set[segment_tag][event.ins_genome_pure] = set()
+                sample_set[segment_tag][event.ins_genome_pure].add(insertion_site)
+
+            for segment in sample_set:
+                for recipient_genome in sample_set[segment]:
+                    if len(sample_set[segment][recipient_genome]) > 1:
+                        individual_multiple_segment_dict[segment] = 1
+        print (len(individual_multiple_segment_dict), len(individual_multiple_segment_dict)/len(trans_times_dict))
+
+
+        HGTs_multiple_samples = defaultdict(set) # record how many individuals contain the HGTs related to the multiple-sites transferred sequences
+        print ("No. of the transferred sequences that have multiple sites", len(multiple_sites_sequence))
+        for sample in self.HGT_event_dict:
+            for event in self.HGT_event_dict[sample]:
+                segment_tag = "&".join([event.del_genome, str(round(event.del_start/window)), str(round(event.del_end/window))])  #, event.ins_genome_pure
+                if segment_tag not in multiple_sites_sequence:
+                    continue
+                insertion_site = event.ins_genome + "&" + str(round(event.ins_pos/window))
+                # trans_times_dict[segment_tag].add(insertion_site)
+                HGT_event_tag = segment_tag + "&" + insertion_site
+                if sample in sra2individual_ID:  ## avoid the impact of time-series data
+                    print (sample)
+                    sample = sra2individual_ID[sample]
+                    print (sample)
+                HGTs_multiple_samples[HGT_event_tag].add(sample)
+        single = 0
+        for HGT_event_tag in HGTs_multiple_samples:
+            if len(HGTs_multiple_samples[HGT_event_tag]) == 1:
+                single += 1
+        print (len(HGTs_multiple_samples), single, single/len(HGTs_multiple_samples))
+        
     def count_times(self, final_data, trans_type):
         ## count how many times the sequence is transferred in each sample
         
@@ -385,7 +479,6 @@ class Transfer_times():
         print ("uniq samples", multiple_persons_HGT_num, all_HGT_num, all_HGT_num - multiple_persons_HGT_num, 1-multiple_persons_HGT_num/all_HGT_num)
         return final_data
 
-
     def check_gene_type(self, multi_segment_tag):
         annotation = Annotation(gff)
         annotation.read_gff()
@@ -450,7 +543,8 @@ def count_transfer_times():
     # get_gene_lengths(identified_hgt)  #  get transfer seq length distribution
     trans = Transfer_times()  
     trans.read_events(identified_hgt)
-    trans.main_count_times()
+    # trans.main_count_times()
+    trans.all_count_times()
 
 def merge_intervals(intervals):
     # Sort the intervals by their start time
@@ -1073,15 +1167,21 @@ class Classify(): # check the composition of transferred sequences
         self.min_gene_frac = min_gene_frac
 
     def main(self):
+        window = 100
+        record_segment_tag = {}
         total_num, IS_num, trans_num = 0, 0, 0
         for sample in self.HGT_event_dict:
             for event in self.HGT_event_dict[sample]:
+                segment_tag = "&".join([event.del_genome, str(round(event.del_start/window)), str(round(event.del_end/window))])  #, event.ins_genome_pure
+                if segment_tag in record_segment_tag:
+                    continue
                 event.check_IS(self.min_gene_frac, annotation)
                 if event.IS_flag:
                     IS_num += 1
                 if event.Transposon_flag:
                     trans_num += 1
                 total_num += 1
+                record_segment_tag[segment_tag] = 1
 
             # break
         print (IS_num, total_num, IS_num/total_num, trans_num, trans_num/total_num, IS_num/trans_num)
@@ -1099,6 +1199,32 @@ def read_meta(meta_data):
                 sample_id = sample_id.split("_")[1]
             sra_sample_dict[sra_id] = sample_id
     return sra_sample_dict
+
+def read_design():
+    
+    sample_individual_dict = {}
+    sample_time_point = {}
+
+    for line in open(design_file):
+        if line.strip() == '':
+            continue
+        array = line.strip().split()
+        if array[0] != 'Sample':
+            sample_id = array[0]
+            individual = array[3]
+            sample_individual_dict[sample_id] = individual
+            sample_time_point[sample_id] = int(array[4])
+    return sample_individual_dict, sample_time_point
+
+def get_individual_ID(): ## for the hybrid dataset
+    sra2individual_ID = {}
+    sra_sample_dict = read_meta(meta_data)
+    sample_individual_dict, sample_time_point = read_design()
+    for sra in sra_sample_dict:
+        sample_id = sra_sample_dict[sra]
+        individual_id = sample_individual_dict[sample_id]
+        sra2individual_ID[sra] = individual_id
+    return sra2individual_ID
 
 def count_uniq_event_ratio(HGT_event_dict): # cal the ratio of uniq HGT events which occur only in one sample
     meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
@@ -1144,6 +1270,10 @@ if __name__ == "__main__":
     transfer_cds_fasta = "/mnt/d/HGT/seq_ana/transfer_cds.fasta"
     no_transfer_cds_fasta = "/mnt/d/HGT/seq_ana/no_transfer_cds.fasta"
 
+    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
+    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
+    sra2individual_ID = get_individual_ID()
+
     phage_db = "/mnt/d/HGT/seq_ana/BlastDB/allprophage_DB"
     plasmid_db = "/mnt/d/HGT/seq_ana/database/plsdb.fna"
 
@@ -1170,10 +1300,10 @@ if __name__ == "__main__":
     annotation = Annotation(gff)
     annotation.read_gff()
 
-    count_transfer_times()
+    # count_transfer_times()
 
-    # trans = Transfer_times()
-    # trans.read_events(identified_hgt)
+    trans = Transfer_times()
+    trans.read_events(identified_hgt)
 
     # count_uniq_event_ratio(trans.HGT_event_dict)
 
@@ -1209,8 +1339,8 @@ if __name__ == "__main__":
 
 
 
-    # classify = Classify(trans.HGT_event_dict)
-    # classify.main()
+    classify = Classify(trans.HGT_event_dict)
+    classify.main()
 
 
 

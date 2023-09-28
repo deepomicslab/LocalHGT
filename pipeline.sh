@@ -5,7 +5,11 @@ fq1=$2
 fq2=$3
 ID=$4
 outdir=$5
-thread=$9
+accept_hit_ratio=$6
+accept_perfect_hit_ratio=$7
+thread=$8
+k=$9
+max_peak=${10}
 
 interval_file=$outdir/$ID.interval.txt
 sample=$outdir/$ID
@@ -19,7 +23,8 @@ if [ ! -d $outdir ]; then
 fi
 
 # :<<!
-$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $6 $7 $thread $8
+# echo "$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak"
+$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak
 python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
 
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref

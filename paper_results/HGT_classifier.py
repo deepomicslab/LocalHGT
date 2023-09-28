@@ -377,6 +377,7 @@ class Marker():
 
     def select_sample(self):
         selected_samples = []
+        group1_num, group2_num = 0, 0
         for sample in self.sample_obj_list:
 
             if len(sample.full_disease) != 1:
@@ -387,11 +388,14 @@ class Marker():
                 continue
             if sample.disease ==  self.group1 or self.group1 in sample.full_disease:
                 index = 0
+                group1_num += 1
             elif sample.disease ==self.group2 or self.group2 in sample.full_disease:
                 index = 1
+                group2_num += 1
             else:
                 continue 
             selected_samples.append(sample.ID)
+        print (self.group1, group1_num, self.group2, group2_num)
         shuffle(selected_samples)    
         return selected_samples
 
@@ -515,7 +519,6 @@ class ROC_ana(Marker):
         print ("after balance, sample num for groups", len(y)-sum(y), sum(y))
         return X, y
  
-
     def main(self):
         marker_flag = True # indicate enough marker
         selected_samples = self.select_sample()
@@ -642,9 +645,9 @@ if __name__ == "__main__":
     shuffle(dat.sample_obj_list)
 
     group_list = ["CRC", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
-    # for group1 in group_list:
-    #     ro = ROC_ana(group1, "control", dat.sample_obj_list)
-    #     ro.main()
+    for group1 in group_list:
+        ro = ROC_ana(group1, "control", dat.sample_obj_list)
+        ro.main()
 
     # for marker_num in range(5, 100, 5):
     #     mar = Marker(group1, group2, dat.sample_obj_list)
@@ -696,43 +699,43 @@ if __name__ == "__main__":
 
 
     ## pairwise comparison
-    replication = 10
-    data = []
-    # group_list = ["control", "CRC", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
-    group_list = ["CRC", "IGT", "T2D", "acute_diarrhoea",  "IBD", "adenoma"]
-    combination_feature_num = {}
-    marker_num = 1000000
-    for i in range(len(group_list)):
-        group1 = group_list[i]
-        array = [group1] + ["NA"] * len(group_list)
-        for j in range(i+1, len(group_list)):
-            group2 = group_list[j]
-            combination = group1 + " vs. " + group2
-            # if group2 == "acute_diarrhoea":
-            #     group2 = "diarrhoea" 
+    # replication = 10
+    # data = []
+    # # group_list = ["control", "CRC", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
+    # group_list = ["CRC", "IGT", "T2D", "acute_diarrhoea",  "IBD", "adenoma"]
+    # combination_feature_num = {}
+    # marker_num = 1000000
+    # for i in range(len(group_list)):
+    #     group1 = group_list[i]
+    #     array = [group1] + ["NA"] * len(group_list)
+    #     for j in range(i+1, len(group_list)):
+    #         group2 = group_list[j]
+    #         combination = group1 + " vs. " + group2
+    #         # if group2 == "acute_diarrhoea":
+    #         #     group2 = "diarrhoea" 
 
-            print (combination)
+    #         print (combination)
             
-            replicate_result = []
-            for z in range(replication):
-                mar = ROC_ana(group1, group2, dat.sample_obj_list)
-                mean_auc, real_marker_num = mar.main_AUC()
-                replicate_result.append(mean_auc)
-            combination_feature_num[combination] = real_marker_num
-            if np.mean(replicate_result) > 0:
-                array[j+1] = round(np.mean(replicate_result), 2)
-            else:
-                array[j+1] = 0
-        if array[0] == "acute_diarrhoea":
-            array[0] = "diarrhoea" 
-        data.append(array)
+    #         replicate_result = []
+    #         for z in range(replication):
+    #             mar = ROC_ana(group1, group2, dat.sample_obj_list)
+    #             mean_auc, real_marker_num = mar.main_AUC()
+    #             replicate_result.append(mean_auc)
+    #         combination_feature_num[combination] = real_marker_num
+    #         if np.mean(replicate_result) > 0:
+    #             array[j+1] = round(np.mean(replicate_result), 2)
+    #         else:
+    #             array[j+1] = 0
+    #     if array[0] == "acute_diarrhoea":
+    #         array[0] = "diarrhoea" 
+    #     data.append(array)
 
-        print ("#########", group1, group2, round(np.mean(replicate_result), 2))
-        print ("---------------\n")
-    group_list[3] = "diarrhoea"
-    df = pd.DataFrame(data, columns = ["group"] + group_list)
-    df.to_csv('/mnt/d/R_script_files/classifier_pairwise.csv', sep=',')
-    print (combination_feature_num)
+    #     print ("#########", group1, group2, round(np.mean(replicate_result), 2))
+    #     print ("---------------\n")
+    # group_list[3] = "diarrhoea"
+    # df = pd.DataFrame(data, columns = ["group"] + group_list)
+    # df.to_csv('/mnt/d/R_script_files/classifier_pairwise.csv', sep=',')
+    # print (combination_feature_num)
 
 
 

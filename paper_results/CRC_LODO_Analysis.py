@@ -41,7 +41,6 @@ from sklearn.model_selection import ShuffleSplit
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.feature_selection import SelectFromModel
 from scipy.sparse import csgraph
-from graph_denoise import svd_denoise
 from sklearn.linear_model import Ridge
 from sklearn.linear_model import Lasso
 from sklearn.inspection import permutation_importance
@@ -55,12 +54,14 @@ import scipy.special as sc
 # from math import comb #The comb function is new in Python 3.8
 from scipy.special import comb
 # from deep_learning import Classifier
-from KR_norm_juicer import KRnorm_sym
+# from KR_norm_juicer import KRnorm_sym
+from statsmodels.stats.multitest import multipletests
+from scipy.stats import fisher_exact
 
 level_dict = {"phylum":1, "class":2, "order":3, "family":4, "genus":5, "species":6}
 gender_dict = {"male":0, "female":1, "nan": 2}
 # sra_meta = "italy.csv"
-pheno_file = "allmetadata.xlsx"#"CRC.xlsx"
+pheno_file = "/mnt/d/breakpoints/script/analysis/allmetadata.xlsx"#"CRC.xlsx"
 UHGG_meta = "/mnt/d/breakpoints/HGT/UHGG/genomes-all_metadata.tsv"
 cohort_abd = {"YuJ_2015":"2021-03-31.YuJ_2015.relative_abundance.xls",
 "WirbelJ_2018":"2021-03-31.WirbelJ_2018.relative_abundance.xls",
@@ -71,7 +72,12 @@ cohort_abd = {"YuJ_2015":"2021-03-31.YuJ_2015.relative_abundance.xls",
 "ZellerG_2014":"2021-03-31.ZellerG_2014.relative_abundance.xls",
 "FengQ_2015":"2021-03-31.FengQ_2015.relative_abundance.xls",
 "VogtmannE_2016":"2021-03-31.VogtmannE_2016.relative_abundance.xls",
-"KarlssonFH_2013":"2021-10-14.KarlssonFH_2013.relative_abundance.xls"
+"KarlssonFH_2013":"2021-10-14.KarlssonFH_2013.relative_abundance.xls",
+"NielsenHB_2014":"2021-03-31.NielsenHB_2014.relative_abundance.xls",
+"HallAB_2017":"2021-10-14.HallAB_2017.relative_abundance.xls",
+"QinJ_2012":"2021-10-14.QinJ_2012.relative_abundance.xls",
+"DavidLA_2015":"2021-03-31.DavidLA_2015.relative_abundance.xls",
+"KieserS_2018":"2021-10-14.KieserS_2018.relative_abundance.xls"
 }
 marker_species = ["Peptostreptococcus stomatis", "Fusobacterium nucleatum", "Parvimonas spp.", "Porphyromonas asaccharolytica", "Gemella morbillorum",
 "Clostridium symbiosum", "Parvimonas micra", "Escherichia coli", "Streptococcus parasanguinis", "Clostridium leptum", "Clostridium hathewayi",
@@ -100,7 +106,7 @@ class Taxonomy():
         #     array = line.split()
 
     def get(self):
-        save_file = "taxonomy_dict.pkl"
+        save_file = "/mnt/d/breakpoints/script/analysis//taxonomy_dict.pkl"
         if not os.path.isfile(save_file):
             self.read_UHGG()
             with open(save_file, 'wb') as f:
@@ -159,7 +165,7 @@ def get_genus_abd(marker_genus):
     # print (marker_species_num, marker_genus)
     for cohort in cohort_abd:
         abd_file = cohort_abd[cohort]
-        f = open("use/" + abd_file, 'r')
+        f = open("/mnt/d/breakpoints/script/analysis/use/" + abd_file, 'r')
         i = 0
         for line in f:
             array = line.strip().split()
@@ -189,7 +195,7 @@ def get_genus_abd(marker_genus):
 
 def get_abd_file_name():
     ID_abd_file = {} 
-    file = "last_gutmeta_sample.tsv"
+    file = "/mnt/d/breakpoints/script/analysis/last_gutmeta_sample.tsv"
     df = pd.read_csv(file, sep = "\t")
     for i in range(len(df.index)):
         sra_ID = df["run_name"][i]
@@ -627,7 +633,7 @@ class RF():
         # self.all_samples()
         # with open("sample_data", "wb") as fp:
         #     pickle.dump(self.all_data, fp)
-        with open("sample_data", "rb") as fp:
+        with open("/mnt/d/breakpoints/script/analysis/sample_data", "rb") as fp:
             self.all_data = pickle.load(fp)
         self.cohorts_names = {}        
         self.HGT_network = ''
@@ -641,14 +647,14 @@ class RF():
         # with open('selected_26_edges.pkl', 'rb') as f:
         #     select_HGTs = pickle.load(f)
         #     print ("origin:", select_HGTs)
-        out_marker = open("CRC_prediction_markers.csv", 'w')
+        out_marker = open("/mnt/d/breakpoints/script/analysis/CRC_prediction_markers.csv", 'w')
         select_HGTs, abun_related_HGTs = self.select_top_HGT(select_feature_num)
         # print (select_HGTs, len(select_HGTs))
         # with open('filtered_HGTs.pkl', 'rb') as f:
         #     abun_related_HGTs = pickle.load(f)
         # select_edges = {**select_HGTs, **abun_related_HGTs} # combine abundance-related HGT events
         select_edges = select_HGTs
-        with open('selected_diff_edges.pkl', 'wb') as f:
+        with open('/mnt/d/breakpoints/script/analysis/selected_diff_edges.pkl', 'wb') as f:
             pickle.dump(select_edges, f) 
         # select_edges = select_HGTs
         i = 0
@@ -665,6 +671,7 @@ class RF():
                 marker_genus[array[0]] = 1
             if array[1] not in marker_genus:
                 marker_genus[array[1]] = 1
+
         i = 0
         for genus in marker_genus:
             marker_genus[genus] = i
@@ -697,23 +704,23 @@ class RF():
 
     def store_markers(self, marker_genus, select_edges):
         # store the markers
-        with open('marker_genus.pkl', 'wb') as f:
+        with open('/mnt/d/breakpoints/script/analysis/marker_genus.pkl', 'wb') as f:
             pickle.dump(marker_genus, f) 
-        with open('select_edges.pkl', 'wb') as f:
+        with open('/mnt/d/breakpoints/script/analysis/select_edges.pkl', 'wb') as f:
             pickle.dump(select_edges, f) 
     
     def load_markers(self):
         print ("load saved markers.")
-        with open('marker_genus.pkl', 'rb') as f:
+        with open('/mnt/d/breakpoints/script/analysis/marker_genus.pkl', 'rb') as f:
             marker_genus = pickle.load(f)
-        with open('select_edges.pkl', 'rb') as f:
+        with open('/mnt/d/breakpoints/script/analysis/select_edges.pkl', 'rb') as f:
             select_edges = pickle.load(f)
         self.get_HGT_network(select_edges)
         self.get_abundance_marker_value(marker_genus, self.all_data)
         self.get_genus_network(marker_genus)
         return marker_genus, select_edges
 
-    def select_top_HGT_BK(self, select_feature_num):
+    def select_top_HGT_BK_old(self, select_feature_num):
         specific_HGT = {} 
         abun_related_HGTs = {}
         crc_num = 0
@@ -780,7 +787,7 @@ class RF():
           
         return final_select_edges, abun_related_HGTs
 
-    def select_top_HGT(self, select_feature_num):
+    def select_top_HGT_BK(self, select_feature_num):
         specific_HGT = {} 
         abun_related_HGTs = {}
         record_all_HGTs = {}
@@ -879,6 +886,119 @@ class RF():
           
         return final_select_edges, abun_related_HGTs
 
+    def select_top_HGT(self, select_feature_num):
+        specific_HGT = {} 
+        abun_related_HGTs = {}
+        record_all_HGTs = {}
+        crc_num = 0
+        control_num = 0
+        edge_distribution = []
+        reads_num_list = []
+        for sample in self.all_data:
+            sample_dict = {}
+            reads_num_list.append(sample.reads_num)
+            min_split_num, p = get_split_reads_cutoff(sample.reads_num)
+            for bkp in sample.bkps:
+                edge = get_tag(bkp, level)
+                array = edge.split("&")
+                if len(array[0].strip()) <= 3 or len(array[1].strip()) <= 3:
+                    continue
+                support_ratio = bkp.cross_split_reads/sample.reads_num
+                # if support_ratio < min_cross:
+                #     continue
+                if support_ratio == 0:
+                    continue
+                if edge not in record_all_HGTs:
+                    record_all_HGTs[edge] = 1
+                    specific_HGT[edge] = [[], []]
+                if edge not in sample_dict:
+                    sample_dict[edge] = 0
+                # if support_ratio > sample_dict[edge]:
+                #     sample_dict[edge] = support_ratio
+                # sample_dict[edge] += support_ratio
+                # sample_dict[edge] = 1
+                sample_dict[edge] += bkp.cross_split_reads
+            edge_distribution.append(len(sample_dict))
+            # in each sample, choose same number of edge.       
+            sample_dict = self.same_HGT_number(sample_dict, max_hgt_num, min_split_num)
+
+            for edge in sample_dict:
+                if sample.disease == "CRC" :
+                    specific_HGT[edge][0].append(sample_dict[edge])
+                else:
+                    specific_HGT[edge][1].append(sample_dict[edge])
+            if sample.disease == "CRC" :
+                crc_num += 1
+            if sample.disease == "control" :
+                control_num += 1
+        # print ("sample num :%s, Edge count: mean is %s, median is %s"%(len(edge_distribution),\
+        #     np.mean(edge_distribution), np.median(edge_distribution)), np.std(edge_distribution))
+        # print ("read num, median %s, mean %s"%(np.median(reads_num_list),np.mean(reads_num_list)), min(reads_num_list), max(reads_num_list))
+        select_edges = {}
+        # print (crc_num, control_num, crc_num+control_num, len(specific_HGT)/(crc_num+control_num))
+        genus_level_markers = {}
+        for marker in marker_genus:
+            if marker[0] == "s":
+                marker = "g__" + marker.split("_")[2]
+            genus_level_markers[marker] = 1
+        print ("abundance marker-related genus:", len(genus_level_markers))
+
+        diff_data = []
+        for tag in specific_HGT:
+            # if len(specific_HGT[tag][0]) + len(specific_HGT[tag][1]) < 25:
+            #     continue
+            array = tag.split("&")
+            species_1 = array[0]
+            species_2 = array[1]
+
+            a = len(specific_HGT[tag][0])
+            b = crc_num - len(specific_HGT[tag][0])
+            c = len(specific_HGT[tag][1])
+            d = control_num - len(specific_HGT[tag][1])
+
+            oddsratio, p_value = fisher_exact([[a, b], [c, d]])
+            diff_data.append([tag, p_value, oddsratio, species_1, species_2])
+
+        df = pd.DataFrame(diff_data, columns = ["genus_pair", "p_value", "oddsratio", "species_1", "species_2"])
+        reject, pvals_corrected, _, alphacBonf = multipletests(list(df["p_value"]), alpha=0.05, method='bonferroni')
+        df["p.adj"] = pvals_corrected
+        filtered_df = df[df['p.adj'] < 0.05]
+
+        print ("diff HGT genums pair number is ", len(filtered_df))
+
+        for index, row in filtered_df.iterrows():
+            select_edges[row["genus_pair"]] = row["p.adj"]
+            if row["p.adj"] < 0.05 and (row["species_1"] in genus_level_markers and row["species_2"] in genus_level_markers):
+                abun_related_HGTs[row["genus_pair"]] = 1
+
+
+        sort_select_edges = sorted(select_edges.items(), key=lambda item: item[1], reverse = False)
+
+        final_select_edges = {}
+        if select_feature_num > len(sort_select_edges):
+            select_feature_num = len(sort_select_edges)
+        for i in range(select_feature_num):
+            edge = sort_select_edges[i][0]
+            # if i < 3:
+            #     print (sort_select_edges[i])
+            final_select_edges[edge] = i
+            if edge in abun_related_HGTs:
+                del abun_related_HGTs[edge]
+        print ("abun_related_HGTs", len(abun_related_HGTs))
+
+        tree_edges = {}
+        for i in range(len(sort_select_edges)): # store the all differential genome pairs
+            # if sort_select_edges[i][1] > 0.05:
+            #     break
+            tag = sort_select_edges[i][0]
+            crc_ratio = len(specific_HGT[tag][0])/crc_num
+            control_ratio = len(specific_HGT[tag][1])/control_num
+            tree_edges[sort_select_edges[i][0]] = [crc_ratio, control_ratio, sort_select_edges[i][1]]
+        # with open('selected_diff_edges.pkl', 'wb') as f:
+        #     pickle.dump(tree_edges, f) 
+          
+        return final_select_edges, abun_related_HGTs
+
     def same_HGT_number(self, sample_dict, choose_num, min_split_num): #only choose top x HGTs in each sample
         new_same_dict = {}
         sort_sample_dict = sorted(sample_dict.items(), key=lambda item: item[1], reverse = True)
@@ -893,9 +1013,9 @@ class RF():
         return new_same_dict
 
     def all_samples(self):
-        all_acc_file = "acc.list"
+        all_acc_file = "/mnt/d/breakpoints/script/analysis/acc.list"
         # result_dir = "new_result_more"
-        result_dir = "new_result"
+        result_dir = "/mnt/d/breakpoints/script/analysis/new_result"
         os.system(f"ls {result_dir}/*acc.csv>{all_acc_file}")
         
         for line in open(all_acc_file):
@@ -970,7 +1090,7 @@ class RF():
         train_data, train_label =  self.complex_data("train", "use all samples for train")
 
         # read validation set generated by additional_validation.py
-        with open('validation_data.pkl', 'rb') as f:
+        with open('/mnt/d/breakpoints/script/analysis/validation_data.pkl', 'rb') as f:
             validation_data = pickle.load(f) 
         test_data, test_label = [], [] 
         for one_sample in validation_data:
@@ -1080,11 +1200,11 @@ class RF():
                         edges_list.append([id_conver[i], id_conver[j]])
                 else:
                     self.species_network[i][j] = 0
-        with open('selected_abun_genus_graph.pkl', 'wb') as f:
+        with open('/mnt/d/breakpoints/script/analysis/selected_abun_genus_graph.pkl', 'wb') as f:
             pickle.dump([nodes_list, edges_list], f) 
         print ("abundance marker num:", len(marker_genus))
         pearson_network, pearson_edges_list = self.get_genus_matrix_pearson(marker_genus, id_conver)
-        with open('selected_abun_genus_graph_pearson.pkl', 'wb') as f:
+        with open('/mnt/d/breakpoints/script/analysis/selected_abun_genus_graph_pearson.pkl', 'wb') as f:
             pickle.dump([nodes_list, pearson_edges_list], f) 
         I = np.diag([1]*len(marker_genus))
         U = np.ones((len(marker_genus), len(marker_genus)))
@@ -1157,6 +1277,8 @@ class RF():
                 sample_array = list(sample.select_feature_array)
             elif group == "Abun":
                 sample_array = list(sample.genus_abundance)
+            elif group == "Abun-rectify":
+                sample_array = list(sample_array_genus)
             data.append(sample_array)
             if sample.disease == "control" :
                 label.append(1)
@@ -1177,7 +1299,7 @@ class RF():
         train_data, train_label =  self.complex_data("train", "use all to train")
 
         prediction_data = [list(train_data), list(train_label), train_cohort]
-        with open("prediction_data.pkl", 'wb') as f:
+        with open("/mnt/d/breakpoints/script/analysis/prediction_data.pkl", 'wb') as f:
             pickle.dump(prediction_data, f)
 
     def LODO_DNN(self, select_feature_num):
@@ -1311,6 +1433,7 @@ class Fast_RF():
                 marker_genus[array[0]] = 1
             if array[1] not in marker_genus:
                 marker_genus[array[1]] = 1
+                
         i = 0
         for genus in marker_genus:
             marker_genus[genus] = i
@@ -1321,7 +1444,7 @@ class Fast_RF():
         return select_edges, marker_genus
     
     def basic_run(self, select_feature_num):
-        with open("sample_data", "rb") as fp:
+        with open("/mnt/d/breakpoints/script/analysis/sample_data", "rb") as fp:
             self.all_data = pickle.load(fp) 
         print ("data loaded")
         select_edges,marker_genus = self.combine_markers(select_feature_num)  
@@ -1494,9 +1617,9 @@ class Fast_RF():
         return final_select_edges, abun_related_HGTs
 
     def all_samples(self):
-        all_acc_file = "acc.list"
+        all_acc_file = "/mnt/d/breakpoints/script/analysis/acc.list"
         # result_dir = "new_result_more"
-        result_dir = "new_result"
+        result_dir = "/mnt/d/breakpoints/script/analysis/new_result"
         os.system(f"ls {result_dir}/*acc.csv>{all_acc_file}")
         
         for line in open(all_acc_file):
@@ -1798,6 +1921,10 @@ if __name__ == "__main__":
     delta, hgt_alpha, hgt_beta, hgt_gamma, eta, zeta, mu = 0, 0, 1, 1e-8, 1, 0.048, 0
     corr_para = 0.4
 
+    feature_num = 16
+    hgt_gamma = 1e-8
+    zeta = 0.057
+
     group = ""
     auc_data_frame = []
     network_level = 2
@@ -1811,7 +1938,7 @@ if __name__ == "__main__":
     i=2
 
     
-    result_file = open("random_forest.log", 'w')
+    result_file = open("/mnt/d/breakpoints/script/analysis/random_forest.log", 'w')
 
     prior_a = 20 # prior probability
     given_r = 2 # the cutoff with n reads  4
@@ -1823,28 +1950,45 @@ if __name__ == "__main__":
     class_dict = find_all_class()
 
     ### test the classifier in the independent CRC cohort and T2D cohort
-    group = "Hybrid"
-    rf = RF()
-    # rf.t2d_validation(feature_num) # independent T2D cohort
+    # group = "Abun"
+    # group = "Abun-rectify"
+    # rf = RF()
+    # # rf.t2d_validation(feature_num) # independent T2D cohort
     # auc_list, weighted_mean = rf.LODO(feature_num)
     # must run python additional_validation.py 
-    auc_list, weighted_mean = rf.validation(feature_num) # independent CRC cohort
+    # auc_list, weighted_mean = rf.validation(feature_num) # independent CRC cohort
 
 
-    ### compare the integration of HGT and abundance biomarkers and the previously reported 16 biomarkers
-    # for group in ["Hybrid", "Thomas-Abun"]:  # for main plot
-    #     marker_genus = select_genus()
-    #     sample_abd =  get_genus_abd(marker_genus)
-    #     phenotype = Phenotype()
-    #     taxonomy = Taxonomy()
-    #     rf = RF()
+    # group = "Hybrid"
+    # # for hgt_gamma in [1e-7, 1e-8, 1e-9, 5e-8]:
+    # #     for i in range(11):
+    # #         zeta = 0.05 + 0.001 * i
+    #         # for feature_num in range(15, 18, 1):  # for main plot
+    # marker_genus = select_genus()
+    # sample_abd =  get_genus_abd(marker_genus)
+    # phenotype = Phenotype()
+    # taxonomy = Taxonomy()
+    # rf = RF()
+
+    # auc_list, weighted_mean = rf.LODO(feature_num)
+    # print (feature_num, zeta, group, auc_list, weighted_mean)
+    # del rf
+
+
+    ## compare the integration of HGT and abundance biomarkers and the previously reported 16 biomarkers
+    for group in ["Hybrid", "Thomas-Abun"]:  # for main plot
+        marker_genus = select_genus()
+        sample_abd =  get_genus_abd(marker_genus)
+        phenotype = Phenotype()
+        taxonomy = Taxonomy()
+        rf = RF()
     
-    #     auc_list, weighted_mean = rf.LODO(feature_num)
-    #     print (group, auc_list, weighted_mean)
-    #     del rf
-    # df = pd.DataFrame(auc_data_frame, columns = ["AUC", "Cohort", "Group"])
-    # df.to_csv('./for_AUC_plot.csv', sep='\t')
-    # os.system("Rscript plot_auc.R")
+        auc_list, weighted_mean = rf.LODO(feature_num)
+        print (group, auc_list, weighted_mean)
+        del rf
+    df = pd.DataFrame(auc_data_frame, columns = ["AUC", "Cohort", "Group"])
+    df.to_csv('/mnt/d/R_script_files//for_AUC_plot.csv', sep='\t')
+    os.system("Rscript plot_auc.R")
 
 
     ### compare the integration of HGT and abundance biomarkers, the previously reported 16 biomarkers, only HGT, and only our abundance. 
@@ -1853,13 +1997,12 @@ if __name__ == "__main__":
     #     sample_abd =  get_genus_abd(marker_genus)
     #     phenotype = Phenotype()
     #     taxonomy = Taxonomy()
-    #     rf = RF()
-    
+    #     rf = RF()  
     #     auc_list, weighted_mean = rf.LODO(feature_num)
     #     print (group, auc_list, weighted_mean)
     #     del rf
     # df = pd.DataFrame(auc_data_frame, columns = ["AUC", "Cohort", "Group"])
-    # df.to_csv('/mnt/c/Users/user/Desktop/HGT/HGT_R_plot_files//for_AUC_plot.csv', sep='\t')
+    # df.to_csv('/mnt/c/Users/user/Desktop/HGT/HGT_R_plot_files/for_AUC_plot.csv', sep='\t')
 
 
 
