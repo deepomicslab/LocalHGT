@@ -10,6 +10,8 @@ accept_perfect_hit_ratio=$7
 thread=$8
 k=$9
 max_peak=${10}
+coder_num=${11}
+seed=${12}
 
 interval_file=$outdir/$ID.interval.txt
 sample=$outdir/$ID
@@ -23,8 +25,8 @@ if [ ! -d $outdir ]; then
 fi
 
 # :<<!
-# echo "$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak"
-$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak
+# echo "$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak $coder_num $seed"
+$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak $coder_num $seed
 python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
 
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
@@ -61,6 +63,7 @@ python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.bam -b ${interval
 -s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv
 
 python $dir/remove_repeat.py $sample.repeat.acc.csv $sample.acc.csv
+rm $sample.repeat.acc.csv
 
 if [ ! -f "$sample.acc.csv" ]; then
     echo "Error: Final HGT breakpoint file is not generated."

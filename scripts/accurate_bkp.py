@@ -710,7 +710,7 @@ if __name__ == "__main__":
             # print (acc.from_strand, acc.to_strand)
             acc.write_out(writer)
         f.close()
-        print ('Final bkp num is %s'%(len(acc_bkp_list)))
+        # print ('Final bkp num is %s'%(len(acc_bkp_list)))
 
 
         #edit the cluster raw bkp parameter.

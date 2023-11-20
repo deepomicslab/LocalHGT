@@ -50,8 +50,6 @@ Also, at the first running, `LocalHGT` will index the database automatically, an
 ## Run
 First, infer HGT breakpoints by running `python main.py` like
 ```
-usage: main.py -h
-
 Detect HGT breakpoints from metagenomics sequencing data.
 
 required arguments:
@@ -63,11 +61,16 @@ required arguments:
 
 optional arguments:
   -k             <int> kmer size (default: 32)
-  -t             <int> number of threads (default: 5)
+  -t             <int> number of threads (default: 10)
+  -e             <int> number of hash functions (1-9), delete the reference
+                   index (*.index.dat) before change this value. (default: 3)
+  -d             <int> seed to initialize a pseudorandom number generator.
+                   (default: 1)
   --hit_ratio    <float> Minimum approximate kmer match ratio to extract a
                    reference fragment. (default: 0.1)
   --match_ratio  <float> Minimum exact kmer match ratio to extract a
                    reference fragment. (default: 0.08)
+  --max_peak     <int> Maximum candidate BKP count. (default: 300000000)
   -h, --help
 ```
 A command example:
