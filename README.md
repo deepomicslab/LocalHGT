@@ -7,7 +7,8 @@ cd LocalHGT/
 conda env create --name localhgt -f environment.yml
 conda activate localhgt
 sudo chmod 744 ./extract_ref
-python main.py -h
+python scripts/main.py -h  # detect HGT breakpoints
+python scripts/infer_HGT_event -h # detect complete HGT events
 ```
 
 ## Test
@@ -35,15 +36,15 @@ optional arguments:
   -m        <int> Try this number of times until all the genomes are
               downloaded. (default: 10)
   -h, --help
-  
+
 Example: python paper_results/build_UHGG_reference.py -r my_ref.fasta -b genomes_dir -m 4
 ```
 
-Then index the database. First, build `samtools` index 
+Then index the database using `samtools`
 ```
 samtools faidx ref_database.fasta
 ```
-Second, at the first running, `LocalHGT` will index the database automatically, and it will take several hours. 
+Also, at the first running, `LocalHGT` will index the database automatically, and it will take several hours. 
 
 
 ## Run
