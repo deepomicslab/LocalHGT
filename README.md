@@ -10,18 +10,6 @@ sudo chmod 744 ./extract_ref
 python main.py -h
 ```
 
-## Reference database
-The database (a single `fasta` file) should contain all the representative references of your concerning bacteria. 
-
-For example, use gut-specific representative genomes collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
-The script `paper_results/build_UHGG_reference.py` can download the gut-specific UHGG v1 database.
-
-Then index the database. First, build `samtools` index 
-```
-samtools faidx ref_database.fasta
-```
-Second, at the first running, `LocalHGT` will index the database automatically, and it will take several hours. 
-
 ## Test
 ```
 cd test/
@@ -30,7 +18,35 @@ sh run_event_detection.sh
 ```
 See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_output.csv` for event results.
 
-## Running
+## Construct reference database
+The database (a single `fasta` file) should contain all the representative references of your concerning bacteria. 
+
+For example, use gut-specific representative genomes collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
+The script `paper_results/build_UHGG_reference.py` can download the gut-specific UHGG v1 database. The command is
+```
+Construct the reference from gut-specific UHGG V1 database.
+
+required arguments:
+  -r        <str> Generated reference file. (default: None)
+  -b        <str> Folder saves all the downloaded assemblies. (default:
+              genomes/)
+
+optional arguments:
+  -m        <int> Try this number of times until all the genomes are
+              downloaded. (default: 10)
+  -h, --help
+  
+Example: python paper_results/build_UHGG_reference.py -r my_ref.fasta -b genomes_dir -m 4
+```
+
+Then index the database. First, build `samtools` index 
+```
+samtools faidx ref_database.fasta
+```
+Second, at the first running, `LocalHGT` will index the database automatically, and it will take several hours. 
+
+
+## Run
 First, infer HGT breakpoints by running `python main.py` like
 ```
 usage: main.py -h
@@ -55,7 +71,7 @@ optional arguments:
 ```
 A command example:
 ```
-python ./main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
+python scripts/main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
 ```
 The detected HGT breakpoints would be stored in the `<sample name>.acc.csv` file within the output folder.
 
