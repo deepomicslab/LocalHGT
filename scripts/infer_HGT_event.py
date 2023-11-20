@@ -401,4 +401,6 @@ if __name__ == "__main__":
 
         df = pd.DataFrame(result_data, columns = ["sample", "receptor", "insert_locus", "donor", "delete_start", "delete_end", "reverse_flag"])
         df.to_csv(identified_hgt, sep=',', index=False)
+        print ("HGT event results are stored in %s."%(identified_hgt))
+        print ("--------------------------\nFinished!")
 
