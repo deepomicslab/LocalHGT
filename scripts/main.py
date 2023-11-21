@@ -45,6 +45,7 @@ if __name__ == "__main__":
     optional.add_argument("-t", type=int, default=10, help="<int> number of threads.", metavar="\b")
     optional.add_argument("-e", type=int, default=3, help="<int> number of hash functions (1-9).", metavar="\b")
     optional.add_argument("-d", type=int, default=1, help="<int> seed to initialize a pseudorandom number generator.", metavar="\b")
+    optional.add_argument("--use_kmer", type=int, default=1, help="<1/0> 1 means using kmer to extract HGT-related segment, 0 means using original reference.", metavar="\b")
     optional.add_argument("--hit_ratio", type=float, default=0.1, help="<float> Minimum fuzzy kmer match ratio to extract a reference fragment.", metavar="\b")
     optional.add_argument("--match_ratio", type=float, default=0.08, help="<float> Minimum exact kmer match ratio to extract a reference fragment.", metavar="\b")
     optional.add_argument("--max_peak", type=int, default=300000000, help="<int> Maximum candidate BKP count.", metavar="\b")
@@ -55,6 +56,11 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         print (f"see python {sys.argv[0]} -h")
     else:
-        acc_pa = Accept_Parameters(options)
-        acc_pa.get_order()
-        acc_pa.run()
+        if options.use_kmer == 1:
+            acc_pa = Accept_Parameters(options)
+            acc_pa.get_order()
+            acc_pa.run()
+        elif options.use_kmer == 0:
+            pass
+        else:
+            print ("## wrong value for the parameter --use_kmer. ")
