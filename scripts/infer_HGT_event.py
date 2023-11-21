@@ -374,7 +374,7 @@ if __name__ == "__main__":
     optional = parser.add_argument_group("optional arguments")
     required.add_argument("-r", type=str, help="<str> Reference file.", metavar="\b")
     required.add_argument("-b", type=str, help="<str> Folder saves all the breakpoint results from all samples.", metavar="\b")
-    required.add_argument("-f", type=str, default="./", help="<str> Output file to save all inferred HGT events.", metavar="\b")
+    required.add_argument("-f", type=str, default="complete_HGT_event.csv", help="<str> Output file to save all inferred HGT events.", metavar="\b")
     optional.add_argument("-m", type=int, default=500, help="<int> minimum transfer sequence length", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
 

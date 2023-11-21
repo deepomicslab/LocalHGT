@@ -89,7 +89,7 @@ required arguments:
   -r        <str> Reference file. (default: None)
   -b        <str> Folder saves all the breakpoint results from all samples.
               (default: None)
-  -f        <str> Output file to save all inferred HGT events. (default: ./)
+  -f        <str> Output file to save all inferred HGT events. (default: complete_HGT_event.csv)
 
 optional arguments:
   -m        <int> minimum transfer sequence length (default: 500)
