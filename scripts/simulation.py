@@ -582,7 +582,7 @@ def UHGG_frag(uniq_segs_loci):
                     if_success = random_HGT(pa)
 
 def UHGG_cami(): 
-    pa = Parameters()
+    pa = Parameters(uhgg_ref)
     pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
 
     for snp_rate in pa.snp_level: #[0.02, 0.04]:
@@ -592,15 +592,15 @@ def UHGG_cami():
         for level in pa.complexity_level:
             cami_ID = pa.sample + '_' + level
             for j in range(1, 3):
-                combine = "cat %s/%s.%s.fq %s/%s.fq/%s.%s.fq >%s/%s.%s.fq"%(pa.outdir, pa.sample, j, \
-                pa.cami_dir, pa.cami_data[level], pa.cami_data[level], j, pa.outdir, cami_ID, j)
+                combine = "cat %s/%s.%s.fq %s/%s.%s.fq >%s/%s.%s.fq"%(pa.outdir, pa.sample, j, \
+                pa.cami_dir, pa.cami_data[level], j, pa.outdir, cami_ID, j)
                 print (combine)
                 os.system(combine)
 
-def UHGG_cami2(): 
+def UHGG_cami2():  # discarded function
     pa = Parameters()
     pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
-    com = Complexity()
+    com = Complexity(uhgg_ref)
     for snp_rate in [0.02, 0.04]:
         pa.change_snp_rate(snp_rate)
         index = 0
@@ -610,6 +610,42 @@ def UHGG_cami2():
                 combine = f"cat {pa.outdir}/{pa.sample}.{j}.fq {com.complexity_dir}/{level}.{j}.fq >{pa.outdir}/{pa.sample}_{level}.{j}.fq"
                 print (combine)
                 os.system(combine)
+
+def UHGG_amount():   # generate complex sample to evaluate the relationship between data amount and speed
+    h = open("/mnt/d/breakpoints/HGT/run_localHGT_amount.sh", 'w')
+    pa = Parameters(uhgg_ref)
+    pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
+    amount_dir = "/mnt/d/breakpoints/HGT/uhgg_amount"
+    amount_result_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_result/"
+    com = Complexity()
+    for snp_rate in [0.01]:
+        pa.change_snp_rate(snp_rate)
+        index = 0
+        pa.get_ID(index)
+        for level in pa.complexity_level:
+            cami_ID = pa.sample + '_' + level
+            """
+            for j in range(1, 3):
+                combine = "cat %s/%s.%s.fq %s/%s.%s.fq >%s/%s.%s.fq"%(pa.outdir, pa.sample, j, \
+                pa.cami_dir, pa.cami_data[level], j, amount_dir, cami_ID, j)
+                # print (combine)
+                # os.system(combine)
+                full_fq = "%s/%s.%s.fq"%(amount_dir, cami_ID, j)
+                for z in range(1,10):
+                    prop = round(z * 0.1, 2)
+                    command = f"seqkit sample -s 123 -j 10 -p {prop} {full_fq} > {amount_dir}/{cami_ID}_{prop}_{j}.fq"
+                    print (command)
+                    # os.system(command)
+            """
+            for z in range(1,11):
+                prop = round(z * 0.1, 2)
+                
+                run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}.time python /mnt/d/breakpoints/script/scripts/main.py -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
+                --fq1 {amount_dir}/{cami_ID}_{prop}_1.fq --fq2 {amount_dir}/{cami_ID}_{prop}_2.fq -s {cami_ID}_{prop} -o {amount_result_dir}
+                """
+                print (run, file = h)
+    h.close()
+
 
 class Parameters():
     def __init__(self, reference):
@@ -625,8 +661,9 @@ class Parameters():
         self.min_uniq_len = 20000
         self.random_rate = 0.01
         self.mean_frag = 350
-        self.cami_data = {'low':'RL_S001__insert_270', 'medium':'RM2_S001__insert_270',\
-         'high':'RH_S001__insert_270'}
+        # self.cami_data = {'low':'RL_S001__insert_270', 'medium':'RM2_S001__insert_270',\
+        #  'high':'RH_S001__insert_270'}
+        self.cami_data = {'low':'low', 'medium':'medium','high':'high'}
         self.complexity_level = ['high', 'low', 'medium']
         self.snp_level = [round(x*0.01,2) for x in range(1,6)]
         
@@ -684,7 +721,8 @@ class Parameters():
                 sca_len += (end- start) 
             self.uniq_len[sca] = sca_len
 
-class Complexity():
+class Complexity():## discarded function 
+    
     def __init__(self):
         self.levels = ['low', 'medium', 'high']
         self.size = {'high':1000000000, 'medium':500000000, 'low':100000000}
@@ -725,6 +763,8 @@ class Complexity():
             self.select_genome(level)
 
 def generate_complexity():
+    ## discarded function 
+    ## because data is too larger
     com = Complexity()
     com.run()
 
@@ -733,13 +773,13 @@ if __name__ == "__main__":
     t0 = time.time()
     # pa = Parameters()
 
-    # uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
-    # blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
+    uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
+    blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
     uhgg_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
 
-    uniq_segs_file = "/mnt/d/breakpoints/HGT/proGenomes/uniq_region_proGenomes.npy"
-    blast_file = '/mnt/d/breakpoints/HGT/proGenomes/freeze12.contigs.representatives.fasta.blast.out.xz'
-    progenomes = '/mnt/d/breakpoints/HGT/proGenomes/proGenomes_v2.1.fasta'
+    # uniq_segs_file = "/mnt/d/breakpoints/HGT/proGenomes/uniq_region_proGenomes.npy"
+    # blast_file = '/mnt/d/breakpoints/HGT/proGenomes/freeze12.contigs.representatives.fasta.blast.out.xz'
+    # progenomes = '/mnt/d/breakpoints/HGT/proGenomes/proGenomes_v2.1.fasta'
 
 
     # uniq_segs_loci = extract_uniq_region(blast_file)  
@@ -758,9 +798,10 @@ if __name__ == "__main__":
     print ('Uniq extraction is done.', t1 - t0)
     print ("genome num:", len(uniq_segs_loci))
     # pro_snp(uniq_segs_loci)
-    pro_cami()
+    # pro_cami()
     # UHGG_donor(uniq_segs_loci)
     # UHGG_frag(uniq_segs_loci)
     # UHGG_length(uniq_segs_loci)
     # UHGG_depth(uniq_segs_loci)
     # """
+    UHGG_amount()

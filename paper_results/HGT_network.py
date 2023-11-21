@@ -411,7 +411,7 @@ def read_phenotype():
         ID = array[1]
         if ID == "sample":
             continue
-        pheno = array[2:5]
+        pheno = array[2:6]  #  add bases info
         phenotype_dict[ID] = pheno
     return phenotype_dict
 

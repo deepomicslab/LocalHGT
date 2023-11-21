@@ -120,14 +120,23 @@ class Basic_count():
         for sample in self.cohort_data:
             sample_bkp_list = self.cohort_data[sample]
             bkp_count_list.append(len(sample_bkp_list))
-            data.append([sample, len(sample_bkp_list)])
+            bases = phenotype_dict[sample][3]
+            data.append([sample, len(sample_bkp_list), bases])
         sorted_bkp_count_list = sorted(bkp_count_list)
         print ("sample num is %s, mean bkp count is %s, median bkp count is %s, minimum bkp count is %s,\
          max bkp count is %s."%(len(self.cohort_data), np.mean(bkp_count_list), np.median(bkp_count_list),\
           sorted_bkp_count_list[0], sorted_bkp_count_list[-1]))
 
-        df = pd.DataFrame(data, columns = ["Sample", "Bkp_count"])
+        df = pd.DataFrame(data, columns = ["Sample", "Bkp_count", "Bases"])
         df.to_csv('/mnt/d/R_script_files/basic_stasitcis_count.csv', sep=',')
+
+    def analyze_amount(self): # analyze the association between called BKP num and sequencing amount
+        df = pd.read_csv('/mnt/d/R_script_files/basic_stasitcis_count.csv')  
+        # print (list(df['Bkp_count']))
+        res = stats.spearmanr(list(df['Bkp_count']), list(df['Bases']))
+        correlation = res.correlation
+        print (res, "correlation", correlation)
+
 
     def count_genome_pair(self):
         # genome_pair_dict = {}
@@ -536,8 +545,9 @@ if __name__ == "__main__":
     hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
 
     ba = Basic_count()
-    ba.read_samples()
+    # ba.read_samples()
     # ba.count()  
+    ba.analyze_amount()
     # ba.count_inter_taxa_HGT()
 
     # ################## cal the correlation between HGT frequency and phylogenetic distance
@@ -547,15 +557,15 @@ if __name__ == "__main__":
 
 
     # ##################  try to normalize the HGT frequency by the microbial abundance
-    taxa_average_abun_dict = taxa_average_abun()
-    # print (taxa_average_abun_dict)
-    taxa_sort_data = []
-    for level in range(1, 2):
-        sorted_dict = ba.sort_taxa_by_freq_norm(level)
-        top_sum = 0
-        for i in range(5):
-            print (i, sorted_dict[i][0], sorted_dict[i][1])
-            taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
+    # taxa_average_abun_dict = taxa_average_abun()
+    # # print (taxa_average_abun_dict)
+    # taxa_sort_data = []
+    # for level in range(1, 2):
+    #     sorted_dict = ba.sort_taxa_by_freq_norm(level)
+    #     top_sum = 0
+    #     for i in range(5):
+    #         print (i, sorted_dict[i][0], sorted_dict[i][1])
+    #         taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
 
 
 

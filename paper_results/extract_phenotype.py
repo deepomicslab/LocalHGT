@@ -262,6 +262,7 @@ def get_pheno(ID_dict):
 def read_meta_tgs():
     
     sra_sample_dict = {}
+    base_dict = {}
 
     for line in open(tgs_meta):
         if line.strip() == '':
@@ -273,10 +274,13 @@ def read_meta_tgs():
             if re.search("_", sample_id):
                 sample_id = sample_id.split("_")[1]
             sra_sample_dict[sra_id] = sample_id
-    return sra_sample_dict
+            bases = int(array[3])
+            base_dict[sra_id] = bases
+
+    return sra_sample_dict, base_dict
 
 def get_pheno_for_tgs(tgs_dir):
-    sra_sample_dict = read_meta_tgs()
+    sra_sample_dict, base_dict = read_meta_tgs()
     add_data = []
     files = os.listdir(tgs_dir)
     for acc_file in files:
@@ -289,13 +293,16 @@ def get_pheno_for_tgs(tgs_dir):
             cohort = "Cross-sectional"
         else:
             print ("!!!!!!!!wrong")
-        add_data.append([ID, cohort, "control", "healthy", "NA", "NA","NA","NA"])
+        bases = base_dict[ID]
+        add_data.append([ID, cohort, "control", "healthy", bases, "NA","NA","NA"])
+        # print (ID, cohort, "control", "healthy", bases, "NA","NA","NA")
     return add_data
 
 ### read wenkui CRC phenotype
 
 def read_meta_wenkui(meta_file):
     status_dict = {}
+    info_dict = {}
 
     status_conversion = {"Colorectal Neoplasms":"CRC", "Health":"control" } #, "Irritable Bowel Syndrome":"IBS"
     f = open(meta_file)
@@ -306,16 +313,22 @@ def read_meta_wenkui(meta_file):
         sample_name = array[4]
         ID = array[5]
         status = array[8]
+        bases = int(array[6])
+        gender = array[12]
+        age = array[13]
+        bmi = array[18]
+        
         if status not in status_conversion:
             continue
         status = status_conversion[status]
+        info_dict[ID] = [bases, age, gender, bmi]
         # print (ID, status)
         status_dict[ID] = status
-    return status_dict
+    return status_dict, info_dict
 
 
 def get_pheno_for_wenkui_CRC(wenkui_dir):
-    status_dict = read_meta_wenkui(wenkui_meta_file)
+    status_dict, info_dict = read_meta_wenkui(wenkui_meta_file)
     add_data = []
     files = os.listdir(wenkui_dir)
     cohort = "YangJ_2020"
@@ -330,7 +343,9 @@ def get_pheno_for_wenkui_CRC(wenkui_dir):
             full_disease = "healthy"
         else:
             full_disease = "CRC"
-        add_data.append([ID, cohort, disease, full_disease, "NA", "NA","NA","NA"])
+        add_data.append([ID, cohort, disease, full_disease] + info_dict[ID])
+        # print ([ID, cohort, disease, full_disease] + info_dict[ID])
+        #  add_data.append([ID, cohort, disease, full_disease, "NA", "NA","NA","NA"])
     return add_data
 
 if __name__ == "__main__":
@@ -345,6 +360,7 @@ if __name__ == "__main__":
     wenkui_meta_file = "/mnt/d/breakpoints/script/analysis/validation/last_gutmeta_sample.tsv"
 
     data = []
+
     found_cohort = {}
     ID_dict = get_samples(hgt_result_dir)
     phenotype = Phenotype()
@@ -362,6 +378,12 @@ if __name__ == "__main__":
     data += add_data
     add_data_2 = get_pheno_for_wenkui_CRC(wenkui_dir)
     data += add_data_2
+    for da in data:
+        da[-4] == int(da[-4])
     df = pd.DataFrame(data, columns = ["sample", "cohort", "disease", "full_disease", "bases", "age", "gender",  "BMI"])
     df.to_csv(pheno_result, sep=',')
+
+    # for da in data:
+    #     if da[-4] == "NA":
+    #         print (da)
 
