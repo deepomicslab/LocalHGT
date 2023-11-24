@@ -48,6 +48,7 @@ Also, at the first running, `LocalHGT` will index the database automatically, an
 
 
 ## Run
+### Detect HGT breakpoints
 First, infer HGT breakpoints by running `python main.py` like
 ```
 Detect HGT breakpoints from metagenomics sequencing data.
@@ -80,10 +81,13 @@ A command example:
 python scripts/main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
 ```
 The detected HGT breakpoints would be stored in the `<sample name>.acc.csv` file within the output folder.
+
 Note:
 - With a small reference, we can skip the extraction of HGT-related segments by setting `--use_kmer 0`.
 - With a small reference, set a small value of `-k`. 
 
+
+### Detect complete HGT events
 Second, infer complete HGT events by matching breakpoints after detecting HGT breakpoints for all the samples.
 ```
 usage: infer_HGT_event.py -h
