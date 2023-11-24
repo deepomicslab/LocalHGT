@@ -106,11 +106,12 @@ def read_lemon(lemon):
         past = array[:4]
     return lemon_bkp
 
-def read_localHGT(lemon):
+def read_localHGT(lemon, abun_cutoff):
     lemon_bkp = []
     past = ['', '', '', '']
     for line in open(lemon):
         if line[0] == "#":
+            reads_num = int(line.split(";")[0].split(":")[1])
             continue
         array = line.strip().split(',')
         if array[0] == "from_ref": #skip the annotation line
@@ -119,6 +120,11 @@ def read_localHGT(lemon):
         from_pos = int(array[1])
         to_ref = array[4]
         to_pos = int(array[5])
+
+        cross_split_reads = int(array[14]) # filter BKPs
+        if cross_split_reads/reads_num < abun_cutoff:
+            continue
+
         lemon_bkp.append([from_ref, from_pos, to_ref, to_pos])
     return lemon_bkp
 
@@ -183,6 +189,7 @@ class Performance():
         self.ref_len = 0
         self.F1_score = F1_score
         self.complexity = complexity
+        self.filterd_bkp_num = 0
 
     def add_ref(self, ref_accuracy, ref_len):
         self.ref_accuracy = ref_accuracy
@@ -239,17 +246,18 @@ class Sample():
         else:
             return '_'.join(array[:6])
 
-    def eva_tool(self, tool_dir, tool):
+    def eva_tool(self, tool_dir, tool, abun_cutoff=0):
         acc_file = tool_dir + '/' + self.ID + '.acc.csv'
         if tool == "lemon":
-            bkp = read_lemon(acc_file)
+            bkp = read_lemon(acc_file, abun_cutoff)
         else:
-            bkp = read_localHGT(acc_file)
+            bkp = read_localHGT(acc_file, abun_cutoff)
         accuracy, FDR, F1_score = compare(self.true_bkp, bkp)
         time_file = tool_dir + '/' + self.ID + '.time'
         tool_time = extract_time(time_file)
         tool_mem = extract_mem(time_file)
         pe = Performance(accuracy, FDR, tool_time, tool_mem, F1_score, self.complexity)
+        pe.filterd_bkp_num = len(bkp)
         return pe
 
     def eva_ref(self, tool_dir):
@@ -269,15 +277,15 @@ class Figure():
     
     def add_local_sample(self, pe, va): # any performance Object
         self.data.append([pe.user_time, pe.accuracy, pe.FDR, \
-        pe.max_mem, pe.ref_accuracy, pe.ref_len, "LocalHGT", va, pe.F1_score, pe.complexity])
+        pe.max_mem, pe.ref_accuracy, pe.ref_len, "LocalHGT", va, pe.F1_score, pe.complexity, pe.filterd_bkp_num])
 
     def add_lemon_sample(self, pe, va): # any performance Object
         self.data.append([pe.user_time, pe.accuracy, pe.FDR, \
-        pe.max_mem, pe.ref_accuracy, pe.ref_len, "LEMON", va, pe.F1_score, pe.complexity])
+        pe.max_mem, pe.ref_accuracy, pe.ref_len, "LEMON", va, pe.F1_score, pe.complexity, pe.filterd_bkp_num])
 
     def convert_df(self):
         self.df=pd.DataFrame(self.data,columns=['CPU time', 'Recall','FDR', 'Peak RAM', \
-        'Ref Accuracy',  'Extracted Ref (M)', 'Methods', self.variation, "F1", "Complexity"])
+        'Ref Accuracy',  'Extracted Ref (M)', 'Methods', self.variation, "F1", "Complexity","BKP_num"])
 
     def plot(self):
         self.convert_df()
@@ -329,7 +337,23 @@ class Figure():
         
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
         plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_comparison_%s.pdf'%(give_time))
-        self.df.to_csv('analysis/cami_comparison.csv', sep=',')
+        self.df.to_csv('../analysis/cami_comparison.csv', sep=',')
+
+    def plot_amount(self):
+        self.convert_df()
+        print (self.df)
+        fig, axes = plt.subplots(1,4, figsize=(20,4))
+        # sns.barplot(ax = axes[0][0], x=self.variation, y='CPU time', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'low']).set_title('Low')  
+        # sns.barplot(ax = axes[0][1], x=self.variation, y='CPU time', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'medium']).set_title('Medium') 
+        # sns.barplot(ax = axes[0][2], x=self.variation, y='CPU time', hue= 'Methods',data=self.df.loc[self.df['Complexity'] == 'high']).set_title('High')
+        sns.lineplot(ax = axes[0], x=self.variation, y='CPU time', hue= 'Methods', style="Complexity", markers=True, data=self.df)
+        sns.lineplot(ax = axes[1], x=self.variation, y='Peak RAM', hue= 'Methods', style="Complexity", markers=True, data=self.df)
+        sns.lineplot(ax = axes[2], x=self.variation, y='Recall', hue= 'Methods', style="Complexity", markers=True, data=self.df)
+        sns.lineplot(ax = axes[3], x=self.variation, y='BKP_num', style="Complexity", markers=True, data=self.df.loc[self.df['Methods'] == 'LocalHGT'])
+        
+        give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+        plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_amount_%s.pdf'%(give_time))
+        self.df.to_csv('../analysis/amount_comparison.csv', sep=',')
 
 def cami():
     time_list, mem_list = [], []
@@ -360,6 +384,44 @@ def cami():
             time_list.append(local_pe.user_time)
             mem_list.append(local_pe.max_mem)
     fi.plot_cami()
+
+    print ("CPU time", np.mean(time_list), np.median(time_list))
+    print ("PEAK mem", np.mean(mem_list), np.median(mem_list))
+
+def amount(): # run time with increasing of sequencing data amount
+    local_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_result/"
+
+    time_list, mem_list = [], []
+    fi = Figure()
+    ba = Parameters(uhgg_ref)
+    ba.depth = 30
+    ba.get_dir(true_dir)
+    fi.variation = "fraction"
+    ba.change_snp_rate(0.01)
+    index = 0
+    ba.get_ID(index)
+    default_abun_cutoff = 0
+    for z in range(1,11):
+        prop = round(z * 0.1, 2)
+
+        sa = Sample(ba.sample, true_dir)
+        for level in ba.complexity_level:
+        # for level in ['high', 'low']:
+            cami_ID = ba.sample + '_' + level + '_' + str(prop)
+            sa.change_ID(cami_ID)
+            sa.complexity = level
+            ref_accuracy, ref_len = sa.eva_ref(local_dir)
+            local_pe = sa.eva_tool(local_dir, "LocalHGT", default_abun_cutoff) 
+            local_pe.add_ref(ref_accuracy, ref_len)
+            fi.add_local_sample(local_pe, prop)
+
+            # lemon_pe = sa.eva_tool(lemon_dir, "LEMON")
+            # fi.add_lemon_sample(lemon_pe, snp_rate)
+            print ("#",cami_ID, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.F1_score, local_pe.complexity)
+            # print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy ,lemon_pe.accuracy)
+            time_list.append(local_pe.user_time)
+            mem_list.append(local_pe.max_mem)
+    fi.plot_amount()
 
     print ("CPU time", np.mean(time_list), np.median(time_list))
     print ("PEAK mem", np.mean(mem_list), np.median(mem_list))
@@ -608,6 +670,8 @@ def compare_event(true_list, infer_list):
 
 
 if __name__ == "__main__":
+    default_abun_cutoff = 1e-7
+
     true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
     lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results_paper/"
@@ -624,6 +688,7 @@ if __name__ == "__main__":
     # pure_donor()
     # pure_frag()
     # cal_cami_time_MEM()
-    depth_event()
+    # depth_event()
+    amount()
 
 

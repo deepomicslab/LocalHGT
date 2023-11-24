@@ -545,8 +545,8 @@ if __name__ == "__main__":
     hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
 
     ba = Basic_count()
-    # ba.read_samples()
-    # ba.count()  
+    ba.read_samples()
+    ba.count()  
     ba.analyze_amount()
     # ba.count_inter_taxa_HGT()
 

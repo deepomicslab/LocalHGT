@@ -326,6 +326,22 @@ def read_meta_wenkui(meta_file):
         status_dict[ID] = status
     return status_dict, info_dict
 
+## correct the base num for italian cohort
+def read_meta_italian(meta_italian, base_index):
+    italian_base_dict = {}
+    f = open(meta_italian)
+    for line in f:
+        array = line.strip().split(",")
+        if array[0] == "Run":
+            continue
+        ID = array[0]
+        bases = array[base_index]
+        if bases == '':
+            continue
+        bases = int(array[base_index])
+        italian_base_dict[ID] = bases
+    f.close()
+    return italian_base_dict
 
 def get_pheno_for_wenkui_CRC(wenkui_dir):
     status_dict, info_dict = read_meta_wenkui(wenkui_meta_file)
@@ -358,9 +374,11 @@ if __name__ == "__main__":
     tgs_meta = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
     wenkui_dir = "/mnt/d/breakpoints/HGT/CRC/wenkui/"
     wenkui_meta_file = "/mnt/d/breakpoints/script/analysis/validation/last_gutmeta_sample.tsv"
+    meta_italian = "/mnt/d/breakpoints/HGT/CRC/italian.csv"
+    meta_usa = "/mnt/d/breakpoints/HGT/CRC/USA/usa.csv"
 
     data = []
-
+    base_dict = {}
     found_cohort = {}
     ID_dict = get_samples(hgt_result_dir)
     phenotype = Phenotype()
@@ -378,12 +396,25 @@ if __name__ == "__main__":
     data += add_data
     add_data_2 = get_pheno_for_wenkui_CRC(wenkui_dir)
     data += add_data_2
+    italian_base_dict = read_meta_italian(meta_italian, 3)
+    usa_base_dict = read_meta_italian(meta_usa, -1)
+
+    new_data = []
     for da in data:
-        da[-4] == int(da[-4])
-    df = pd.DataFrame(data, columns = ["sample", "cohort", "disease", "full_disease", "bases", "age", "gender",  "BMI"])
+        if da[0] in italian_base_dict:
+            # print (da[0], da[-4], italian_base_dict[da[0]])
+            da[-4] = italian_base_dict[da[0]]
+        if da[0] in usa_base_dict:
+            # print (da[0], usa_base_dict[da[0]])
+            da[-4] = usa_base_dict[da[0]]
+
+        base_dict[da[0]] = round(da[-4])
+        da[-4] == round(da[-4])
+        new_data.append(da)
+    df = pd.DataFrame(new_data, columns = ["sample", "cohort", "disease", "full_disease", "bases", "age", "gender",  "BMI"])
     df.to_csv(pheno_result, sep=',')
 
-    # for da in data:
-    #     if da[-4] == "NA":
-    #         print (da)
+    sorted_dict = sorted(base_dict.items(), key=lambda x: x[1], reverse = True)
+    for i in range(15):
+        print (sorted_dict[i][0], sorted_dict[i][1])
 

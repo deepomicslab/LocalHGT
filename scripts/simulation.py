@@ -613,10 +613,12 @@ def UHGG_cami2():  # discarded function
 
 def UHGG_amount():   # generate complex sample to evaluate the relationship between data amount and speed
     h = open("/mnt/d/breakpoints/HGT/run_localHGT_amount.sh", 'w')
+    f = open("/mnt/d/breakpoints/HGT/run_lemon_amount.sh", 'w')
     pa = Parameters(uhgg_ref)
     pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
     amount_dir = "/mnt/d/breakpoints/HGT/uhgg_amount"
     amount_result_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_result/"
+    amount_result_lemon = "/mnt/d/breakpoints/HGT/uhgg_amount_lemon/"
     com = Complexity()
     for snp_rate in [0.01]:
         pa.change_snp_rate(snp_rate)
@@ -644,7 +646,14 @@ def UHGG_amount():   # generate complex sample to evaluate the relationship betw
                 --fq1 {amount_dir}/{cami_ID}_{prop}_1.fq --fq2 {amount_dir}/{cami_ID}_{prop}_2.fq -s {cami_ID}_{prop} -o {amount_result_dir}
                 """
                 print (run, file = h)
+
+                run = f"""/usr/bin/time -v -o {amount_result_lemon}/{cami_ID}_{prop}.time bash /mnt/d/breakpoints/lemon/pipeline.sh /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
+                {amount_dir}/{cami_ID}_{prop}_1.fq  {amount_dir}/{cami_ID}_{prop}_2.fq {cami_ID}_{prop} {amount_result_lemon}
+                """
+                print (run, file = f)
+
     h.close()
+    f.close()
 
 
 class Parameters():
