@@ -53,20 +53,22 @@ First, infer HGT breakpoints by running `python main.py` like
 Detect HGT breakpoints from metagenomics sequencing data.
 
 required arguments:
-  -r             <str> Reference file. (default: None)
+  -r             <str> Reference file which contains all the representative
+                   references of concerned bacteria. (default: None)
   --fq1          <str> unzipped fastq 1 file. (default: None)
   --fq2          <str> unzipped fastq 2 file. (default: None)
   -s             <str> Sample name. (default: sample)
   -o             <str> Output folder. (default: ./)
 
 optional arguments:
-  -k             <int> kmer size (default: 32)
-  -t             <int> number of threads (default: 10)
-  -e             <int> number of hash functions (1-9), delete the reference
-                   index (*.index.dat) before change this value. (default: 3)
+  -k             <int> kmer length. (default: 32)
+  -t             <int> number of threads. (default: 10)
+  -e             <int> number of hash functions (1-9). (default: 3)
   -d             <int> seed to initialize a pseudorandom number generator.
                    (default: 1)
-  --hit_ratio    <float> Minimum approximate kmer match ratio to extract a
+  --use_kmer     <1/0> 1 means using kmer to extract HGT-related segment, 0
+                   means using original reference. (default: 1)
+  --hit_ratio    <float> Minimum fuzzy kmer match ratio to extract a
                    reference fragment. (default: 0.1)
   --match_ratio  <float> Minimum exact kmer match ratio to extract a
                    reference fragment. (default: 0.08)
@@ -78,6 +80,9 @@ A command example:
 python scripts/main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
 ```
 The detected HGT breakpoints would be stored in the `<sample name>.acc.csv` file within the output folder.
+Note:
+- With a small reference, we can skip the extraction of HGT-related segments by setting `--use_kmer 0`.
+- With a small reference, set a small value of `-k`. 
 
 Second, infer complete HGT events by matching breakpoints after detecting HGT breakpoints for all the samples.
 ```

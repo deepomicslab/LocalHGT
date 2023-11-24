@@ -28,6 +28,65 @@ class Accept_Parameters:
     def run(self):
         os.system(self.run_order)
 
+def direct_alignment(options):
+    command = """
+        ref=%s
+        fq1=%s
+        fq2=%s
+        ID=%s
+        outdir=%s
+        thread=%s
+        dir=%s
+        sample=$outdir/$ID
+
+        if [ ! -d $outdir ]; then
+        mkdir $outdir
+        fi
+
+        if [ ! -f $ref.pac ];then
+        bwa index $ref
+        fi
+
+        if [ ! -f $ref.fai ];then
+        samtools faidx $ref
+        fi
+
+
+        bwa mem -M -t $thread -R "@RG\\tID:id\\tSM:sample\\tLB:lib" $ref $fq1 $fq2 | samtools view -bhS -> $sample.unsort.bam
+        samtools sort -o $sample.unique.bam $sample.unsort.bam
+        rm $sample.unsort.bam
+
+        samtools view -h $sample.unique.bam \
+        | python3 $dir/extractSplitReads_BwaMem.py -i stdin \
+        | samtools view -Sb > $sample.unsort.splitters.bam
+
+        samtools sort -o $sample.splitters.bam $sample.unsort.splitters.bam
+        rm $sample.unsort.splitters.bam
+
+        samtools index $sample.splitters.bam
+        samtools index $sample.unique.bam
+
+        python $dir/get_raw_bkp.py -t $thread -u $sample.unique.bam -o $sample.raw.csv -n 0
+        python $dir/accurate_bkp.py -g $ref -u $sample.unique.bam -b None -s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv -n 0
+
+        python $dir/remove_repeat.py $sample.repeat.acc.csv $sample.acc.csv
+        rm $sample.repeat.acc.csv
+
+        if [ ! -f "$sample.acc.csv" ]; then
+            echo "Error: Final HGT breakpoint file is not generated."
+        else
+            echo "Final HGT breakpoint file is generated."
+            wc -l $sample.acc.csv
+        fi
+
+        
+        # rm $sample.splitters.bam
+
+        echo "Final result is in $sample.acc.csv"
+        echo "--------------------------"
+        echo "Finished!"
+    """%(options.r, options.fq1, options.fq2, options.s, options.o, options.t, sys.path[0])
+    os.system(command)
 
 if __name__ == "__main__":
 
@@ -56,11 +115,11 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         print (f"see python {sys.argv[0]} -h")
     else:
-        if options.use_kmer == 1:
+        if options.use_kmer == 1: # default
             acc_pa = Accept_Parameters(options)
             acc_pa.get_order()
             acc_pa.run()
         elif options.use_kmer == 0:
-            pass
+            direct_alignment(options)
         else:
             print ("## wrong value for the parameter --use_kmer. ")

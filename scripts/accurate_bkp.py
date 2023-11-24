@@ -540,8 +540,14 @@ def count_reads_for_norm(): # for normalization
     # split_bamfile = pysam.AlignmentFile(filename = split_bam_name, mode = 'rb')
     for acc in acc_bkp_list:
 
-        from_segment_name, from_new_pos = convert_chr2_segment(acc.from_ref, acc.from_bkp)
-        to_segment_name, to_new_pos = convert_chr2_segment(acc.to_ref, acc.to_bkp)
+        if args["n"] == 1:  # change name if the ref is extracted
+            from_segment_name, from_new_pos = convert_chr2_segment(acc.from_ref, acc.from_bkp)
+            to_segment_name, to_new_pos = convert_chr2_segment(acc.to_ref, acc.to_bkp)
+        else:
+            from_segment_name = acc.from_ref
+            from_new_pos = acc.from_bkp
+            to_segment_name = acc.to_ref
+            to_new_pos = acc.to_bkp
         if from_segment_name == "NA" or to_segment_name == "NA":
             continue
         
@@ -626,6 +632,8 @@ def count_reads_for_norm(): # for normalization
 def find_chr_segment_name(bed_file):
     # bed_file =  "/mnt/d/breakpoints/HGT/test_5_11/species20_snp0.01_depth30_reads150_sample_1.interval.txt.bed"  
     chr_segments = {} 
+    if args["n"] == 0:
+        return chr_segments
     for line in open(bed_file):   
         segment = line.strip()
         my_chr = segment.split(":")[0]
@@ -662,7 +670,7 @@ if __name__ == "__main__":
     required.add_argument("-s", type=str, help="<str> split reads bam file.", metavar="\b")
     optional.add_argument("-t", type=int, default=5, help="<int> number of threads", metavar="\b")
     optional.add_argument("-b", type=str, help="bed file of extracted ref.", metavar="\b")
-    optional.add_argument("-n", type=int, default=1, help="<0/1> 1 indicates the aligned-ref is extracted.", metavar="\b")
+    optional.add_argument("-n", type=int, default=1, help="<0/1> 1 indicates the ref is extracted using kmer.", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
     args = vars(parser.parse_args())
 
