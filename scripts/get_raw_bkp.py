@@ -723,6 +723,7 @@ def main():
         for proc in procs:
             proc.join()
         i = i + split_num
+    print ("Raw HGT breakpoint detection is finished.")
 
 
 if __name__ == "__main__":

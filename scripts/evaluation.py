@@ -248,8 +248,8 @@ class Sample():
 
     def eva_tool(self, tool_dir, tool, abun_cutoff=0):
         acc_file = tool_dir + '/' + self.ID + '.acc.csv'
-        if tool == "lemon":
-            bkp = read_lemon(acc_file, abun_cutoff)
+        if tool.upper() == "LEMON":
+            bkp = read_lemon(acc_file)
         else:
             bkp = read_localHGT(acc_file, abun_cutoff)
         accuracy, FDR, F1_score = compare(self.true_bkp, bkp)
@@ -353,7 +353,7 @@ class Figure():
         
         give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
         plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_amount_%s.pdf'%(give_time))
-        self.df.to_csv('../analysis/amount_comparison.csv', sep=',')
+        self.df.to_csv('/mnt/d/R_script_files/For_methods/amount_comparison.csv', sep=',')
 
 def cami():
     time_list, mem_list = [], []
@@ -390,6 +390,7 @@ def cami():
 
 def amount(): # run time with increasing of sequencing data amount
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_result/"
+    lemon_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_lemon/"
 
     time_list, mem_list = [], []
     fi = Figure()
@@ -415,9 +416,9 @@ def amount(): # run time with increasing of sequencing data amount
             local_pe.add_ref(ref_accuracy, ref_len)
             fi.add_local_sample(local_pe, prop)
 
-            # lemon_pe = sa.eva_tool(lemon_dir, "LEMON")
-            # fi.add_lemon_sample(lemon_pe, snp_rate)
-            print ("#",cami_ID, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.F1_score, local_pe.complexity)
+            lemon_pe = sa.eva_tool(lemon_dir, "LEMON", default_abun_cutoff)
+            fi.add_lemon_sample(lemon_pe, prop)
+            # print ("#",cami_ID, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.F1_score, local_pe.complexity)
             # print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy ,lemon_pe.accuracy)
             time_list.append(local_pe.user_time)
             mem_list.append(local_pe.max_mem)

@@ -11,6 +11,8 @@ import numpy as np
 import argparse
 import sys
 import re
+import multiprocessing
+import time
 
 
 from get_raw_bkp import getInsertSize, readFilter
@@ -349,6 +351,43 @@ def find_accurate_bkp():
         # print (bkp_num_support)
     print ('number of bkp with support reads is %s.'%(bkp_num_support), bkp_num)
 
+def find_accurate_bkp_parallel():
+    threads = args["t"]
+    cluster_num = 0
+    for species_pair in rrm.raw_bkps_cluster:
+        cluster_num += len(rrm.raw_bkps_cluster[species_pair])
+    print ("Breakpoint cluster number is %s."%(cluster_num))
+
+    bkp_num_support = 0
+    for species_pair in rrm.raw_bkps_cluster:
+        raw_bkp_clusters = rrm.raw_bkps_cluster[species_pair]
+        # print (len(raw_bkp_clusters))
+        for cluster in raw_bkp_clusters:
+            if bkp_num_support % threads == 0:
+                procs = []
+            p = multiprocessing.Process(target = choose_acc_from_cluster, args = (cluster,))
+            procs.append(p)
+            p.start()
+            if len(procs) == threads or bkp_num_support == cluster_num-1:
+                for proc in procs:
+                    proc.join()
+            bkp_num_support += 1
+
+    for species_pair in rrm.raw_bkps_cluster:
+        raw_bkp_clusters = rrm.raw_bkps_cluster[species_pair]
+        # print (len(raw_bkp_clusters))
+        for cluster in raw_bkp_clusters:
+            if len(cluster.support_reads) == 0: # ignore the bkp not supported by split reads
+                # print ("no reads", cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
+                continue
+            choose_acc_from_cluster(cluster)
+            bkp_num_support += 1
+            if bkp_num_support % 1000 == 0:
+                print ("processed %s breakpoint clusters."%(bkp_num_support))
+        # break
+        # print (bkp_num_support)
+    print ('number of bkp with support reads is %s.'%(bkp_num_support))
+
 def choose_acc_from_cluster(cluster):
     flag = False
     locus_score = {}
@@ -674,22 +713,25 @@ if __name__ == "__main__":
     optional.add_argument("-h", "--help", action="help")
     args = vars(parser.parse_args())
 
-    bed_file = args["b"]
-    unique_bam_name = args["u"]
-    unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
-    mean, sdev, rlen, rnum = getInsertSize(unique_bamfile)
-    insert_size = int(mean + 2*sdev)
-    rlen = int(rlen)
 
-    raw_bkp = args["a"]
-    split_bam_name = args["s"]
-    ref = args["g"]
-    output_acc_bkp_file = args["o"]
 
 
     if len(sys.argv) == 1:
         print (Usage%{'prog':sys.argv[0]})
     else:
+        t0 = time.time()
+        bed_file = args["b"]
+        unique_bam_name = args["u"]
+        raw_bkp = args["a"]
+        split_bam_name = args["s"]
+        ref = args["g"]
+        output_acc_bkp_file = args["o"]
+
+        unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
+        mean, sdev, rlen, rnum = getInsertSize(unique_bamfile)
+        insert_size = int(mean + 2*sdev)
+        rlen = int(rlen)
+
         reads_mapped_len = {}
         acc_bkp_list = []
         rrm = Read_Raw_Bkp(raw_bkp)
@@ -699,7 +741,8 @@ if __name__ == "__main__":
 
 
         read_split_bam(split_bam_name)
-        find_accurate_bkp()
+        # find_accurate_bkp()
+        find_accurate_bkp_parallel()
         print ("accurate bkps are found, count support reads")
         chr_segments = find_chr_segment_name(bed_file)  #find the reads support each breakpoint
         count_reads_for_norm()
@@ -719,6 +762,9 @@ if __name__ == "__main__":
             acc.write_out(writer)
         f.close()
         # print ('Final bkp num is %s'%(len(acc_bkp_list)))
+        t1 = time.time()
+        print ("precise breakpoint detection costs %s seconds."%(round(t1 - t0), 1))
+
 
 
         #edit the cluster raw bkp parameter.
