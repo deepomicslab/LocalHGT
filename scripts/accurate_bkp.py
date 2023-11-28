@@ -351,7 +351,7 @@ def find_accurate_bkp():
         # print (bkp_num_support)
     print ('number of bkp with support reads is %s.'%(bkp_num_support), bkp_num)
 
-def find_accurate_bkp_parallel():
+def find_accurate_bkp_parallel_bk():
     threads = args["t"]
     cluster_num = 0
     for species_pair in rrm.raw_bkps_cluster:
@@ -363,6 +363,9 @@ def find_accurate_bkp_parallel():
         raw_bkp_clusters = rrm.raw_bkps_cluster[species_pair]
         # print (len(raw_bkp_clusters))
         for cluster in raw_bkp_clusters:
+            if len(cluster.support_reads) == 0:
+                bkp_num_support += 1
+                continue
             if bkp_num_support % threads == 0:
                 procs = []
             p = multiprocessing.Process(target = choose_acc_from_cluster, args = (cluster,))
@@ -372,23 +375,50 @@ def find_accurate_bkp_parallel():
                 for proc in procs:
                     proc.join()
             bkp_num_support += 1
-
-    for species_pair in rrm.raw_bkps_cluster:
-        raw_bkp_clusters = rrm.raw_bkps_cluster[species_pair]
-        # print (len(raw_bkp_clusters))
-        for cluster in raw_bkp_clusters:
-            if len(cluster.support_reads) == 0: # ignore the bkp not supported by split reads
-                # print ("no reads", cluster.ref1, cluster.ref1_positions, cluster.ref2, cluster.ref2_positions)
-                continue
-            choose_acc_from_cluster(cluster)
-            bkp_num_support += 1
             if bkp_num_support % 1000 == 0:
                 print ("processed %s breakpoint clusters."%(bkp_num_support))
         # break
         # print (bkp_num_support)
     print ('number of bkp with support reads is %s.'%(bkp_num_support))
 
+def find_accurate_bkp_parallel():
+    threads = args["t"]
+    cluster_num = 0
+    for species_pair in rrm.raw_bkps_cluster:
+        cluster_num += len(rrm.raw_bkps_cluster[species_pair])
+    print ("Breakpoint cluster number is %s."%(cluster_num))
+
+    pool=multiprocessing.Pool(processes=threads)
+    pool_list=[]    
+
+    bkp_num_support = 0
+    for species_pair in rrm.raw_bkps_cluster:
+        raw_bkp_clusters = rrm.raw_bkps_cluster[species_pair]
+        # print (len(raw_bkp_clusters))
+        for cluster in raw_bkp_clusters:
+            if len(cluster.support_reads) == 0:
+                bkp_num_support += 1
+                continue
+            pool_list.append(pool.apply_async(choose_acc_from_cluster,(cluster,)))
+
+            bkp_num_support += 1
+            if bkp_num_support % 1000 == 0:
+                print ("processed %s breakpoint clusters."%(bkp_num_support))
+        # break
+        # print (bkp_num_support)
+    pool.close()
+    pool.join()
+    print ('number of bkp with support reads is %s.'%(bkp_num_support))
+    acc_bkp_list = []
+    for result in pool_list:
+        # print (result.get())
+        if result.get() != None:
+            acc_bkp_list.append(result.get())
+    return acc_bkp_list
+
+
 def choose_acc_from_cluster(cluster):
+    # print ("###")
     flag = False
     locus_score = {}
     score1 = 0
@@ -473,9 +503,11 @@ def choose_acc_from_cluster(cluster):
 
         if cluster.pos1 > 0 and cluster.pos2 > 0:
             if score1 > min_match_score and acc1.recheck():
-                acc_bkp_list.append(acc1)
+                # acc_bkp_list.append(acc1)
+                return acc1
             elif score2 > min_match_score and acc2.recheck():
-                acc_bkp_list.append(acc2)
+                # acc_bkp_list.append(acc2)
+                return acc2
             # if readobj.ref1 in test and readobj.ref2 in test:
             #     print (readobj.qname, readobj.ref1, readobj.pos1, readobj.ref2, readobj.pos2,\
             #         readobj.mapped_len, readobj.clipped_direction, score1, score2, read_seq,\
@@ -742,7 +774,7 @@ if __name__ == "__main__":
 
         read_split_bam(split_bam_name)
         # find_accurate_bkp()
-        find_accurate_bkp_parallel()
+        acc_bkp_list = find_accurate_bkp_parallel()
         print ("accurate bkps are found, count support reads")
         chr_segments = find_chr_segment_name(bed_file)  #find the reads support each breakpoint
         count_reads_for_norm()
@@ -762,8 +794,8 @@ if __name__ == "__main__":
             acc.write_out(writer)
         f.close()
         # print ('Final bkp num is %s'%(len(acc_bkp_list)))
-        t1 = time.time()
-        print ("precise breakpoint detection costs %s seconds."%(round(t1 - t0), 1))
+        # t1 = time.time()
+        # print ("precise breakpoint detection costs %s seconds."%(round(t1 - t0), 1))
 
 
 
