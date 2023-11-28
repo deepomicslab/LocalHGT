@@ -60,7 +60,7 @@ echo Time taken to map reads is ${take} seconds. >> ${sample}.log
 python $dir/get_raw_bkp.py -t $thread -u $sample.unique.bam -o $sample.raw.csv
 # !
 python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.bam -b ${interval_file}.bed \
--s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv
+-s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv -t $thread
 
 python $dir/remove_repeat.py $sample.repeat.acc.csv $sample.acc.csv
 rm $sample.repeat.acc.csv
