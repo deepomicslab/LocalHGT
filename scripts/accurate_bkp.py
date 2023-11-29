@@ -13,6 +13,7 @@ import sys
 import re
 import multiprocessing
 import time
+import bisect
 
 
 from get_raw_bkp import getInsertSize, readFilter
@@ -107,6 +108,7 @@ class Read_Raw_Bkp():
         print ('raw bkp num is', len(self.raw_bkps))
 
     def cluster_bkp(self):
+        # print (bkp.ref1)
         for bkp in self.raw_bkps:
             if key_name(bkp.ref1, bkp.ref2) in self.raw_bkps_cluster:
                 self.raw_bkps_cluster[key_name(bkp.ref1, bkp.ref2)] = \
@@ -122,6 +124,7 @@ class Read_Raw_Bkp():
     def update_cluster(self, xy_cluster, bkp):
         flag = False
         for cluster in xy_cluster:
+            
             if bkp.ref1 == cluster.ref1 and bkp.ref2 == cluster.ref2 and bkp.direction == cluster.direction:
                 if abs(bkp.ref1_positions[0] - cluster.ref1_positions[0]) < self.max_dist and\
                     abs(bkp.ref2_positions[0] - cluster.ref2_positions[0]) < self.max_dist:
@@ -351,44 +354,13 @@ def find_accurate_bkp():
         # print (bkp_num_support)
     print ('number of bkp with support reads is %s.'%(bkp_num_support), bkp_num)
 
-def find_accurate_bkp_parallel_bk():
-    threads = args["t"]
-    cluster_num = 0
-    for species_pair in rrm.raw_bkps_cluster:
-        cluster_num += len(rrm.raw_bkps_cluster[species_pair])
-    print ("Breakpoint cluster number is %s."%(cluster_num))
-
-    bkp_num_support = 0
-    for species_pair in rrm.raw_bkps_cluster:
-        raw_bkp_clusters = rrm.raw_bkps_cluster[species_pair]
-        # print (len(raw_bkp_clusters))
-        for cluster in raw_bkp_clusters:
-            if len(cluster.support_reads) == 0:
-                bkp_num_support += 1
-                continue
-            if bkp_num_support % threads == 0:
-                procs = []
-            p = multiprocessing.Process(target = choose_acc_from_cluster, args = (cluster,))
-            procs.append(p)
-            p.start()
-            if len(procs) == threads or bkp_num_support == cluster_num-1:
-                for proc in procs:
-                    proc.join()
-            bkp_num_support += 1
-            if bkp_num_support % 1000 == 0:
-                print ("processed %s breakpoint clusters."%(bkp_num_support))
-        # break
-        # print (bkp_num_support)
-    print ('number of bkp with support reads is %s.'%(bkp_num_support))
-
 def find_accurate_bkp_parallel():
-    threads = args["t"]
     cluster_num = 0
     for species_pair in rrm.raw_bkps_cluster:
         cluster_num += len(rrm.raw_bkps_cluster[species_pair])
     print ("Breakpoint cluster number is %s."%(cluster_num))
 
-    pool=multiprocessing.Pool(processes=threads)
+    pool=multiprocessing.Pool(processes=args["t"])
     pool_list=[]    
 
     bkp_num_support = 0
@@ -402,18 +374,19 @@ def find_accurate_bkp_parallel():
             pool_list.append(pool.apply_async(choose_acc_from_cluster,(cluster,)))
 
             bkp_num_support += 1
-            if bkp_num_support % 1000 == 0:
-                print ("processed %s breakpoint clusters."%(bkp_num_support))
+            # if bkp_num_support % 1000 == 0:
+            #     print ("processed %s breakpoint clusters."%(bkp_num_support))
         # break
         # print (bkp_num_support)
     pool.close()
     pool.join()
-    print ('number of bkp with support reads is %s.'%(bkp_num_support))
+    
     acc_bkp_list = []
     for result in pool_list:
         # print (result.get())
         if result.get() != None:
             acc_bkp_list.append(result.get())
+    print ('rough number of acc bkp is %s.'%(len(acc_bkp_list)))
     return acc_bkp_list
 
 
@@ -700,9 +673,125 @@ def count_reads_for_norm(): # for normalization
         # print (acc.from_reads, acc.to_reads, acc.cross, ref1_first, ref2_first)
         # break
 
+def count_reads_for_norm_parallel(acc): # for normalization
+    around_cutoff = 20
+    unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
+
+    if args["n"] == 1:  # change name if the ref is extracted
+        from_segment_name, from_new_pos = convert_chr2_segment(acc.from_ref, acc.from_bkp)
+        to_segment_name, to_new_pos = convert_chr2_segment(acc.to_ref, acc.to_bkp)
+    else:
+        from_segment_name = acc.from_ref
+        from_new_pos = acc.from_bkp
+        to_segment_name = acc.to_ref
+        to_new_pos = acc.to_bkp
+    if from_segment_name == "NA" or to_segment_name == "NA":
+        # continue
+        return None
+    
+    from_split_reads, to_split_reads = set(), set()
+    strand_flag = False
+
+    start_pos = from_new_pos-around_cutoff
+    if start_pos < 1:
+        start_pos = 1
+    for read in unique_bamfile.fetch(from_segment_name, start_pos, from_new_pos+around_cutoff):
+        # if read.mapping_quality < 20:
+        #     continue
+        if read.has_tag('SA'):
+            from_split_reads.add(read.query_name)
+        if strand_flag == False:
+            if read.has_tag('SA'):
+                array = read.get_tag('SA').split(',')
+
+                if array[0] == to_segment_name and abs(int(array[1]) - to_new_pos) < 150:
+                    to_bkp_strand = array[2]
+                    if read.is_reverse == False:
+                        acc.from_strand = "+"
+                        acc.to_strand = to_bkp_strand
+                        # print (read.reference_name, from_new_pos, "+", read.next_reference_name, to_new_pos, to_bkp_strand)
+                    else:
+                        acc.from_strand = "-"
+                        acc.to_strand = to_bkp_strand
+                        # print (read.next_reference_name, to_new_pos, to_bkp_strand, read.reference_name, from_new_pos, "-", read.query_name)
+                    strand_flag = True
+
+    start_pos = to_new_pos-around_cutoff
+    if start_pos < 1:
+        start_pos = 1
+    for read in unique_bamfile.fetch(to_segment_name, start_pos, to_new_pos+around_cutoff):
+        # if read.mapping_quality < 20:
+        #     continue
+
+        if strand_flag == False:
+            if read.has_tag('SA'):
+                array = read.get_tag('SA').split(',')
+
+                if array[0] == from_segment_name and abs(int(array[1]) - from_new_pos) < 500:
+                    from_bkp_strand = array[2]
+                    if read.is_reverse == False:
+                        acc.to_strand = "+"
+                        acc.from_strand = from_bkp_strand
+                        # print (read.reference_name, to_new_pos, "+", read.next_reference_name, from_new_pos, from_bkp_strand)
+                    else:
+                        acc.to_strand = "-"
+                        acc.from_strand = from_bkp_strand
+                        # print (read.next_reference_name, from_new_pos, from_bkp_strand, read.reference_name, to_new_pos, "-")
+                    strand_flag = True
+        if read.has_tag('SA'):
+            to_split_reads.add(read.query_name)
+    acc.from_reads = len(from_split_reads)
+    acc.to_reads = len(to_split_reads)
+    acc.cross = len(to_split_reads & from_split_reads)
+
+    PE_reads = set()
+    start_pos = from_new_pos-insert_size
+    if start_pos < 1:
+        start_pos = 1
+    for read in unique_bamfile.fetch(from_segment_name, start_pos, from_new_pos+insert_size):
+        if read.mapping_quality < 20:
+            continue
+        if read.next_reference_name == to_segment_name and abs(read.next_reference_start - to_new_pos) < insert_size:
+            PE_reads.add(read.query_name)
+    start_pos = to_new_pos-insert_size
+    if start_pos < 1:
+        start_pos = 1
+    for read in unique_bamfile.fetch(to_segment_name, start_pos, to_new_pos+insert_size):
+        if read.mapping_quality < 20:
+            continue
+        if read.next_reference_name == from_segment_name and abs(read.next_reference_start - from_new_pos) < insert_size:
+            PE_reads.add(read.query_name)
+    acc.pair_end = len(PE_reads)
+
+    return acc
+
+
+def count_reads_all(acc_bkp_list):
+    pool=multiprocessing.Pool(processes=args["t"])
+    pool_list=[]    
+
+    bkp_num_support = 0
+    for acc in acc_bkp_list:
+        pool_list.append(pool.apply_async(count_reads_for_norm_parallel,(acc,)))
+
+        bkp_num_support += 1
+        # if bkp_num_support % 1000 == 0:
+        #     print ("count reads for %s accurate bkps."%(bkp_num_support))
+
+    pool.close()
+    pool.join()
+
+    acc_bkp_list = []
+    for result in pool_list:
+        # print (result.get())
+        if result.get() != None:
+            acc_bkp_list.append(result.get())
+    return acc_bkp_list
+
 def find_chr_segment_name(bed_file):
+    tolerate_gap = 150
     # bed_file =  "/mnt/d/breakpoints/HGT/test_5_11/species20_snp0.01_depth30_reads150_sample_1.interval.txt.bed"  
-    chr_segments = {} 
+    chr_segments, chr_starts = {}, {} 
     if args["n"] == 0:
         return chr_segments
     for line in open(bed_file):   
@@ -712,10 +801,15 @@ def find_chr_segment_name(bed_file):
         end = int(segment.split(":")[1].split("-")[1])
         if my_chr not in chr_segments:
             chr_segments[my_chr] = []
+        start -= tolerate_gap
+        end += tolerate_gap
         chr_segments[my_chr].append([start, end])
-    return chr_segments
+    for my_chr in chr_segments:
+        chr_segments[my_chr] = sorted(chr_segments[my_chr], key=lambda interval: interval[0])
+        chr_starts[my_chr] = [interval[0] for interval in chr_segments[my_chr]]
+    return chr_segments, chr_starts
 
-def convert_chr2_segment(ref, pos):
+def convert_chr2_segment_bk(ref, pos):
     tolerate_gap = 150
     for interval in chr_segments[ref]:
         if pos >= interval[0] - tolerate_gap and pos <= interval[1] + tolerate_gap:
@@ -726,6 +820,21 @@ def convert_chr2_segment(ref, pos):
             return segment_name, new_pos
     print ("Can't find corresponding for", ref, pos)
     return "NA", 0
+
+def convert_chr2_segment(ref, pos):
+    tolerate_gap = 150
+
+    index = bisect.bisect_right(chr_starts[ref], pos)
+    if index > 0:
+        interval = chr_segments[ref][index - 1]
+        new_pos = pos - (interval[0] +tolerate_gap)
+        segment_name = "%s:%s-%s"%(ref, interval[0]+tolerate_gap, interval[1]-tolerate_gap)
+        if new_pos < 1:
+            new_pos = 1
+        return segment_name, new_pos
+    else:
+        print ("Can't find corresponding for", ref, pos)
+
 
 
 if __name__ == "__main__":
@@ -776,8 +885,9 @@ if __name__ == "__main__":
         # find_accurate_bkp()
         acc_bkp_list = find_accurate_bkp_parallel()
         print ("accurate bkps are found, count support reads")
-        chr_segments = find_chr_segment_name(bed_file)  #find the reads support each breakpoint
-        count_reads_for_norm()
+        chr_segments, chr_starts = find_chr_segment_name(bed_file)  #find the reads support each breakpoint
+        # count_reads_for_norm()
+        acc_bkp_list = count_reads_all(acc_bkp_list)
 
 
         f = open(output_acc_bkp_file, 'w', newline='')
@@ -794,8 +904,8 @@ if __name__ == "__main__":
             acc.write_out(writer)
         f.close()
         # print ('Final bkp num is %s'%(len(acc_bkp_list)))
-        # t1 = time.time()
-        # print ("precise breakpoint detection costs %s seconds."%(round(t1 - t0), 1))
+        t1 = time.time()
+        print ("precise breakpoint detection costs %s seconds."%(round(t1 - t0, 1)))
 
 
 
