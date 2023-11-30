@@ -21,7 +21,7 @@ class Accept_Parameters:
         self.threads = options.t
 
     def get_order(self):
-        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak} {options.e} {options.d}\n"
+        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak} {options.e} {options.d} {options.base_num}\n"
         print ("Running command:")
         print (self.run_order)
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     usage="%(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required = parser.add_argument_group("required arguments")
     optional = parser.add_argument_group("optional arguments")
-    required.add_argument("-r", type=str, help="<str> Reference file which contains all the representative references of concerned bacteria.", metavar="\b")
+    required.add_argument("-r", type=str, help="<str> reference file which contains all the representative references of concerned bacteria.", metavar="\b")
     required.add_argument("--fq1", type=str, help="<str> unzipped fastq 1 file.", metavar="\b")
     required.add_argument("--fq2", type=str, help="<str> unzipped fastq 2 file.", metavar="\b")
     required.add_argument("-s", type=str, default="sample", help="<str> Sample name.", metavar="\b")
@@ -105,9 +105,10 @@ if __name__ == "__main__":
     optional.add_argument("-e", type=int, default=3, help="<int> number of hash functions (1-9).", metavar="\b")
     optional.add_argument("-d", type=int, default=1, help="<int> seed to initialize a pseudorandom number generator.", metavar="\b")
     optional.add_argument("--use_kmer", type=int, default=1, help="<1/0> 1 means using kmer to extract HGT-related segment, 0 means using original reference.", metavar="\b")
-    optional.add_argument("--hit_ratio", type=float, default=0.1, help="<float> Minimum fuzzy kmer match ratio to extract a reference fragment.", metavar="\b")
-    optional.add_argument("--match_ratio", type=float, default=0.08, help="<float> Minimum exact kmer match ratio to extract a reference fragment.", metavar="\b")
-    optional.add_argument("--max_peak", type=int, default=300000000, help="<int> Maximum candidate BKP count.", metavar="\b")
+    optional.add_argument("--hit_ratio", type=float, default=0.1, help="<float> minimum fuzzy kmer match ratio to extract a reference fragment.", metavar="\b")
+    optional.add_argument("--match_ratio", type=float, default=0.08, help="<float> minimum exact kmer match ratio to extract a reference fragment.", metavar="\b")
+    optional.add_argument("--max_peak", type=int, default=300000000, help="<int> maximum candidate BKP count.", metavar="\b")
+    optional.add_argument("--base_num", type=int, default=2000000000, help="<int> randmomly select this number of base pairs from reads in first round of kmer counting.", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
 
     options = parser.parse_args()

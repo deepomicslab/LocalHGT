@@ -12,6 +12,7 @@ k=$9
 max_peak=${10}
 coder_num=${11}
 seed=${12}
+base_num=${13}
 
 interval_file=$outdir/$ID.interval.txt
 sample=$outdir/$ID
@@ -26,7 +27,7 @@ fi
 
 # :<<!
 # echo "$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak $coder_num $seed"
-$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak $coder_num $seed
+$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak $coder_num $seed $base_num
 python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
 
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
