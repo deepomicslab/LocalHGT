@@ -314,6 +314,7 @@ def read_split_bam(split_bam_name):
             continue
     # print (used_reads_num)
         # print (read.reference_name, read.cigar, read.get_tag('SA'))
+    split_bamfile.close()
 
 def add_support_split_reads(cluster, read_obj):
     max_dist_support_read = insert_size #rlen #
@@ -766,7 +767,7 @@ def count_reads_for_norm_parallel(acc): # for normalization
         if read.next_reference_name == from_segment_name and abs(read.next_reference_start - from_new_pos) < insert_size:
             PE_reads.add(read.query_name)
     acc.pair_end = len(PE_reads)
-
+    unique_bamfile.close()
     return acc
 
 
@@ -794,10 +795,10 @@ def count_reads_all(acc_bkp_list):
 
 def find_chr_segment_name(bed_file):
     tolerate_gap = 150
-    # bed_file =  "/mnt/d/breakpoints/HGT/test_5_11/species20_snp0.01_depth30_reads150_sample_1.interval.txt.bed"  
+
     chr_segments, chr_starts = {}, {} 
     if args["n"] == 0:
-        return chr_segments
+        return chr_segments, chr_starts
     for line in open(bed_file):   
         segment = line.strip()
         my_chr = segment.split(":")[0]
@@ -813,19 +814,19 @@ def find_chr_segment_name(bed_file):
         chr_starts[my_chr] = [interval[0] for interval in chr_segments[my_chr]]
     return chr_segments, chr_starts
 
-def convert_chr2_segment_bk(ref, pos):
+def convert_chr2_segment(ref, pos):
     tolerate_gap = 150
     for interval in chr_segments[ref]:
         if pos >= interval[0] - tolerate_gap and pos <= interval[1] + tolerate_gap:
             new_pos = pos - interval[0] 
-            segment_name = "%s:%s-%s"%(ref, interval[0], interval[1])
+            segment_name = "%s:%s-%s"%(ref, interval[0]+tolerate_gap, interval[1]-tolerate_gap)
             if new_pos < 1:
                 new_pos = 1
             return segment_name, new_pos
     print ("Can't find corresponding for", ref, pos)
     return "NA", 0
 
-def convert_chr2_segment(ref, pos):
+def convert_chr2_segment_new(ref, pos):
     tolerate_gap = 150
 
     index = bisect.bisect_right(chr_starts[ref], pos)
@@ -874,8 +875,10 @@ if __name__ == "__main__":
 
         unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
         mean, sdev, rlen, rnum = getInsertSize(unique_bamfile)
+        unique_bamfile.close()
         insert_size = int(mean + 2*sdev)
         rlen = int(rlen)
+        print ("read length is %s, insert size is %s, reads count is %s."%(rlen, insert_size, rnum))
 
         reads_mapped_len = {}
         acc_bkp_list = []

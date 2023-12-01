@@ -743,5 +743,5 @@ if __name__ == "__main__":
     mean, sdev, rlen, rnum = getInsertSize(unique_bamfile)
     insert_size = int(mean + 2*sdev)
     rlen = int(rlen)
-    print ("read length is %s"%(rlen))
+    print ("read length is %s, insert size is %s."%(rlen, insert_size))
     sys.exit(main())
