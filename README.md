@@ -46,6 +46,8 @@ samtools faidx ref_database.fasta
 ```
 Also, at the first running, `LocalHGT` will index the database automatically, and it will take several hours. 
 
+Note:
+- reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.
 
 ## Run
 ### Detect HGT breakpoints

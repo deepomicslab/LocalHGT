@@ -521,10 +521,14 @@ class Acc_Bkp(object):
         check_len = 50
         from_ref_seq = extract_ref_seq(self.from_ref, self.from_bkp-check_len, self.from_bkp + check_len)         
         to_ref_seq = extract_ref_seq(self.to_ref, self.to_bkp-check_len, self.to_bkp + check_len)   
-
-        matches1 = compute_scores(from_ref_seq, to_ref_seq)/len(from_ref_seq)
-        from_ref_seq = get_reverse_complement_seq(from_ref_seq)
-        matches2 = compute_scores(from_ref_seq, to_ref_seq)/len(from_ref_seq)
+        
+        if len(from_ref_seq) > 0:
+            matches1 = compute_scores(from_ref_seq, to_ref_seq)/len(from_ref_seq)
+            from_ref_seq = get_reverse_complement_seq(from_ref_seq)
+            matches2 = compute_scores(from_ref_seq, to_ref_seq)/len(from_ref_seq)
+        else:
+            matches1, matches2 = 0, 0
+        
         if matches1 > matches2:
             score = matches1
         else:
