@@ -8,7 +8,7 @@ conda env create --name localhgt -f environment.yml
 conda activate localhgt
 sudo chmod 744 scripts/extract_ref
 python scripts/main.py -h  # detect HGT breakpoints
-python scripts/infer_HGT_event -h # detect complete HGT events
+python scripts/infer_HGT_event.py -h # detect complete HGT events
 ```
 
 ## Test

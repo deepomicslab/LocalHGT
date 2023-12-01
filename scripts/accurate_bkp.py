@@ -390,7 +390,6 @@ def find_accurate_bkp_parallel():
     print ('rough number of acc bkp is %s.'%(len(acc_bkp_list)))
     return acc_bkp_list
 
-
 def choose_acc_from_cluster(cluster):
     # print ("###")
     flag = False
@@ -770,7 +769,6 @@ def count_reads_for_norm_parallel(acc): # for normalization
     unique_bamfile.close()
     return acc
 
-
 def count_reads_all(acc_bkp_list):
     pool=multiprocessing.Pool(processes=args["t"])
     pool_list=[]    
@@ -856,6 +854,7 @@ if __name__ == "__main__":
     optional.add_argument("-t", type=int, default=5, help="<int> number of threads", metavar="\b")
     optional.add_argument("-b", type=str, help="bed file of extracted ref.", metavar="\b")
     optional.add_argument("-n", type=int, default=1, help="<0/1> 1 indicates the ref is extracted using kmer.", metavar="\b")
+    optional.add_argument("-read_info", type=int, default=1, help="<0/1> 1 indicates including reads info, 0 indicates not (just for evaluation).", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
     args = vars(parser.parse_args())
 
@@ -891,10 +890,14 @@ if __name__ == "__main__":
         read_split_bam(split_bam_name)
         # find_accurate_bkp()
         acc_bkp_list = find_accurate_bkp_parallel()
-        print ("accurate bkps are found, count support reads")
-        chr_segments, chr_starts = find_chr_segment_name(bed_file)  #find the reads support each breakpoint
-        # count_reads_for_norm()
-        acc_bkp_list = count_reads_all(acc_bkp_list)
+
+        if args.read_info == 1:
+            print ("accurate bkps are found, count support reads")
+            chr_segments, chr_starts = find_chr_segment_name(bed_file)  #find the reads support each breakpoint
+            # count_reads_for_norm()
+            acc_bkp_list = count_reads_all(acc_bkp_list)
+        else:
+            print ("Skip searching supporting reads for breakpoints, just for fast evaluation.")
 
 
         f = open(output_acc_bkp_file, 'w', newline='')

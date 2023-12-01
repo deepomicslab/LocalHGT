@@ -21,7 +21,7 @@ class Accept_Parameters:
         self.threads = options.t
 
     def get_order(self):
-        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak} {options.e} {options.d} {options.base_num}\n"
+        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak} {options.e} {options.d} {options.base_num} {options.read_info}\n"
         print ("Running command:")
         print (self.run_order)
 
@@ -109,6 +109,7 @@ if __name__ == "__main__":
     optional.add_argument("--match_ratio", type=float, default=0.08, help="<float> minimum exact kmer match ratio to extract a reference fragment.", metavar="\b")
     optional.add_argument("--max_peak", type=int, default=300000000, help="<int> maximum candidate BKP count.", metavar="\b")
     optional.add_argument("--base_num", type=int, default=2000000000, help="<int> randmomly select this number of base pairs from reads in first round of kmer counting.", metavar="\b")
+    optional.add_argument("-read_info", type=int, default=1, help="<0/1> 1 indicates including reads info, 0 indicates not (just for evaluation).", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
 
     options = parser.parse_args()

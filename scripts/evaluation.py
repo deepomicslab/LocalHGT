@@ -195,7 +195,6 @@ class Performance():
         self.ref_accuracy = ref_accuracy
         self.ref_len = ref_len
 
-
 def extract_time(time_file): #log file obtained by /usr/bin/time -v
         #if no time available
     for line in open(time_file):
@@ -229,7 +228,6 @@ def extract_mem(time_file):
             used_mem =  time_re.group(1).strip()
     final_mem = round(float(used_mem)/1000000, 2)
     return final_mem
-
 
 class Sample():
     def __init__(self, ID, true_dir):
@@ -426,6 +424,27 @@ def amount(): # run time with increasing of sequencing data amount
 
     print ("CPU time", np.mean(time_list), np.median(time_list))
     print ("PEAK mem", np.mean(mem_list), np.median(mem_list))
+
+def ultra_deep():
+    ### 	SAMEA5669781    753.73 G
+    abun_cutoff = 0
+    data = [[0,0]]
+    acc_dir = "/mnt/d/breakpoints/HGT/deep_result/acc_result/"
+    for z in range(1,8):
+        prop = round(z * 0.01, 3)
+        bases = round(prop*786)
+        new_x = "%s(%sG)"%(prop, bases)
+        acc_file = acc_dir + "/SAMEA5669780_%s.acc.csv"%(prop)
+        bkp = read_localHGT(acc_file, abun_cutoff)
+        print (prop, len(bkp))
+        data.append([prop, len(bkp)])
+
+    df=pd.DataFrame(data,columns=['fraction', 'bkp_num'])
+    # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
+    ax = sns.lineplot(data=df, x="fraction", y="bkp_num").set_title('Sample: SAMEA5669780 Bases: 786.34 G')  
+    give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_deep_%s.pdf'%(give_time))
+
 
 def cal_cami_time_MEM(): # cal avergae Run time and Peak MEM with CAMI data
     time_list, mem_list, cpu_list = [], [], []
@@ -690,6 +709,7 @@ if __name__ == "__main__":
     # pure_frag()
     # cal_cami_time_MEM()
     # depth_event()
-    amount()
+    # amount()
+    ultra_deep()
 
 
