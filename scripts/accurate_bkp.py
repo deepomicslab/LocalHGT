@@ -854,7 +854,7 @@ if __name__ == "__main__":
     optional.add_argument("-t", type=int, default=5, help="<int> number of threads", metavar="\b")
     optional.add_argument("-b", type=str, help="bed file of extracted ref.", metavar="\b")
     optional.add_argument("-n", type=int, default=1, help="<0/1> 1 indicates the ref is extracted using kmer.", metavar="\b")
-    optional.add_argument("-read_info", type=int, default=1, help="<0/1> 1 indicates including reads info, 0 indicates not (just for evaluation).", metavar="\b")
+    optional.add_argument("--read_info", type=int, default=1, help="<0/1> 1 indicates including reads info, 0 indicates not (just for evaluation).", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
     args = vars(parser.parse_args())
 
@@ -890,8 +890,7 @@ if __name__ == "__main__":
         read_split_bam(split_bam_name)
         # find_accurate_bkp()
         acc_bkp_list = find_accurate_bkp_parallel()
-
-        if args.read_info == 1:
+        if args["read_info"] == 1:
             print ("accurate bkps are found, count support reads")
             chr_segments, chr_starts = find_chr_segment_name(bed_file)  #find the reads support each breakpoint
             # count_reads_for_norm()

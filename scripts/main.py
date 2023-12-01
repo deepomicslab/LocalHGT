@@ -37,6 +37,7 @@ def direct_alignment(options):
         outdir=%s
         thread=%s
         dir=%s
+        info=%s
         sample=$outdir/$ID
 
         if [ ! -d $outdir ]; then
@@ -67,7 +68,7 @@ def direct_alignment(options):
         samtools index $sample.unique.bam
 
         python $dir/get_raw_bkp.py -t $thread -u $sample.unique.bam -o $sample.raw.csv -n 0
-        python $dir/accurate_bkp.py -g $ref -u $sample.unique.bam -b None -s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv -n 0
+        python $dir/accurate_bkp.py -g $ref -u $sample.unique.bam -b None -s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv -n 0 --read_info $info
 
         python $dir/remove_repeat.py $sample.repeat.acc.csv $sample.acc.csv
         rm $sample.repeat.acc.csv
@@ -85,7 +86,7 @@ def direct_alignment(options):
         echo "Final result is in $sample.acc.csv"
         echo "--------------------------"
         echo "Finished!"
-    """%(options.r, options.fq1, options.fq2, options.s, options.o, options.t, sys.path[0])
+    """%(options.r, options.fq1, options.fq2, options.s, options.o, options.t, sys.path[0], options.read_info)
     os.system(command)
 
 if __name__ == "__main__":
@@ -109,7 +110,7 @@ if __name__ == "__main__":
     optional.add_argument("--match_ratio", type=float, default=0.08, help="<float> minimum exact kmer match ratio to extract a reference fragment.", metavar="\b")
     optional.add_argument("--max_peak", type=int, default=300000000, help="<int> maximum candidate BKP count.", metavar="\b")
     optional.add_argument("--base_num", type=int, default=2000000000, help="<int> randmomly select this number of base pairs from reads in first round of kmer counting.", metavar="\b")
-    optional.add_argument("-read_info", type=int, default=1, help="<0/1> 1 indicates including reads info, 0 indicates not (just for evaluation).", metavar="\b")
+    optional.add_argument("--read_info", type=int, default=1, help="<0/1> 1 indicates including reads info, 0 indicates not (just for evaluation).", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
 
     options = parser.parse_args()
