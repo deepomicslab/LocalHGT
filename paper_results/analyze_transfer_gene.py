@@ -1297,13 +1297,14 @@ if __name__ == "__main__":
     remove_transposon_flag = False
     only_healthy = False  # only check healthy persons
 
-    annotation = Annotation(gff)
-    annotation.read_gff()
+    # annotation = Annotation(gff)
+    # annotation.read_gff()
 
     # count_transfer_times()
+    get_gene_lengths(identified_hgt)
 
-    trans = Transfer_times()
-    trans.read_events(identified_hgt)
+    # trans = Transfer_times()
+    # trans.read_events(identified_hgt)
 
     # count_uniq_event_ratio(trans.HGT_event_dict)
 
@@ -1339,8 +1340,8 @@ if __name__ == "__main__":
 
 
 
-    classify = Classify(trans.HGT_event_dict)
-    classify.main()
+    # classify = Classify(trans.HGT_event_dict)
+    # classify.main()
 
 
 
