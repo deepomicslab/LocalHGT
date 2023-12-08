@@ -21,7 +21,7 @@ class Accept_Parameters:
         self.threads = options.t
 
     def get_order(self):
-        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak} {options.e} {options.d} {options.sample} {options.read_info}\n"
+        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak} {options.e} {options.seed} {options.sample} {options.read_info}\n"
         print ("Running command:")
         print (self.run_order)
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     optional.add_argument("-k", type=int, default=32, help="<int> kmer length.", metavar="\b")
     optional.add_argument("-t", type=int, default=10, help="<int> number of threads.", metavar="\b")
     optional.add_argument("-e", type=int, default=3, help="<int> number of hash functions (1-9).", metavar="\b")
-    optional.add_argument("-d", type=int, default=1, help="<int> seed to initialize a pseudorandom number generator.", metavar="\b")
+    optional.add_argument("--seed", type=int, default=1, help="<int> seed to initialize a pseudorandom number generator.", metavar="\b")
     optional.add_argument("--use_kmer", type=int, default=1, help="<1/0> 1 means using kmer to extract HGT-related segment, 0 means using original reference.", metavar="\b")
     optional.add_argument("--hit_ratio", type=float, default=0.1, help="<float> minimum fuzzy kmer match ratio to extract a reference fragment.", metavar="\b")
     optional.add_argument("--match_ratio", type=float, default=0.08, help="<float> minimum exact kmer match ratio to extract a reference fragment.", metavar="\b")
