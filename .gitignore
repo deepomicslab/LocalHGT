@@ -11,7 +11,7 @@ analysis/use
 *list
 *xls
 *npy
-src
+#src
 test/output
 test/ref.fa.*
 paper_results/nohup.out

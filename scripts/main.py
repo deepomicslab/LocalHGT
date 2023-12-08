@@ -109,7 +109,7 @@ if __name__ == "__main__":
     optional.add_argument("--hit_ratio", type=float, default=0.1, help="<float> minimum fuzzy kmer match ratio to extract a reference fragment.", metavar="\b")
     optional.add_argument("--match_ratio", type=float, default=0.08, help="<float> minimum exact kmer match ratio to extract a reference fragment.", metavar="\b")
     optional.add_argument("--max_peak", type=int, default=300000000, help="<int> maximum candidate BKP count.", metavar="\b")
-    optional.add_argument("--sample", type=float, default=2000000000, help="downsampling in kmer counting: (0-1) means sampling proportion, (>1) means sampling base count (bp).", metavar="\b")
+    optional.add_argument("--sample", type=float, default=2000000000, help="<float> down-sample in kmer counting: (0-1) means sampling proportion, (>1) means sampling base count (bp).", metavar="\b")
     optional.add_argument("--read_info", type=int, default=1, help="<0/1> 1 indicates including reads info, 0 indicates not (just for evaluation).", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
 
