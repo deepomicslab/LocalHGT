@@ -682,8 +682,8 @@ def count_reads_for_norm_parallel(acc): # for normalization
     unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
 
     if args["n"] == 1:  # change name if the ref is extracted
-        from_segment_name, from_new_pos = convert_chr2_segment(acc.from_ref, acc.from_bkp)
-        to_segment_name, to_new_pos = convert_chr2_segment(acc.to_ref, acc.to_bkp)
+        from_segment_name, from_new_pos = convert_chr2_segment_new(acc.from_ref, acc.from_bkp)
+        to_segment_name, to_new_pos = convert_chr2_segment_new(acc.to_ref, acc.to_bkp)
     else:
         from_segment_name = acc.from_ref
         from_new_pos = acc.from_bkp
@@ -702,6 +702,7 @@ def count_reads_for_norm_parallel(acc): # for normalization
     for read in unique_bamfile.fetch(from_segment_name, start_pos, from_new_pos+around_cutoff):
         # if read.mapping_quality < 20:
         #     continue
+        # print (read.reference_name)
         if read.has_tag('SA'):
             from_split_reads.add(read.query_name)
         if strand_flag == False:
@@ -816,7 +817,7 @@ def convert_chr2_segment(ref, pos):
     tolerate_gap = 150
     for interval in chr_segments[ref]:
         if pos >= interval[0] - tolerate_gap and pos <= interval[1] + tolerate_gap:
-            new_pos = pos - interval[0] 
+            new_pos = pos - interval[0] # wrong
             segment_name = "%s:%s-%s"%(ref, interval[0]+tolerate_gap, interval[1]-tolerate_gap)
             if new_pos < 1:
                 new_pos = 1
@@ -890,6 +891,8 @@ if __name__ == "__main__":
         read_split_bam(split_bam_name)
         # find_accurate_bkp()
         acc_bkp_list = find_accurate_bkp_parallel()
+
+
         if args["read_info"] == 1:
             print ("accurate bkps are found, count support reads")
             chr_segments, chr_starts = find_chr_segment_name(bed_file)  #find the reads support each breakpoint
