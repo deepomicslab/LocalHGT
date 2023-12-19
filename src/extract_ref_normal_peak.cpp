@@ -24,6 +24,7 @@ const unsigned char least_depth = 3;
 int k;
 long array_size;
 char *kmer_count_table;
+float *random_array ;
 
 int MIN_BASE_NUM = 6; // 6 
 int REF_NEAR = 500; // 500
@@ -36,6 +37,8 @@ int SKIP_A = 1;
 int MIN_READS = 1; // 1
 int MAX_PEAK_NUM = 300000000;
 int thread_num;
+int MAX_RANDOM_NUM = 50000000;
+int READ_NUM = 0;
 std::mutex mtx;  
 
 class Split_reads{
@@ -167,7 +170,7 @@ class Peaks{
         unsigned int *peak_kmer = new unsigned int[array_size];
         int thread_num;
         void init(int thread_num);
-        void add_peak(int ref_index, int pos, unsigned int* record_ref_index,int ref_len, 
+        int add_peak(int ref_index, int pos, unsigned int* record_ref_index,int ref_len, 
                     long & total_peak_num, unsigned char* record_ref_hit, int thread_index);
         void delete_array(void);
         void slide_reads(string fastq_file, string fastq_file_2, char* coder, int* base, 
@@ -186,10 +189,11 @@ void Peaks::init(int obtain_thread_num){
     
 }
 
-void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int ref_len, 
+int Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int ref_len, 
                     long & total_peak_num, unsigned char* record_ref_hit, int thread_index){
     // cout << Peaks::merge_peak(ref_index, pos)<<endl;
     int my_peak_index = peak_index_array[thread_index];
+    int add_peak_num = 0;
     if (Peaks::merge_peak(ref_index, pos,my_peak_index)){
         int index;
         for (int near_pos = pos - near; near_pos < pos + 1; near_pos++){
@@ -219,12 +223,18 @@ void Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int
         }  
         // if (peak_index_array[thread_index] - each_thread_peak_num * thread_index >= each_thread_peak_num){
         if (my_peak_index >= max_peak_num){
-            cout <<"Too many peaks! Reduce the sampling size, or appoint larger a max_peak_num (see --max_peak)."<<endl;
+            cout <<"Too many peaks! Reduce the sampling size, or appoint a larger max_peak_num (see --max_peak)."<<endl;
         }
         my_peak_index += 1; 
         total_peak_num += 1;
+        add_peak_num += 1;
+
+        // if (ref_index == 11){
+        //     cout << ref_index <<  "\t"  << add_peak_num <<  "\t" << total_peak_num <<  "\t" << pos << endl;
+        // }
     }
     peak_index_array[thread_index] = my_peak_index;
+    return add_peak_num;
     
 }
 
@@ -270,7 +280,8 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
     int m;
     int n;
     unsigned int kmer_index, comple_kmer_index, real_index, b;   
-    int r ;
+    float r ;
+    int r_index;
     // short read_len = 0;
     short read_len_1, read_len_2;
     int chr_index, peak_locus,peak_index;
@@ -307,19 +318,19 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
     }
     fq_file.seekg(pos, ios::beg);
     fq_file_2.seekg(pos, ios::beg);
-    long add_size = start;
+    long add_size = pos;
     // while (fq_file >> reads_seq)
     while (getline(fq_file,reads_seq))
     {
         // fq_file_2>>reads_seq_2;
         getline(fq_file_2, reads_seq_2);
         if (start == 0 & lines % 1000000 == 1000000-1){
-            cout <<start<< " recheck reads\t"<<lines<<endl;
+            cout <<"thread start: "<<start<< " recheck reads\t"<<lines<<endl;
         }
-        if (add_size>=end){
+        if (add_size > end){
             break;
         }
-        add_size += reads_seq.length();
+        add_size += reads_seq.length() + 1;
         if (lines == 0){
             string read_name_forward = get_read_ID(reads_seq);
             string read_name_reverse = get_read_ID(reads_seq_2);
@@ -371,8 +382,11 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
             read_len_2 = reads_seq_2.length();
             
             // }
-            r = rand() % 100;
+            // r = rand() % 100;
+            r_index = (lines / 4) % MAX_RANDOM_NUM;
+            r = random_array[r_index];  // ensure the random value is consistent between runs
             if (r < down_sam_ratio){
+                READ_NUM += 1;
                 Split_reads each_read;
                 each_read.read_name = read_name;
 
@@ -498,7 +512,7 @@ void Peaks::count_filtered_peak(string interval_name){
     }
 
     interval_file.close();
-    cout <<"final_ref_len is:\t"<<final_ref_len<<endl;
+    cout <<"rough final_ref_len is:\t"<<final_ref_len<<endl;
 }
 
 void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, long & extract_ref_len,
@@ -527,6 +541,9 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
     for (int j = 0; j < ref_len; j++){
         short hit_coder_num = 0;
         for (int p = 0; p < coder_num; p++){
+            // if (j>34080 & j < 34120 & ref_index==11){
+            //     cout << j << " "<<p<<" "<<int(record_ref_hit[coder_num*j+p]) << endl;
+            // }
             // if (record_ref_hit[ref_len*p+j] == true){
             if (record_ref_hit[coder_num*j+p] == least_depth){
                 hit_coder_num += 1;
@@ -635,13 +652,13 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
         }
 
     }
-
+    int ref_peak_num = 0;
     for (int i = 0; i < frag_index; i++){
         // extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
         // mtx.lock();
         for (int j =save_good_intervals[2*i]; j <save_good_intervals[2*i+1];j++ ){
             if (peak_hit[j] == true){
-                MyPeak.add_peak(ref_index, j, record_ref_index, ref_len, total_peak_num, 
+                ref_peak_num += MyPeak.add_peak(ref_index, j, record_ref_index, ref_len, total_peak_num, 
                                 record_ref_hit,thread_index);
                 start = j - 200;
                 end = j + 200;
@@ -663,7 +680,7 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
         } 
         // mtx.unlock();
     }
-
+    // cout << "ref index: "<< ref_index << " raw BKP num: "<< ref_peak_num <<endl;
     for (int i = 0; i < frag_index; i++){
         extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
     }
@@ -886,11 +903,11 @@ void read_index(char* coder, int* base, int k, char* comple, string index_name, 
  
     long start_point = start;
     int buffer_size;
-    cout <<"Start slide ref..."<<endl;
+    
 
     index_file.seekg (0, index_file.end);
     long length = index_file.tellg();
-    cout <<start_ref_index <<"\t"<< start_point<<endl;
+    // cout <<start_ref_index <<"\t"<< start_point<<endl;
 
 
     // /*
@@ -933,8 +950,7 @@ void read_index(char* coder, int* base, int k, char* comple, string index_name, 
         delete [] record_ref_index;
         if (ref_index % 10000 == 0){
             time_t t1 = time(0);
-            cout <<"#\t" <<start<<"\t"<<ref_index << "\t" <<slide_ref_len << " bp\t" <<
-             extract_ref_len <<" bp\t" << total_peak_num << "peaks\t"<<t1-t0<< "\t single ref"<<ref_len << endl;
+            cout <<"thread: " <<start<<" ref_index: "<<ref_index << " No. of raw BKPs " << total_peak_num<< " contig_len "<<ref_len << endl;
         } 
         ref_index += 1;
         if (start_point >= end){
@@ -950,7 +966,7 @@ void read_index(char* coder, int* base, int k, char* comple, string index_name, 
     index_file.close();  
     interval_file.close();
     time_t t1 = time(0);
-    cout << slide_ref_len << " bp\t" << extract_ref_len <<" bp\t" <<total_peak_num<<"peaks\t" <<t1-t0<< endl;
+    cout << "Slided ref len: "<<slide_ref_len << " bp\t" <<"Extracted ref len: " << extract_ref_len <<" bp\t" <<"No. of raw BKPs: "<< total_peak_num << "\tcost time "<<t1-t0<< endl;
     // cout << "##########end" << end << "\t"<< start_point<<endl;
 }
 
@@ -972,7 +988,7 @@ void read_fastq(string fastq_file, int k, char* coder, int* base, char* comple,
         }       
     }
     fq_file.seekg(pos, ios::beg);
-    long add_size = start;
+    long add_size = pos;
 
 
     string reads_seq;
@@ -985,31 +1001,40 @@ void read_fastq(string fastq_file, int k, char* coder, int* base, char* comple,
     int m;
     int n;
     unsigned int kmer_index, comple_kmer_index, real_index, b;   
-    double r ;
+    float r ;
     short read_len = 0;
+    int r_index;
+    int read_num = 0;
+    string read_first_line;
 
     // while (fq_file >> reads_seq)
     while (getline(fq_file,reads_seq))
     {
-        if (add_size>=end){
+        if (add_size > end){
+            // cout << start << "\t" << end << "\t" << pos<< "\t" <<add_size <<endl;
             break;
         }
-        add_size += reads_seq.length();
+        add_size += reads_seq.length()+1; // size of (read + "\n")
 
         if (lines % 4 == 1){
             time_t t1 = time(0);
             if (lines % 10000000 == 10000000-1){
-                cout <<lines<<"reads\t" << t1-t0 <<endl;
+                cout << "Process " <<lines<<" lines cost " << t1-t0 <<"s" <<endl;
             }
             // if (lines == 1){
             read_len = reads_seq.length();//cal read length
             // }
-            r = (rand() % 1000) / 10.0 ;
-            // if (lines < 100){
-            //     cout <<r << "\tr "<< down_sam_ratio <<endl;
+            // r = (rand() % 1000) / 10.0 ;
+            r_index = (lines / 4) % MAX_RANDOM_NUM;
+            r = random_array[r_index];  // ensure the random value is consistent between runs
+            
+            // if (lines == 1){
+            //     cout << "thread start: " << start << "\tfirst random value: "<< r <<endl;
             // }
             
             if (r < down_sam_ratio){
+                READ_NUM += 1;
+                read_num += 1;
                 for (int j = 0; j < read_len; j++){
                     reads_int[j] = (int)reads_seq[j];
                     reads_comple_int[j] = comple[reads_int[j]];
@@ -1050,12 +1075,24 @@ void read_fastq(string fastq_file, int k, char* coder, int* base, char* comple,
                         }  
                     }
                 }
-            }         
+            }       
+        }
+        else{
+            if (lines%4 == 0){
+                if (lines == 0){
+                    cout << "<<< thread : first read " <<start << " : " <<reads_seq <<endl;
+                }
+                
+                read_first_line = reads_seq;
+            }
         }
         lines++;
     }
     fq_file.close();
+    // cout << "finish reading "<< fastq_file << " in a thread." <<endl;
+    // cout << start << "\t" << end << "\t" << pos<< "\t" <<add_size <<endl;
     // return kmer_count_table;
+    cout << ">>> thread : final read " <<start << " : " <<read_first_line << " read num: " << read_num <<endl;
 
 }
 
@@ -1143,9 +1180,6 @@ short * random_coder(int k)
     }
 
     int r, t;
-    // unsigned seed;
-    // seed = time(0);
-    // srand(seed);
     for (int j = 0; j < k; j++){
         
         t = int(coder_num/3) + 1;
@@ -1259,7 +1293,7 @@ long * split_ref(string index_name, string fasta_file, int thread_num){
         add = 4*((ref_len-k+1)*coder_num+1); //the size of the genome.
         if (pos -start_byte > each_index_size){
             end_byte = pos + add;
-            cout << start_byte <<"--"<<end_byte<<"\t"<<ref_len<<"index"<< start_ref_index<<endl;
+            // cout << start_byte <<"--"<<end_byte<<"\t"<<ref_len<<"index"<< start_ref_index<<endl;
             split_ref_cutoffs[3*cut_index] = start_byte;
             split_ref_cutoffs[3*cut_index+1] = end_byte;
             split_ref_cutoffs[3*cut_index+2] = start_ref_index;
@@ -1283,6 +1317,16 @@ long * split_ref(string index_name, string fasta_file, int thread_num){
     }
     len_file.close();
     return split_ref_cutoffs;
+}
+
+int get_random(void){
+    random_array  = new float[MAX_RANDOM_NUM];
+    float r;
+    for (int i=0; i<MAX_RANDOM_NUM; i++){
+        r = (rand() % 1000) / 10.0 ;
+        random_array[i] = r;
+    }
+    return 0;
 }
 
 int main( int argc, char *argv[])
@@ -1343,7 +1387,6 @@ int main( int argc, char *argv[])
         down_sam_ratio = cal_sam_ratio(fq1, down_sampling_size); //percent of downsampling ratio (1-100).
     }
     
-    // int down_sam_ratio = 0;
     //index
     string index_name = fasta_file + ".k" + to_string(k) + ".h" + to_string(coder_num) + ".index.dat";
     cout << "\nSearching reference index file: "<< index_name << "..."<< endl;
@@ -1363,12 +1406,10 @@ int main( int argc, char *argv[])
     memset(kmer_count_table, 0, sizeof(char)*array_size);
     choose_coder = saved_random_coder(index_name);
 
-    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.05_depth50_reads150_sample_0_high.1.fq";
-    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.05_depth50_reads150_sample_0_high.2.fq";
-
     long size = file_size(fq1);
     long each_size = size/thread_num;
     // cout <<size<<endl;
+    get_random();
     
     std::vector<std::thread>threads;
 
@@ -1397,6 +1438,8 @@ int main( int argc, char *argv[])
     threads.clear();
     time_t now2 = time(0);
     cout << "reads finish.\t" << now2 - now1 << endl;
+    cout << "considered read pair num in kmer counting:" << READ_NUM/2 << endl;
+    READ_NUM = 0;
 
 
     Peaks MyPeak;
@@ -1417,6 +1460,7 @@ int main( int argc, char *argv[])
     long slide_ref_len = 0;
     long total_peak_num = 0;
     // std::mutex mylock;
+    cout <<"Start slide ref..."<<endl;
     for (int i=0; i<ref_thread_num; i++){
         start = split_ref_cutoffs[3*i];
         if (start == 0){
@@ -1424,7 +1468,7 @@ int main( int argc, char *argv[])
         }
         end = split_ref_cutoffs[3*i+1];
         int start_ref_index = split_ref_cutoffs[3*i+2];
-        cout << "Thread N.O."<<i << "\t"<< start << "\t" <<end<< "\t"<< start_ref_index << endl;
+        // cout << "Thread N.O."<<i << "\t"<< start << "\t" <<end<< "\t"<< start_ref_index << endl;
         // read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end);
         threads.push_back(thread(read_index, coder, base, k, comple, index_name, interval_name,
          choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end, 
@@ -1433,11 +1477,11 @@ int main( int argc, char *argv[])
 	for (auto&th : threads)
 		th.join();
     threads.clear();
-    cout << "raw peaks is done."<<endl;
-    // down_sam_ratio = 50;
+    cout << "raw breakpoint screening is done."<<endl;
 
-    // fq1 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.05_depth50_reads150_sample_0.1.fq";
-    // fq2 = "/mnt/d/breakpoints/HGT/uhgg_snp//species20_snp0.05_depth50_reads150_sample_0.2.fq";
+    double read_slid_down_sam_ratio;
+    read_slid_down_sam_ratio = down_sam_ratio; // sample ratio in sliding read to find HGT-derived BKP
+
 
     for (int i=0; i<thread_num; i++){
         start = i*each_size;
@@ -1446,17 +1490,19 @@ int main( int argc, char *argv[])
             end = size;
         }
         // cout << "Reads thread N.O."<<i << "\t"<< start << "\t" <<end<< endl;
-        threads.push_back(thread(&Peaks::slide_reads, MyPeak, fq1, fq2, coder, base, comple, choose_coder, down_sam_ratio, start, end));
+        threads.push_back(thread(&Peaks::slide_reads, MyPeak, fq1, fq2, coder, base, comple, choose_coder, read_slid_down_sam_ratio, start, end));
     }
 	for (auto&th : threads)
 		th.join();
     threads.clear();
-    cout << "filtering peaks is done."<<endl;
+    cout << "candidate HGT breakpoint screening is done."<<endl;
+    cout << "considered read pair num in finding candidate HGT breakpoint:" << READ_NUM << endl;
 
     MyPeak.count_filtered_peak(interval_name);
-    cout<<"filtered peak number:" <<MyPeak.filter_peak_num<<endl;
+    // cout<<"No. of candidate HGT breakpoints:" <<MyPeak.filter_peak_num<<endl;
     MyPeak.delete_array();
     delete [] kmer_count_table;
+    delete [] random_array;
     time_t now3 = time(0);
     cout << "Finish with time:\t" << now3-now1<<endl;
     return 0;
