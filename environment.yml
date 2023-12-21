@@ -39,6 +39,7 @@ dependencies:
   - ete3=3.1.2=pyh9f0ad1d_0
   - exceptiongroup=1.1.1=pyhd8ed1ab_0
   - expat=2.5.0=hcb278e6_1
+  - fastp=0.23.2=h79da9fb_0
   - fftw=3.3.10=nompi_hc118613_107
   - flye=2.9.2=py37h595c7a6_1
   - font-ttf-dejavu-sans-mono=2.37=hab24e00_0
@@ -74,6 +75,7 @@ dependencies:
   - importlib_metadata=1.5.0=py37_0
   - iniconfig=2.0.0=pyhd8ed1ab_0
   - ipython=7.33.0=py37h89c1867_0
+  - isa-l=2.30.0=hd590300_6
   - java-jdk=7.0.91=1
   - jedi=0.18.2=pyhd8ed1ab_0
   - joblib=1.2.0=pyhd8ed1ab_0

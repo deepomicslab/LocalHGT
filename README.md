@@ -20,12 +20,13 @@ sh run_event_detection.sh
 See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_output.csv` for event results.
 
 ## Construct reference database
-The database (a single `fasta` file) should contain all the representative references of your concerning bacteria. 
+The reference database (a single `fasta` file) should contain all the representative genomes of your concerning bacteria. 
+For example, to analyze HGT events between bacteria A, B, and C, we should collect the representative genomes in `fasta` format for each bacterium and merge them into a single fasta file.
 
-For example, use gut-specific representative genomes collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
-The script `paper_results/build_UHGG_reference.py` can download the gut-specific UHGG v1 database. The command is
+To analyze HGTs in human gut microbome, we use gut-specific representative genomes collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
+The script `paper_results/build_UHGG_reference.py` can download the human gut-specific UHGG v1 database. The command is
 ```
-Construct the reference from gut-specific UHGG V1 database.
+Construct the reference from human gut-specific UHGG V1 database.
 
 required arguments:
   -r        <str> Generated reference file. (default: None)
@@ -53,6 +54,14 @@ Note:
 
 ### Refine sequencing reads
 It is highly advised to refine the sequencing reads using tools like [fastp](https://github.com/OpenGene/fastp) before calling HGT.
+We include `fastp` in the conda environment, refine the reads like
+```
+fastp -i raw_1.fq -I raw_2.fq -o refine_1.fq -O refine_2.fq
+```
+
+Note:
+- Currently, LocalHGT only supports short read sequencing data (e.g., Illumina data).
+- LocalHGT only supports paired-end sequencing data.
 
 ### Detect HGT breakpoints
 First, infer HGT breakpoints by running `python main.py` like
@@ -110,6 +119,9 @@ optional arguments:
   -m        <int> minimum transfer sequence length (default: 500)
   -h, --help
 ```
+
+Note:
+- It is recommended to detect HGT breakpoints for each sample and store the results in a common output folder. Subsequently, when detecting complete HGT events, specify the output folder using the `-b` parameter. This approach allows LocalHGT to consider all the samples collectively, resulting in more reliable results for complete HGT events.
 
 ## Output interpretion
 
