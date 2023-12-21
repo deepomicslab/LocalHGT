@@ -50,6 +50,10 @@ Note:
 - reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.
 
 ## Run
+
+### Refine sequencing reads
+It is highly advised to refine the sequencing reads using tools like [fastp](https://github.com/OpenGene/fastp) before calling HGT.
+
 ### Detect HGT breakpoints
 First, infer HGT breakpoints by running `python main.py` like
 ```
@@ -82,11 +86,11 @@ A command example:
 ```
 python scripts/main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
 ```
-The detected HGT breakpoints would be stored in the `<sample name>.acc.csv` file within the output folder.
+The detected HGT breakpoints is stored in the `<sample name>.acc.csv` file within the output folder.
 
 Note:
 - With a small reference, we can skip the extraction of HGT-related segments by setting `--use_kmer 0`.
-- With a small reference, set a small value of `-k`. 
+- With a small reference, if we want to maintain the extraction of HGT-related segments, we can set a small value of `-k`. 
 
 
 ### Detect complete HGT events
@@ -110,7 +114,7 @@ optional arguments:
 ## Output interpretion
 
 ###  HGT breakpoints
-The HGT breakpoints would be saved in the `*acc.csv` file. Here is an example:
+The HGT breakpoints is saved in the `*acc.csv` file. Here is an example:
 ```
 # the number of reads in the sample is: 41723899; Insert size is 681.
 from_ref,from_pos,from_side,from_strand,to_ref,to_pos,to_side,to_strand,if_reverse,read_seq,ref_seq,similarity,from_split_reads,to_split_reads,cross_split_reads,pair_end
