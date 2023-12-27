@@ -50,6 +50,7 @@ Also, at the first running, `LocalHGT` will index the database automatically, an
 Note:
 - reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.
 
+
 ## Run
 
 ### Refine sequencing reads
@@ -152,6 +153,10 @@ Interpret each column as:
 | to_split_reads  | number of split reads mapped to the to_pos  |
 | cross_split_reads  | number of split reads supported the breakpoint pair  |
 |pair_end| number of paired-end reads supported the breakpoint pair     |
+
+Note:
+- Before conducting the analysis, it is advisable to filter out any instances of gene transfer between different contigs of the same species that may be present in the results.
+For example, GUT_GENOME000031_1 and GUT_GENOME000031_2 belong to the same species, the detected HGT breakpoint pairs or HGT events between them should be discarded.
 
 ###  HGT events
 HGT event result is like

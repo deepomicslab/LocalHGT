@@ -644,15 +644,15 @@ def UHGG_amount():   # generate complex sample to evaluate the relationship betw
                 prop = round(z * 0.1, 2)
                 
                 for rep in range(2, 3):
-                    # run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}_{rep}.time python /mnt/d/breakpoints/script/scripts/main.py -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
-                    # --fq1 {amount_dir}/{cami_ID}_{prop}_1.fq --fq2 {amount_dir}/{cami_ID}_{prop}_2.fq -s {cami_ID}_{prop}_{rep} -o {amount_result_dir}
-                    # """
-                    # print (run, file = h)
-
-                    run = f"""/usr/bin/time -v -o {amount_result_lemon}/{cami_ID}_{prop}_{rep}.time bash /mnt/d/breakpoints/lemon/pipeline.sh /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
-                    {amount_dir}/{cami_ID}_{prop}_1.fq  {amount_dir}/{cami_ID}_{prop}_2.fq {cami_ID}_{prop}_{rep} {amount_result_lemon}
+                    run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}_{rep}.time python /mnt/d/breakpoints/script/scripts/main.py -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
+                    --fq1 {amount_dir}/{cami_ID}_{prop}_1.fq --fq2 {amount_dir}/{cami_ID}_{prop}_2.fq -s {cami_ID}_{prop}_{rep} -o {amount_result_dir}
                     """
-                    print (run, file = f)
+                    print (run, file = h)
+
+                    # run = f"""/usr/bin/time -v -o {amount_result_lemon}/{cami_ID}_{prop}_{rep}.time bash /mnt/d/breakpoints/lemon/pipeline.sh /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
+                    # {amount_dir}/{cami_ID}_{prop}_1.fq  {amount_dir}/{cami_ID}_{prop}_2.fq {cami_ID}_{prop}_{rep} {amount_result_lemon}
+                    # """
+                    # print (run, file = f)
 
     h.close()
     f.close()
