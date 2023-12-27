@@ -43,9 +43,14 @@ def getInsertSize(unique_bamfile):
 
 def calCrossReads(bamfile):
     dict_Interact_Big = {}
+    del_xa_num = 0
     for read in bamfile:
         if read.mapping_quality < 20:
             continue
+        if args['a'] == 0:
+            if read.has_tag('XA'): 
+                del_xa_num += 1
+                continue   
         if read.is_unmapped == False and read.mate_is_unmapped == False and read.reference_name.split(':')[0] != read.next_reference_name.split(':')[0] and read.flag < 2048: 
             if args['n'] == 1:
                 read.reference_start = int(read.reference_name.split(':')[1].split('-')[0]) + read.reference_start
@@ -59,6 +64,8 @@ def calCrossReads(bamfile):
                 if len(dict_Interact_Big.get(read.qname)) == 2:
                     continue 
                 dict_Interact_Big.get(read.qname).append(read)
+    if args['a'] == 0:
+        print ("No. of deleted reads with XA tag is", del_xa_num)
     return dict_Interact_Big
 
 def indexReadBasedOnRef(dict_Interact_Big):
@@ -736,6 +743,7 @@ if __name__ == "__main__":
     required.add_argument("-u", type=str, help="<str> unique reads bam file.", metavar="\b")
     optional.add_argument("-t", type=int, default=5, help="<int> number of threads", metavar="\b")
     optional.add_argument("-n", type=int, default=1, help="<0/1> 1 indicates the aligned-ref is extracted.", metavar="\b")
+    optional.add_argument("-a", type=int, default=1, help="<0/1> 1 indicates retain reads with XA tag.", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
     args = vars(parser.parse_args())
     unique_bam_name = args["u"]
