@@ -43,16 +43,18 @@ echo Time taken to prepare ref is ${take} seconds. >> ${sample}.log
 
 
 #### Map all reads onto the HGT-related segments
-bwa mem -M -t $thread -R "@RG\tID:id\tSM:sample\tLB:lib" $extracted_ref $fq1 $fq2 | samtools view -bhS -> $sample.unsort.bam
-samtools sort -o $sample.unique.bam $sample.unsort.bam
-# cp $sample.unsort.bam  $sample.unique.bam  
+sort_t=`expr $thread - 1`
+bwa mem -M -t $thread -R "@RG\tID:id\tSM:sample\tLB:lib" $extracted_ref $fq1 $fq2 | samtools view -bhS -@ $sort_t -> $sample.unsort.bam
+
+echo "samtools sort -@ $sort_t -o $sample.unique.bam $sample.unsort.bam"
+samtools sort -@ $sort_t -o $sample.unique.bam $sample.unsort.bam
 
 
 #### extract split reads
 samtools view -h $sample.unique.bam \
 | python3 $dir/extractSplitReads_BwaMem.py -i stdin \
 | samtools view -Sb > $sample.unsort.splitters.bam
-samtools sort -o $sample.splitters.bam $sample.unsort.splitters.bam
+samtools sort -@ $sort_t -o $sample.splitters.bam $sample.unsort.splitters.bam
 samtools index $sample.splitters.bam
 samtools index $sample.unique.bam
 
