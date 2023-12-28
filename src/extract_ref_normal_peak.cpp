@@ -174,7 +174,7 @@ class Peaks{
                     long & total_peak_num, unsigned char* record_ref_hit, int thread_index);
         void delete_array(void);
         void slide_reads(string fastq_file, string fastq_file_2, char* coder, int* base, 
-                        char* comple, short *choose_coder, int down_sam_ratio, long start, long end);
+                        char* comple, short *choose_coder, double down_sam_ratio, long start, long end);
         void count_filtered_peak(string interval_name);
         bool merge_peak(int ref_index, int pos, int my_peak_index);
 };
@@ -264,7 +264,7 @@ string get_read_ID(string reads_seq){
 }
 
 void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int* base, 
-                        char* comple, short *choose_coder, int down_sam_ratio, long start, long end){
+                        char* comple, short *choose_coder, double down_sam_ratio, long start, long end){
 
     time_t t0 = time(0);
     ifstream fq_file; 
@@ -291,31 +291,42 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
 
     string read_name;
 
+    // for (long i = start; i>0; i--){   // read name start with @, and shorter than 40, not work if read seq line <40 (after fastp filter)
+    //     fq_file.seekg(i, ios::beg);
+    //     char j;
+    //     fq_file.get(j);
+    //     if (j == '@'){ //not only read name has this symbol.
+    //         if (i == 1){
+    //             pos = i;
+    //             break;
+    //         }
+    //         else{
+    //             fq_file.seekg(i-1, ios::beg);
+    //             char j;
+    //             fq_file.get(j);
+    //             if (j == '\n'){ //the @ should be the first char in a line
+    //                 fq_file.seekg(i, ios::beg);
+    //                 getline(fq_file,reads_seq);
+    //                 string read_name_forward = get_read_ID(reads_seq);
+    //                 if (read_name_forward.length() < 40){
+    //                     pos = i;
+    //                     break;
+    //                 }                    
+    //             }
+    //         }
+    //     }       
+    // }
+
     for (long i = start; i>0; i--){
         fq_file.seekg(i, ios::beg);
         char j;
         fq_file.get(j);
-        if (j == '@'){ //not only read name has this symbol.
-            if (i == 1){
-                pos = i;
-                break;
-            }
-            else{
-                fq_file.seekg(i-1, ios::beg);
-                char j;
-                fq_file.get(j);
-                if (j == '\n'){ //the @ should be the first char in a line
-                    fq_file.seekg(i, ios::beg);
-                    getline(fq_file,reads_seq);
-                    string read_name_forward = get_read_ID(reads_seq);
-                    if (read_name_forward.length() < 40){
-                        pos = i;
-                        break;
-                    }                    
-                }
-            }
+        if (j == '@'){ //only read name has this symbol.
+            pos = i;
+            break;
         }       
     }
+
     fq_file.seekg(pos, ios::beg);
     fq_file_2.seekg(pos, ios::beg);
     long add_size = pos;
@@ -332,7 +343,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
             break;
         }
         add_size += reads_seq.length() + 1;
-        if (lines == 0){
+        if (lines == 0){ // find the matched pair for fq1 and fq2
             string read_name_forward = get_read_ID(reads_seq);
             string read_name_reverse = get_read_ID(reads_seq_2);
             // cout << read_name_forward << "\t" << read_name_reverse << endl;
@@ -358,7 +369,7 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
                 if (while_times > 1000000000){
                     cout << "Too many iterations to make paired-end reads be consistent!\
                      Please use single thread for this sample to avoid the problem." << endl;
-                    cout << read_name_forward<<"\t<=>\t"<< read_name_reverse<< endl;
+                    cout << read_name_forward<<"\t<!=>\t"<< read_name_reverse<< endl;
                     break;
                 }
             }
@@ -372,13 +383,6 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
         }
         if (lines % 4 == 1){
             time_t t1 = time(0);
-            // if (lines == 1){
-            // if (reads_seq.length() <= reads_seq_2.length()){
-            //     read_len = reads_seq.length();//cal read length
-            // }
-            // else{
-            //     read_len = reads_seq_2.length();//cal read length
-            // }
             read_len_1 = reads_seq.length();
             read_len_2 = reads_seq_2.length();
             
@@ -386,7 +390,12 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
             // r = rand() % 100;
             r_index = (lines / 4) % MAX_RANDOM_NUM;
             r = random_array[r_index];  // ensure the random value is consistent between runs
+            // if (r < 0.1){
+            //     cout << "pair\t" << r << "\t" <<down_sam_ratio << endl;
+            // }
+            
             if (r < down_sam_ratio){
+                // cout << "paired line " << r << endl;
                 READ_NUM += 1;
                 Split_reads each_read;
                 each_read.read_name = read_name;
@@ -681,7 +690,7 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
         } 
         // mtx.unlock();
     }
-    cout << "ref index: "<< ref_index << " raw BKP num: "<< ref_peak_num <<endl;
+    // cout << "ref index: "<< ref_index << " raw BKP num: "<< ref_peak_num <<endl;
     for (int i = 0; i < frag_index; i++){
         extract_ref_len += (save_good_intervals[2*i+1] - save_good_intervals[2*i]);
     }
@@ -691,32 +700,6 @@ void slide_window(unsigned char* record_ref_hit, int ref_len, int ref_index, lon
     delete [] save_peak_intervals;
     delete [] peak_hit;
     // return extract_ref_len;
-}
-
-float cal_tab_empty_rate(){
-    double empty_num = 0;
-    float empty_rate;
-    float weak_rate = 0;
-    double weak_num = 0;
-    for (unsigned int j = 0; j < array_size; j++){  
-        if ((int)kmer_count_table[j] == 0){
-            empty_num += 1;
-        }
-        // else{
-        //     cout << (int)kmer_count_table[j] <<empty_num<< endl;
-        // }
-        if ((int)kmer_count_table[j] != least_depth){
-            weak_num += 1;
-        }
-        // cout << j << (int)kmer_count_table[j]<< empty_num <<endl;
-
-        
-    }
-    empty_rate = empty_num/array_size;
-    weak_rate = weak_num/array_size;
-    cout << array_size << "\t" << weak_num<< "\t" << empty_num<<endl;
-    cout << array_size << "\t" << weak_rate<< "\t" << empty_rate<<endl;
-    return empty_rate;
 }
 
 void read_ref(string fasta_file, char* coder, int* base, int k, char* comple,
@@ -949,10 +932,10 @@ void read_index(char* coder, int* base, int k, char* comple, string index_name, 
         delete [] each_ref_buffer;
         delete [] record_ref_hit;
         delete [] record_ref_index;
-        if (ref_index % 10000 == 0){
-            time_t t1 = time(0);
-            cout <<"thread: " <<start<<" ref_index: "<<ref_index << " No. of raw BKPs " << total_peak_num<< " contig_len "<<ref_len << endl;
-        } 
+        // if (ref_index % 10000 == 0){
+        //     time_t t1 = time(0);
+        //     cout <<"thread: " <<start<<" ref_index: "<<ref_index << " No. of raw BKPs " << total_peak_num<< " contig_len "<<ref_len << endl;
+        // } 
         ref_index += 1;
         if (start_point >= end){
             // cout << length << "\t" << start_point <<endl;
@@ -1036,6 +1019,7 @@ void read_fastq(string fastq_file, int k, char* coder, int* base, char* comple,
             if (r < down_sam_ratio){
                 READ_NUM += 1;
                 read_num += 1;
+                // cout << "fq line " << r << endl;
                 for (int j = 0; j < read_len; j++){
                     reads_int[j] = (int)reads_seq[j];
                     reads_comple_int[j] = comple[reads_int[j]];
@@ -1080,9 +1064,9 @@ void read_fastq(string fastq_file, int k, char* coder, int* base, char* comple,
         }
         else{
             if (lines%4 == 0){
-                if (lines == 0){
-                    cout << "<<< thread : first read " <<start << " : " <<reads_seq <<endl;
-                }
+                // if (lines == 0){
+                //     cout << "<<< thread : first read " <<start << " : " <<reads_seq <<endl;
+                // }
                 
                 read_first_line = reads_seq;
             }
@@ -1324,7 +1308,7 @@ int get_random(void){
     random_array  = new float[MAX_RANDOM_NUM];
     float r;
     for (int i=0; i<MAX_RANDOM_NUM; i++){
-        r = (rand() % 1000) / 10.0 ;
+        r = (rand() % 100000) / 1000.0 ;
         random_array[i] = r;
     }
     return 0;
