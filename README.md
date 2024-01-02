@@ -61,8 +61,7 @@ fastp -i raw_1.fq -I raw_2.fq -o refine_1.fq -O refine_2.fq
 ```
 
 Note:
-- Currently, LocalHGT only supports short read sequencing data (e.g., Illumina data).
-- LocalHGT only supports paired-end sequencing data.
+- Currently, LocalHGT only supports paired-end short-read sequencing data (e.g., Illumina data).
 - Ensure only the read name line has the symbol `@` if you want to use multiple threads.
 - Read length should be not longer than 300 bp.
 

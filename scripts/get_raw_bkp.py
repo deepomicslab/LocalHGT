@@ -66,6 +66,7 @@ def calCrossReads(bamfile):
                 dict_Interact_Big.get(read.qname).append(read)
     if args['a'] == 0:
         print ("No. of deleted reads with XA tag is", del_xa_num)
+    print ("No. of junction reads is", len(dict_Interact_Big))
     return dict_Interact_Big
 
 def indexReadBasedOnRef(dict_Interact_Big):
@@ -691,6 +692,14 @@ def get_processed_junction_refs(output_filename):
             processed_junction_refs_list.append([buf[0],buf[4]])
     return processed_junction_refs_list
 
+def cal_RAM():
+    # Getting all memory using os.popen()
+    total_memory, used_memory, free_memory = map(
+        int, os.popen('free -t -m').readlines()[-1].split()[1:])
+    
+    # Memory usage
+    print('RAM Used (GB):', used_memory/1000000000)
+
 def main():
     split_num = args["t"]
     output_filename = args["o"]
@@ -704,6 +713,8 @@ def main():
     ref_list_Interact_Big = indexReadBasedOnPos(ref_dict_Interact_Big)
     htg_dict = htgMATRIX(dict_Interact_Big,ref_list_Interact_Big)
     preClusterData = prepareClusterData(htg_dict)
+    print ("successfully load reads into memory.")
+    cal_RAM()
 
     del ref_list_Interact_Big
     del htg_dict
