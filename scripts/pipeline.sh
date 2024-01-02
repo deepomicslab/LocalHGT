@@ -17,6 +17,7 @@ seed=${12}
 base_num=${13}
 read_info=${14}
 xa_tag=${15}
+read_q=${16}
 
 interval_file=$outdir/$ID.interval.txt
 sample=$outdir/$ID
@@ -44,7 +45,7 @@ echo Time taken to prepare ref is ${take} seconds. >> ${sample}.log
 
 #### Map all reads onto the HGT-related segments
 sort_t=`expr $thread - 1`
-bwa mem -M -t $thread -R "@RG\tID:id\tSM:sample\tLB:lib" $extracted_ref $fq1 $fq2 | samtools view -bhS -@ $sort_t -> $sample.unsort.bam
+bwa mem -M -t $thread -R "@RG\tID:id\tSM:sample\tLB:lib" $extracted_ref $fq1 $fq2 | samtools view -q $read_q -bhS -@ $sort_t -> $sample.unsort.bam
 
 echo "samtools sort -@ $sort_t -o $sample.unique.bam $sample.unsort.bam"
 samtools sort -@ $sort_t -o $sample.unique.bam $sample.unsort.bam

@@ -21,7 +21,7 @@ class Accept_Parameters:
         self.threads = options.t
 
     def get_order(self):
-        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak} {options.e} {options.seed} {options.sample} {options.read_info} {options.a}\n"
+        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak} {options.e} {options.seed} {options.sample} {options.read_info} {options.a} {options.q}\n"
         print ("Running command:")
         print (self.run_order)
 
@@ -54,7 +54,7 @@ def direct_alignment(options):
 
 
         sort_t=`expr $thread - 1`
-        bwa mem -M -t $thread -R "@RG\\tID:id\\tSM:sample\\tLB:lib" $ref $fq1 $fq2 | samtools view -bhS -@ $sort_t -> $sample.unsort.bam
+        bwa mem -M -t $thread -R "@RG\\tID:id\\tSM:sample\\tLB:lib" $ref $fq1 $fq2 | samtools view -q %s -bhS -@ $sort_t -> $sample.unsort.bam
         echo "samtools sort  -@ $sort_t -o $sample.unique.bam $sample.unsort.bam"
         samtools sort -@ $sort_t -o $sample.unique.bam $sample.unsort.bam
         rm $sample.unsort.bam
@@ -88,7 +88,7 @@ def direct_alignment(options):
         echo "Final result is in $sample.acc.csv"
         echo "--------------------------"
         echo "Finished!"
-    """%(options.r, options.fq1, options.fq2, options.s, options.o, options.t, sys.path[0], options.read_info, options.a)
+    """%(options.r, options.fq1, options.fq2, options.s, options.o, options.t, sys.path[0], options.read_info, options.q, options.a)
     os.system(command)
 
 if __name__ == "__main__":
@@ -107,6 +107,7 @@ if __name__ == "__main__":
     optional.add_argument("-t", type=int, default=10, help="<int> number of threads.", metavar="\b")
     optional.add_argument("-e", type=int, default=3, help="<int> number of hash functions (1-9).", metavar="\b")
     optional.add_argument("-a", type=int, default=1, help="<0/1> 1 indicates retain reads with XA tag.", metavar="\b")
+    optional.add_argument("-q", type=int, default=20, help="<int> minimum read mapping quality in BAM.", metavar="\b")
     optional.add_argument("--seed", type=int, default=1, help="<int> seed to initialize a pseudorandom number generator.", metavar="\b")
     optional.add_argument("--use_kmer", type=int, default=1, help="<1/0> 1 means using kmer to extract HGT-related segment, 0 means using original reference.", metavar="\b")
     optional.add_argument("--hit_ratio", type=float, default=0.1, help="<float> minimum fuzzy kmer match ratio to extract a reference fragment.", metavar="\b")
