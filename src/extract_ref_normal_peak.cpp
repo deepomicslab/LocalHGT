@@ -335,10 +335,10 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
     {
         // fq_file_2>>reads_seq_2;
         getline(fq_file_2, reads_seq_2);
-        if (start == 0 & lines % 1000000 == 1000000-1){
-            // cout <<"thread start: "<<start<< " recheck reads\t"<<lines<<endl;
-            cout <<"thread start: "<< start << " screen paired read lines: "<< lines << "\tconsidered paired reads num: "<<READ_NUM <<endl;
-        }
+        // if (start == 0 & lines % 1000000 == 1000000-1){
+        //     // cout <<"thread start: "<<start<< " recheck reads\t"<<lines<<endl;
+        //     cout <<"thread start: "<< start << " screen paired read lines: "<< lines << "\tconsidered paired reads num: "<<READ_NUM <<endl;
+        // }
         if (add_size > end){
             break;
         }

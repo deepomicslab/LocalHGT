@@ -41,40 +41,6 @@ def getInsertSize(unique_bamfile):
     sdev = math.sqrt(float(sum([(x - mean)**2 for x in insert_size_list])) / (len(insert_size_list) - 1))
     return mean, sdev, read_length, r_num
 
-def calCrossReads_split(bamfile, start, end):
-    dict_Interact_Big = {}
-    del_xa_num = 0
-    read_index = -1
-    handle_read = 0
-    for read in bamfile:
-        
-        read_index += 1
-        if read_index >= start and read_index < end:  # only load reads in this block
-            handle_read += 1
-            if read.mapping_quality < 20:
-                continue
-            if args['a'] == 0:
-                if read.has_tag('XA'): 
-                    del_xa_num += 1
-                    continue   
-            if read.is_unmapped == False and read.mate_is_unmapped == False and read.reference_name.split(':')[0] != read.next_reference_name.split(':')[0] and read.flag < 2048: 
-                if args['n'] == 1:
-                    read.reference_start = int(read.reference_name.split(':')[1].split('-')[0]) + read.reference_start
-                    read.next_reference_start = int(read.next_reference_name.split(':')[1].split('-')[0]) + read.next_reference_start
-                if read.qname not in dict_Interact_Big:
-                    ls = []
-                    ls.append(read)
-                    dict_tmp = {read.qname:ls}
-                    dict_Interact_Big.update(dict_tmp)
-                else:
-                    if len(dict_Interact_Big.get(read.qname)) == 2:
-                        continue 
-                    dict_Interact_Big.get(read.qname).append(read)
-    if args['a'] == 0:
-        print ("No. of deleted reads with XA tag is", del_xa_num)
-    print ("No. of junction reads is", len(dict_Interact_Big), handle_read)
-    return dict_Interact_Big
-
 def calCrossReads(bamfile):
     dict_Interact_Big = {}
     del_xa_num = 0
@@ -759,10 +725,13 @@ def main():
     for ref_name in tmp_ref_name_list:
         # if ref_name not in processed_ref_list:
         ref_name_list.append(ref_name)
-    # print ("ref_name len:", len(ref_name_list))
+    print ("\nNo. of genomes:", len(ref_name_list))
     i = 0
     while i < len(ref_name_list):
         # print (i)
+        if i % 500 == 0:
+            cal_RAM()
+            print ("call raw bkp for %s genomes.\n"%(i + 1))
         start_pos = i
         end_pos = min(i + split_num, len(ref_name_list))
         procs = []
@@ -775,60 +744,6 @@ def main():
         for proc in procs:
             proc.join()
         i = i + split_num
-    print ("Raw HGT breakpoint detection is finished.")
-
-def main_split():
-    split_num = args["t"]
-    output_filename = args["o"]
-    if not os.path.exists(output_filename):
-        os.mknod(output_filename)
-    bam_name = args["u"]
-    block_num = 3
-    each_split_read_num = int(rnum/block_num) + 1
-    # processed_ref_list = [] #get_processed_ref(output_filename)
-    
-
-    for block_i in range(block_num):
-        start = block_i * each_split_read_num
-        end = (block_i + 1) * each_split_read_num
-        bamfile = pysam.AlignmentFile(filename = bam_name, mode = 'rb')
-        dict_Interact_Big = calCrossReads_split(bamfile, start, end)
-        # dict_Interact_Big = calCrossReads(bamfile)
-        ref_dict_Interact_Big = indexReadBasedOnRef(dict_Interact_Big)
-        ref_list_Interact_Big = indexReadBasedOnPos(ref_dict_Interact_Big)
-        htg_dict = htgMATRIX(dict_Interact_Big,ref_list_Interact_Big)
-        preClusterData = prepareClusterData(htg_dict)
-        print ("successfully load reads into memory.")
-        cal_RAM()
-
-        del ref_list_Interact_Big
-        del htg_dict
-        del dict_Interact_Big
-
-        tmp_ref_name_list = list(preClusterData.keys())
-        ref_name_list = []
-        for ref_name in tmp_ref_name_list:
-            # if ref_name not in processed_ref_list:
-            ref_name_list.append(ref_name)
-        # print ("ref_name len:", len(ref_name_list))
-        i = 0
-        while i < len(ref_name_list):
-            # print (i)
-            start_pos = i
-            end_pos = min(i + split_num, len(ref_name_list))
-            procs = []
-            for j in range(start_pos, end_pos):
-                p = multiprocessing.Process(target = worker, args = (preClusterData, ref_name_list[j], output_filename + "_block_%s.raw.csv"%(block_i), ref_dict_Interact_Big))
-                # if ref_name_list[j] == 'GUT_GENOME014555_10':
-                #     print('ref %s is processing, NO.%s of %s.'%(ref_name_list[j], j, len(ref_name_list)), len(preClusterData.get(ref_name_list[j])))
-                procs.append(p)
-                p.start()
-            for proc in procs:
-                proc.join()
-            i = i + split_num
-        print ("Raw HGT breakpoint detection for %s-th is finished."%(block_i))
-        bamfile.close()
-    os.system("cat %s_block_* > %s"%(output_filename, output_filename))
     print ("Raw HGT breakpoint detection is finished.")
 
 
