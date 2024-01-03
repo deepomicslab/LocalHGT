@@ -32,10 +32,11 @@ def getInsertSize(unique_bamfile):
         if readFilter(read):
             insert_size_list.append(read.tlen)
             read_length_list.append(len(read.query_sequence))
-            # num += 1
-        # if num > 10000:
-        #     break
-        r_num += 1
+            r_num += 1
+        if r_num > 10000:
+            print ("consider 10000 reads in estimating read length and insert size.")
+            break
+        
     read_length = int(sum(read_length_list) / len(read_length_list))
     mean = float(sum(insert_size_list)) / len(insert_size_list)
     sdev = math.sqrt(float(sum([(x - mean)**2 for x in insert_size_list])) / (len(insert_size_list) - 1))
@@ -729,7 +730,7 @@ def main():
     i = 0
     while i < len(ref_name_list):
         # print (i)
-        if i % 500 == 0:
+        if i % 1 == 0:
             cal_RAM()
             print ("call raw bkp for %s genomes.\n"%(i + 1))
         start_pos = i
@@ -761,11 +762,12 @@ if __name__ == "__main__":
     optional.add_argument("-h", "--help", action="help")
     args = vars(parser.parse_args())
     unique_bam_name = args["u"]
+    print ("start calling raw bkp...")
     unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
     mean, sdev, rlen, rnum = getInsertSize(unique_bamfile)
     unique_bamfile.close()
     insert_size = int(mean + 2*sdev)
     rlen = int(rlen)
-    print ("read length is %s, insert size is %s, read count is %s."%(rlen, insert_size, rnum))
+    print ("read length is %s, insert size is %s, after counting %s reads."%(rlen, insert_size, rnum))
     sys.exit(main())
     # sys.exit(main_split())  # try to split bam into small blocks, not work
