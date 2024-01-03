@@ -642,8 +642,10 @@ def UHGG_amount():   # generate complex sample to evaluate the relationship betw
             """
             for z in range(1,11):
                 prop = round(z * 0.1, 2)
+                if prop != 0.1:
+                    continue
                 
-                for rep in range(2, 3):
+                for rep in range(1, 2):
                     run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}_{rep}.time python /mnt/d/breakpoints/script/scripts/main.py -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
                     --fq1 {amount_dir}/{cami_ID}_{prop}_1.fq --fq2 {amount_dir}/{cami_ID}_{prop}_2.fq -s {cami_ID}_{prop}_{rep} -o {amount_result_dir}
                     """

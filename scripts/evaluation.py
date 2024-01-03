@@ -386,6 +386,46 @@ def cami():
     print ("CPU time", np.mean(time_list), np.median(time_list))
     print ("PEAK mem", np.mean(mem_list), np.median(mem_list))
 
+def amount_rep(): # run time with increasing of sequencing data amount, with 3 replications
+    local_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_result/"
+    lemon_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_lemon/"
+
+    time_list, mem_list = [], []
+    fi = Figure()
+    ba = Parameters(uhgg_ref)
+    ba.depth = 30
+    ba.get_dir(true_dir)
+    fi.variation = "fraction"
+    ba.change_snp_rate(0.01)
+    index = 0
+    ba.get_ID(index)
+    default_abun_cutoff = 0
+    for z in range(1,11):
+        prop = round(z * 0.1, 2)
+
+        sa = Sample(ba.sample, true_dir)
+        for level in ba.complexity_level:
+            for rep in ['', '_1', '_2']:
+        # for level in ['high', 'low']:
+                cami_ID = ba.sample + '_' + level + '_' + str(prop) + rep
+                sa.change_ID(cami_ID)
+                sa.complexity = level
+                ref_accuracy, ref_len = sa.eva_ref(local_dir)
+                local_pe = sa.eva_tool(local_dir, "LocalHGT", default_abun_cutoff) 
+                local_pe.add_ref(ref_accuracy, ref_len)
+                fi.add_local_sample(local_pe, prop)
+
+                lemon_pe = sa.eva_tool(lemon_dir, "LEMON", default_abun_cutoff)
+                fi.add_lemon_sample(lemon_pe, prop)
+                # print ("#",cami_ID, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.F1_score, local_pe.complexity)
+                # print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy ,lemon_pe.accuracy)
+                time_list.append(local_pe.user_time)
+                mem_list.append(local_pe.max_mem)
+    # fi.plot_amount()
+
+    print ("CPU time", np.mean(time_list), np.median(time_list))
+    print ("PEAK mem", np.mean(mem_list), np.median(mem_list))
+
 def amount(): # run time with increasing of sequencing data amount
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_result/"
     lemon_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_lemon/"
@@ -444,7 +484,6 @@ def ultra_deep():
     ax = sns.lineplot(data=df, x="fraction", y="bkp_num").set_title('Sample: SAMEA5669780 Bases: 786.34 G')  
     give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
     plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_deep_%s.pdf'%(give_time))
-
 
 def cal_cami_time_MEM(): # cal avergae Run time and Peak MEM with CAMI data
     time_list, mem_list, cpu_list = [], [], []
@@ -710,6 +749,7 @@ if __name__ == "__main__":
     # cal_cami_time_MEM()
     # depth_event()
     # amount()
-    ultra_deep()
+    # ultra_deep()
+    amount_rep()
 
 

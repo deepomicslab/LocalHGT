@@ -64,7 +64,7 @@ take=$(( end - start ))
 echo Time taken to map reads is ${take} seconds. >> ${sample}.log
 
 #### Identify precise HGT breakpoints
-python $dir/get_raw_bkp.py -t $thread -u $sample.unique.bam -o $sample.raw.csv -a $xa_tag
+python $dir/get_raw_bkp.py -t $thread -u $sample.unique.bam -o $sample.raw.csv -a $xa_tag 
 python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.bam -b ${interval_file}.bed \
 -s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv -t $thread --read_info $read_info
 
@@ -87,6 +87,7 @@ end=$(date +%s)
 take=$(( end - start ))
 echo Time taken to execute commands is ${take} seconds. >> ${sample}.log
 echo "Final result is in $sample.acc.csv"
+echo "log info is in $sample.log"
 echo "--------------------------"
 echo "Finished!"
 

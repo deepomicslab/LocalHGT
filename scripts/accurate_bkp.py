@@ -15,6 +15,8 @@ import multiprocessing
 import time
 import bisect
 
+import logging
+
 
 from get_raw_bkp import getInsertSize, readFilter
 
@@ -105,7 +107,7 @@ class Read_Raw_Bkp():
         for row in all_rows:
             eb = Each_Bkp(row)
             self.raw_bkps.append(eb)
-        print ('raw bkp num is', len(self.raw_bkps))
+        logging.info ('raw bkp num is %s'%(len(self.raw_bkps)))
 
     def cluster_bkp(self):
         # print (bkp.ref1)
@@ -119,7 +121,7 @@ class Read_Raw_Bkp():
                 self.update_cluster(self.raw_bkps_cluster[key_name(bkp.ref1, bkp.ref2)], bkp)            
             else:
                 self.raw_bkps_cluster[key_name(bkp.ref1, bkp.ref2)] = [bkp]
-        print ('gene pair number is', len(self.raw_bkps_cluster))
+        logging.info ('gene pair number is %s'%( len(self.raw_bkps_cluster)))
 
     def update_cluster(self, xy_cluster, bkp):
         flag = False
@@ -359,7 +361,7 @@ def find_accurate_bkp_parallel():
     cluster_num = 0
     for species_pair in rrm.raw_bkps_cluster:
         cluster_num += len(rrm.raw_bkps_cluster[species_pair])
-    print ("Breakpoint cluster number is %s."%(cluster_num))
+    logging.info ("Breakpoint cluster number is %s."%(cluster_num))
 
     pool=multiprocessing.Pool(processes=args["t"])
     pool_list=[]    
@@ -387,7 +389,7 @@ def find_accurate_bkp_parallel():
         # print (result.get())
         if result.get() != None:
             acc_bkp_list.append(result.get())
-    print ('rough number of acc bkp is %s.'%(len(acc_bkp_list)))
+    logging.info ('rough number of acc bkp is %s.'%(len(acc_bkp_list)))
     return acc_bkp_list
 
 def choose_acc_from_cluster(cluster):
@@ -873,12 +875,19 @@ if __name__ == "__main__":
         ref = args["g"]
         output_acc_bkp_file = args["o"]
 
+        logging.basicConfig(filename=args["a"][:-7] + "log",
+                            filemode='a',
+                            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                            datefmt='%H:%M:%S',
+                            level=logging.DEBUG)
+        logging.info ("start calling precise bkp...")
+
         unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
         mean, sdev, rlen, rnum = getInsertSize(unique_bamfile)
         unique_bamfile.close()
         insert_size = int(mean + 2*sdev)
         rlen = int(rlen)
-        print ("read length is %s, insert size is %s, reads count is %s."%(rlen, insert_size, rnum))
+        # print ("read length is %s, insert size is %s, reads count is %s."%(rlen, insert_size, rnum))
 
         reads_mapped_len = {}
         acc_bkp_list = []
@@ -894,12 +903,12 @@ if __name__ == "__main__":
 
 
         if args["read_info"] == 1:
-            print ("accurate bkps are found, count support reads")
+            logging.info ("accurate bkps are found, count support reads")
             chr_segments, chr_starts = find_chr_segment_name(bed_file)  #find the reads support each breakpoint
             # count_reads_for_norm()
             acc_bkp_list = count_reads_all(acc_bkp_list)
         else:
-            print ("Skip searching supporting reads for breakpoints, just for fast evaluation.")
+            logging.info ("Skip searching supporting reads for breakpoints, just for fast evaluation.")
 
 
         f = open(output_acc_bkp_file, 'w', newline='')
@@ -917,7 +926,8 @@ if __name__ == "__main__":
         f.close()
         # print ('Final bkp num is %s'%(len(acc_bkp_list)))
         t1 = time.time()
-        print ("precise breakpoint detection costs %s seconds."%(round(t1 - t0, 1)))
+        logging.info ("precise breakpoint detection costs %s seconds."%(round(t1 - t0, 1)))
+        logging.info("precise HGT breakpoint detection is finished.\n")
 
 
 

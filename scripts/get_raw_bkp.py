@@ -10,6 +10,7 @@ import os
 import multiprocessing
 import argparse
 import time
+import logging
 
 minSample = 1
 
@@ -699,7 +700,7 @@ def cal_RAM():
         int, os.popen('free -t -m').readlines()[-1].split()[1:])
     
     # Memory usage
-    print('RAM Used (GB):', used_memory/1000000000)
+    logging.info('RAM Used (GB): %s'%(used_memory/1000000000) )
 
 def main():
     split_num = args["t"]
@@ -709,12 +710,12 @@ def main():
     bam_name = args["u"]
     # processed_ref_list = [] #get_processed_ref(output_filename)
     bamfile = pysam.AlignmentFile(filename = bam_name, mode = 'rb')
-    dict_Interact_Big = calCrossReads(bamfile)
+    dict_Interact_Big = calCrossReads(bamfile) # get junction reads
     ref_dict_Interact_Big = indexReadBasedOnRef(dict_Interact_Big)
     ref_list_Interact_Big = indexReadBasedOnPos(ref_dict_Interact_Big)
     htg_dict = htgMATRIX(dict_Interact_Big,ref_list_Interact_Big)
     preClusterData = prepareClusterData(htg_dict)
-    print ("successfully load reads into memory.")
+    logging.info ("successfully load reads into memory.")
     cal_RAM()
 
     del ref_list_Interact_Big
@@ -726,13 +727,14 @@ def main():
     for ref_name in tmp_ref_name_list:
         # if ref_name not in processed_ref_list:
         ref_name_list.append(ref_name)
-    print ("\nNo. of genomes:", len(ref_name_list))
+    logging.info ("No. of genomes: %s"%( len(ref_name_list)))
     i = 0
     while i < len(ref_name_list):
         # print (i)
-        if i % 1 == 0:
+        if i % 500 == 0:
+            logging.info ("call raw bkp for %s genomes."%(i + 1))
             cal_RAM()
-            print ("call raw bkp for %s genomes.\n"%(i + 1))
+            
         start_pos = i
         end_pos = min(i + split_num, len(ref_name_list))
         procs = []
@@ -745,7 +747,7 @@ def main():
         for proc in procs:
             proc.join()
         i = i + split_num
-    print ("Raw HGT breakpoint detection is finished.")
+    logging.info ("Raw HGT breakpoint detection is finished.\n")
 
 
 if __name__ == "__main__":
@@ -761,13 +763,20 @@ if __name__ == "__main__":
     optional.add_argument("-a", type=int, default=1, help="<0/1> 1 indicates retain reads with XA tag.", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
     args = vars(parser.parse_args())
+
+    logging.basicConfig(filename=args["o"][:-7] + "log",
+                        filemode='a',
+                        format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                        datefmt='%H:%M:%S',
+                        level=logging.DEBUG)
+
     unique_bam_name = args["u"]
-    print ("start calling raw bkp...")
+    logging.info ("start calling raw bkp...")
     unique_bamfile = pysam.AlignmentFile(filename = unique_bam_name, mode = 'rb')
     mean, sdev, rlen, rnum = getInsertSize(unique_bamfile)
     unique_bamfile.close()
     insert_size = int(mean + 2*sdev)
     rlen = int(rlen)
-    print ("read length is %s, insert size is %s, after counting %s reads."%(rlen, insert_size, rnum))
+    logging.info ("read length is %s, insert size is %s, after counting %s reads."%(rlen, insert_size, rnum))
     sys.exit(main())
     # sys.exit(main_split())  # try to split bam into small blocks, not work
