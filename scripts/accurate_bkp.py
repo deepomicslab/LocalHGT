@@ -377,8 +377,8 @@ def find_accurate_bkp_parallel():
             pool_list.append(pool.apply_async(choose_acc_from_cluster,(cluster,)))
 
             bkp_num_support += 1
-            # if bkp_num_support % 1000 == 0:
-            #     print ("processed %s breakpoint clusters."%(bkp_num_support))
+            if bkp_num_support % 10000 == 0:
+                logging.info ("processed %s/%s breakpoint clusters."%(bkp_num_support, cluster_num))
         # break
         # print (bkp_num_support)
     pool.close()

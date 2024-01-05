@@ -614,6 +614,7 @@ def UHGG_cami2():  # discarded function
 def UHGG_amount():   # generate complex sample to evaluate the relationship between data amount and speed
     h = open("/mnt/d/breakpoints/HGT/run_localHGT_amount.sh", 'w')
     f = open("/mnt/d/breakpoints/HGT/run_lemon_amount.sh", 'w')
+    print ("export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/wangshuai/miniconda3/envs/lemon/lib", file = f)
     pa = Parameters(uhgg_ref)
     pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
     amount_dir = "/mnt/d/breakpoints/HGT/uhgg_amount"
@@ -642,19 +643,24 @@ def UHGG_amount():   # generate complex sample to evaluate the relationship betw
             """
             for z in range(1,11):
                 prop = round(z * 0.1, 2)
-                if prop != 0.1:
-                    continue
+                # if prop != 0.1:
+                #     continue
                 
-                for rep in range(1, 2):
-                    run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}_{rep}.time python /mnt/d/breakpoints/script/scripts/main.py -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
-                    --fq1 {amount_dir}/{cami_ID}_{prop}_1.fq --fq2 {amount_dir}/{cami_ID}_{prop}_2.fq -s {cami_ID}_{prop}_{rep} -o {amount_result_dir}
-                    """
-                    print (run, file = h)
-
-                    # run = f"""/usr/bin/time -v -o {amount_result_lemon}/{cami_ID}_{prop}_{rep}.time bash /mnt/d/breakpoints/lemon/pipeline.sh /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
-                    # {amount_dir}/{cami_ID}_{prop}_1.fq  {amount_dir}/{cami_ID}_{prop}_2.fq {cami_ID}_{prop}_{rep} {amount_result_lemon}
+                for rep in range(1, 3):
+                    # run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}_{rep}.time python /mnt/d/breakpoints/script/scripts/main.py -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
+                    # --fq1 {amount_dir}/{cami_ID}_{prop}_1.fq --fq2 {amount_dir}/{cami_ID}_{prop}_2.fq -s {cami_ID}_{prop}_{rep} -o {amount_result_dir}
                     # """
-                    # print (run, file = f)
+                    # myfile = f"{amount_result_dir}/{cami_ID}_{prop}_{rep}.acc.csv"
+                    # if not os.path.isfile(myfile):
+                    #     print (run, file = h)
+
+                    run = f"""/usr/bin/time -v -o {amount_result_lemon}/{cami_ID}_{prop}_{rep}.time bash /mnt/d/breakpoints/lemon/pipeline.sh /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
+                    {amount_dir}/{cami_ID}_{prop}_1.fq  {amount_dir}/{cami_ID}_{prop}_2.fq {cami_ID}_{prop}_{rep} {amount_result_lemon}
+                    """
+                    myfile = f"{amount_result_lemon}/{cami_ID}_{prop}_{rep}.acc.csv"
+                    # print (myfile)
+                    if not os.path.isfile(myfile):
+                        print (run, file = f)               
 
     h.close()
     f.close()

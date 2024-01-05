@@ -716,7 +716,7 @@ def main():
     htg_dict = htgMATRIX(dict_Interact_Big,ref_list_Interact_Big)
     preClusterData = prepareClusterData(htg_dict)
     logging.info ("successfully load reads into memory.")
-    cal_RAM()
+    # cal_RAM()
 
     del ref_list_Interact_Big
     del htg_dict
@@ -733,7 +733,7 @@ def main():
         # print (i)
         if i % 500 == 0:
             logging.info ("call raw bkp for %s genomes."%(i + 1))
-            cal_RAM()
+            # cal_RAM()
             
         start_pos = i
         end_pos = min(i + split_num, len(ref_name_list))
