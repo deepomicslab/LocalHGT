@@ -393,6 +393,8 @@ def find_accurate_bkp_parallel():
     return acc_bkp_list
 
 def choose_acc_from_cluster(cluster):
+    # if cluster.ref1 == "GUT_GENOME000139_2" or cluster.ref2 == "GUT_GENOME000139_2":
+    #     print (cluster.ref1 , cluster.ref1_positions, cluster.ref2, cluster.ref2_positions, len(cluster.support_reads))
     # print ("###")
     flag = False
     locus_score = {}
@@ -403,6 +405,7 @@ def choose_acc_from_cluster(cluster):
     for readobj in cluster.support_reads:
         if readobj.end_point == True: #the pos is near the segment end, so may be false positive
             continue
+        
         score1 = 0
         my_pos1 = 0
         score2 = 0
@@ -854,7 +857,7 @@ if __name__ == "__main__":
     required.add_argument("-o", type=str, help="<str> output file of accurate breakpoints.", metavar="\b")
     required.add_argument("-u", type=str, help="<str> unique reads bam file.", metavar="\b")
     required.add_argument("-s", type=str, help="<str> split reads bam file.", metavar="\b")
-    optional.add_argument("-t", type=int, default=5, help="<int> number of threads", metavar="\b")
+    optional.add_argument("-t", type=int, default=1, help="<int> number of threads, not using", metavar="\b")
     optional.add_argument("-b", type=str, help="bed file of extracted ref.", metavar="\b")
     optional.add_argument("-n", type=int, default=1, help="<0/1> 1 indicates the ref is extracted using kmer.", metavar="\b")
     optional.add_argument("--read_info", type=int, default=1, help="<0/1> 1 indicates including reads info, 0 indicates not (just for evaluation).", metavar="\b")

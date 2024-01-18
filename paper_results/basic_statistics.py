@@ -121,13 +121,13 @@ class Basic_count():
             sample_bkp_list = self.cohort_data[sample]
             bkp_count_list.append(len(sample_bkp_list))
             bases = phenotype_dict[sample][3]
-            data.append([sample, len(sample_bkp_list), bases])
+            data.append([sample, len(sample_bkp_list), bases, round(bases/1000000000)])
         sorted_bkp_count_list = sorted(bkp_count_list)
         print ("sample num is %s, mean bkp count is %s, median bkp count is %s, minimum bkp count is %s,\
          max bkp count is %s."%(len(self.cohort_data), np.mean(bkp_count_list), np.median(bkp_count_list),\
           sorted_bkp_count_list[0], sorted_bkp_count_list[-1]))
 
-        df = pd.DataFrame(data, columns = ["Sample", "Bkp_count", "Bases"])
+        df = pd.DataFrame(data, columns = ["Sample", "Bkp_count", "Bases", "Bases(Gbp)"])
         df.to_csv('/mnt/d/R_script_files/basic_stasitcis_count.csv', sep=',')
 
     def analyze_amount(self): # analyze the association between called BKP num and sequencing amount

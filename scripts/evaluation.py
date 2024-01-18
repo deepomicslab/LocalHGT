@@ -106,7 +106,7 @@ def read_lemon(lemon):
         past = array[:4]
     return lemon_bkp
 
-def read_localHGT(lemon, abun_cutoff):
+def read_localHGT(lemon, abun_cutoff, deep_flag=False):
     lemon_bkp = []
     past = ['', '', '', '']
     for line in open(lemon):
@@ -124,9 +124,15 @@ def read_localHGT(lemon, abun_cutoff):
         cross_split_reads = int(array[14]) # filter BKPs
         if cross_split_reads/reads_num < abun_cutoff:
             continue
+        if deep_flag:
+            if "_".join(from_ref.split("_")[:-1]) == "_".join(to_ref.split("_")[:-1]):
+                continue
 
         lemon_bkp.append([from_ref, from_pos, to_ref, to_pos])
     return lemon_bkp
+
+def get_pure_genome(genome):
+    return "_".join(genome.split("_")[:-1])
 
 def compare(true_bkp, our_bkp):
     right = 0
@@ -197,18 +203,21 @@ class Performance():
 
 def extract_time(time_file): #log file obtained by /usr/bin/time -v
         #if no time available
-    for line in open(time_file):
-        time_re = re.search('User time \(seconds\):(.*?)$', line)
-        if time_re:
-            user_time =  time_re.group(1).strip()
+    if os.path.isfile(time_file):
+        for line in open(time_file):
+            time_re = re.search('User time \(seconds\):(.*?)$', line)
+            if time_re:
+                user_time =  time_re.group(1).strip()
 
-        time_sys = re.search('System time \(seconds\):(.*?)$', line)
-        if time_sys:
-            sys_time = time_sys.group(1).strip()
-    # print (user_time, sys_time)
-    all_time = float(user_time) + float(sys_time)
-    final_time = round(all_time/3600, 2)
-    return final_time
+            time_sys = re.search('System time \(seconds\):(.*?)$', line)
+            if time_sys:
+                sys_time = time_sys.group(1).strip()
+        # print (user_time, sys_time)
+        all_time = float(user_time) + float(sys_time)
+        final_time = round(all_time/3600, 2)
+        return final_time
+    else:
+        return None
 
 def extract_wall_clock_time(time_file): #log file obtained by /usr/bin/time -v
         #if no time available
@@ -234,7 +243,10 @@ class Sample():
         self.ID = ID
         true_ID = self.get_true(ID)
         self.true_file = true_dir + '/' + true_ID + '.true.sv.txt'
-        self.true_bkp, self.true_event = read_true(self.true_file)
+        if os.path.isfile(self.true_file):
+            self.true_bkp, self.true_event = read_true(self.true_file)
+        else:
+            print ("cannot find", self.true_file)
         self.complexity = ''
 
     def get_true(self, ID):
@@ -470,18 +482,93 @@ def ultra_deep():
     abun_cutoff = 0
     data = [[0,0]]
     acc_dir = "/mnt/d/breakpoints/HGT/deep_result/acc_result/"
-    for z in range(1,8):
-        prop = round(z * 0.01, 3)
+    acc_dir = "/mnt/d/HGT/amount_deep/backup_1_15/"
+    result_dict = {}
+
+    for z in range(1, 13):
+
+        prop = round(z * 0.08, 3)
         bases = round(prop*786)
         new_x = "%s(%sG)"%(prop, bases)
-        acc_file = acc_dir + "/SAMEA5669780_%s.acc.csv"%(prop)
-        bkp = read_localHGT(acc_file, abun_cutoff)
-        print (prop, len(bkp))
+        acc_file = acc_dir + "/SAMEA5669781_prop%s.acc.csv"%(prop)
+        bkp = read_localHGT(acc_file, abun_cutoff, True)
+        # print (prop, len(bkp))
         data.append([prop, len(bkp)])
+        result_dict[prop] = bkp
+    
+    # #### count bkp num of each genome
+    # genome_count_dict = defaultdict(int)
+    # for each_bkp in result_dict[0.96] + result_dict[0.88]:
+    #     genome_count_dict[each_bkp[0]] += 1
+    #     genome_count_dict[each_bkp[2]] += 1
+    # # print (len(genome_count_dict))
+    # sort_genome_count_dict = sorted(genome_count_dict.items(), key=lambda x: x[1], reverse = True)
+    # print (sort_genome_count_dict[:10])
 
-    df=pd.DataFrame(data,columns=['fraction', 'bkp_num'])
+    prop_dict = {}
+    for prop in result_dict:
+        genome_count_dict = defaultdict(int)
+        for each_bkp in result_dict[prop]:
+            genome_count_dict[each_bkp[0]] += 1
+            genome_count_dict[each_bkp[2]] += 1
+        prop_dict[prop] = genome_count_dict
+    genome_count_dict = defaultdict(int)
+    for prop in prop_dict:
+        for genome in prop_dict[prop]:
+            if genome not in genome_count_dict:
+                genome_count_dict[genome] = prop_dict[prop][genome]
+            if prop_dict[prop][genome] > genome_count_dict[genome]:
+                genome_count_dict[genome] = prop_dict[prop][genome]
+
+    ### method 1
+    # consider_genome = defaultdict(int)
+    # cut = 40
+    # for each_bkp in result_dict[0.24]:
+    #     if each_bkp[0] in genome_count_dict:
+    #         if genome_count_dict[each_bkp[0]] < cut:
+    #             consider_genome[each_bkp[0]] += 1
+    #     else:
+    #         consider_genome[each_bkp[0]] += 1
+
+    #     if each_bkp[2] in genome_count_dict:
+    #         if genome_count_dict[each_bkp[2]] < cut:
+    #             consider_genome[each_bkp[2]] += 1
+    #     else:
+    #         consider_genome[each_bkp[2]] += 1
+    
+
+    ### method 2
+    cut = 8 #15
+    count_prop_num = defaultdict(set)
+    for prop in result_dict:
+        for each_bkp in result_dict[prop]:
+            count_prop_num[each_bkp[0]].add(prop)
+            count_prop_num[each_bkp[2]].add(prop)
+    count_prop_count = {}
+    for genome in count_prop_num:
+        count_prop_count[genome] = len(count_prop_num[genome])
+    sort_count_prop_count = sorted(count_prop_count.items(), key=lambda x: x[1], reverse = True)
+    # print (sort_count_prop_count[10000])
+    consider_genome = {}
+    for sor in sort_count_prop_count:
+        if sor[1] >=7 and genome_count_dict[sor[0]] < cut:
+            consider_genome[sor[0]] = 1
+
+    print ("len(consider_genome)", len(consider_genome))
+    
+    data = [[0,0]]
+    for prop in result_dict:
+        bkp = []
+        for each_bkp in result_dict[prop]:
+            if each_bkp[0] in consider_genome and each_bkp[2] in consider_genome:
+                bkp.append(each_bkp)
+        result_dict[prop] = bkp
+        data.append([prop, len(bkp), round(prop*670)])
+        print ([prop, len(bkp), round(prop*670)])
+    sns.set_style("whitegrid")
+    df=pd.DataFrame(data,columns=['fraction', 'No. of HGT breakpoint pair', "Base Number (Gbp)"])
     # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
-    ax = sns.lineplot(data=df, x="fraction", y="bkp_num").set_title('Sample: SAMEA5669780 Bases: 786.34 G')  
+    ax = sns.lineplot(data=df, x="Base Number (Gbp)", y='No. of HGT breakpoint pair', marker="o").set_title('Sample: SAMEA5669780')  
     give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
     plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_deep_%s.pdf'%(give_time))
 
@@ -727,6 +814,27 @@ def compare_event(true_list, infer_list):
         F1_score = 0
     return F1_score
 
+def abundance():
+    fi = Figure()
+    ba = Parameters(uhgg_ref)
+    true_dir = "/mnt/d/HGT/abundance/abun_0.5"
+    local_dir = "/mnt/d/breakpoints/HGT/uhgg_abundance_result//"
+    true_file = true_dir + "/species20_snp0.01_depth30_reads150_sample_0.true.sv.txt"
+    abun = 0.5
+    for amount in range(1, 10):
+        sample = f"abun_{abun}_amount_{amount}"
+
+        # if amount == 5:
+        #     continue
+        ba.sample = sample
+        sa = Sample(ba.sample, true_dir)
+        sa.true_bkp, sa.true_event = read_true(true_file)
+        local_pe = sa.eva_tool(local_dir, "localhgt")
+
+        print (ba.sample, local_pe.accuracy, local_pe.FDR, local_pe.F1_score)
+            # fi.add_local_sample(local_pe, depth)
+        # break
+    # fi.plot()
 
 if __name__ == "__main__":
     default_abun_cutoff = 1e-7
@@ -750,6 +858,7 @@ if __name__ == "__main__":
     # depth_event()
     # amount()
     # ultra_deep()
-    amount_rep()
+    abundance()
+    # amount_rep()
 
 

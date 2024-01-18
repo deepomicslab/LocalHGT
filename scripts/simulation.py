@@ -16,6 +16,9 @@ def DNA_complement2(sequence):
     string = sequence.translate(trantab)
     return string
 
+def get_pure_genome(genome):
+    return "_".join(genome.split("_")[:-1])
+
 def add_snp(sequence, rate):
     locus_set = {}
     allele = ['A', 'T', 'C', 'G']
@@ -188,7 +191,7 @@ def blast_map2_self(file, map_ref):
     os.system(makedb)
     os.system(blastn)
 
-def random_HGT(pa):
+def random_HGT(pa, skip_fq=False):
     truth_HGT = open(pa.outdir +'/%s.true.sv.txt'%(pa.sample), 'w')
 
     new_seq_dict = pa.seq_dict.copy()
@@ -251,12 +254,23 @@ def random_HGT(pa):
         new_seq_dict[chrom] = add_snp(new_seq_dict[chrom], pa.snp_rate)
         new_seq_dict[chrom] = add_indel(new_seq_dict[chrom], pa.indel_rate)
     t1 = time.time()
-    generate_fastq(new_seq_dict, truth_HGT, pa)
+    if not skip_fq:
+        generate_fastq(new_seq_dict, pa)
+    else:
+        generate_fasta(new_seq_dict, pa) # only generate edited fasta
     print (t1-t0, time.time()-t1)
     truth_HGT.close()
     return 1
 
-def generate_fastq(new_seq_dict, truth_HGT, pa):
+def generate_fasta(new_seq_dict, pa):
+    fasta_file = pa.outdir+'/%s.true.fasta'%(pa.sample)
+    fasta = open(fasta_file, 'w')
+    for chrom in new_seq_dict.keys():
+        print ('>%s edited genome (contain hgt)'%(chrom), file = fasta)
+        print (new_seq_dict[chrom], file = fasta)
+    fasta.close()
+
+def generate_fastq(new_seq_dict, pa):
     fasta_file = pa.outdir+'/%s.true.fasta'%(pa.sample)
     fasta = open(fasta_file, 'w')
     i = 0
@@ -647,12 +661,12 @@ def UHGG_amount():   # generate complex sample to evaluate the relationship betw
                 #     continue
                 
                 for rep in range(1, 3):
-                    # run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}_{rep}.time python /mnt/d/breakpoints/script/scripts/main.py -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
-                    # --fq1 {amount_dir}/{cami_ID}_{prop}_1.fq --fq2 {amount_dir}/{cami_ID}_{prop}_2.fq -s {cami_ID}_{prop}_{rep} -o {amount_result_dir}
-                    # """
-                    # myfile = f"{amount_result_dir}/{cami_ID}_{prop}_{rep}.acc.csv"
-                    # if not os.path.isfile(myfile):
-                    #     print (run, file = h)
+                    run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}_{rep}.time python /mnt/d/breakpoints/script/scripts/main.py -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
+                    --fq1 {amount_dir}/{cami_ID}_{prop}_1.fq --fq2 {amount_dir}/{cami_ID}_{prop}_2.fq -s {cami_ID}_{prop}_{rep} -o {amount_result_dir}
+                    """
+                    myfile = f"{amount_result_dir}/{cami_ID}_{prop}_{rep}.acc.csv"
+                    if not os.path.isfile(myfile):
+                        print (run, file = h)
 
                     run = f"""/usr/bin/time -v -o {amount_result_lemon}/{cami_ID}_{prop}_{rep}.time bash /mnt/d/breakpoints/lemon/pipeline.sh /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
                     {amount_dir}/{cami_ID}_{prop}_1.fq  {amount_dir}/{cami_ID}_{prop}_2.fq {cami_ID}_{prop}_{rep} {amount_result_lemon}
@@ -664,6 +678,116 @@ def UHGG_amount():   # generate complex sample to evaluate the relationship betw
 
     h.close()
     f.close()
+
+def get_base_number(fasta_file):
+    total_bases = 0
+
+    for record in SeqIO.parse(fasta_file, "fasta"):
+        total_bases += len(record.seq)
+
+
+    return total_bases
+
+def UHGG_abundance(uniq_segs_loci): 
+    species_dict = {} 
+    pa = Parameters(uhgg_ref)
+    pa.HGT_num = 20
+    pa.get_dir(workdir)
+    pa.add_segs(uniq_segs_loci)
+    pa.get_uniq_len()
+    pa.donor_in_flag = True
+    pa.random_rate = 0.8
+
+    # for depth in [10]:
+    #     pa.change_depth(depth)
+    np.random.seed(0)
+    for index in range(1):
+        pa.get_ID(index)
+        if_success = 0
+        pure_genome_dict = {}
+        while if_success == 0:
+            ############random select scaffold###########
+            all_ref = pa.outdir + '/%s.fa'%(pa.sample)
+            fasta_sequences = SeqIO.parse(open(pa.origin_ref),'fasta')       
+            f = open(all_ref, 'w')
+            select_num = 0
+            for record in fasta_sequences:
+                if len(record.seq) < pa.min_genome:
+                    continue
+                if pa.uniq_len[str(record.id)] < pa.min_uniq_len:
+                    continue
+                if get_pure_genome(str(record.id)) in pure_genome_dict: ## one species only have one HGT event
+                    continue
+                if np.random.random() < pa.random_rate:
+                    rec1 = SeqRecord(record.seq, id=str(record.id), description="simulation")
+                    SeqIO.write(rec1, f, "fasta") 
+                    # uniq_segs_loci[str(record.id)] = [[1, len(record.seq)]]
+                    species_dict[str(record.id)] = str(record.id)
+                    select_num += 1
+                    pure_genome_dict[get_pure_genome(str(record.id))] = str(record.id)
+                if select_num == pa.scaffold_num + pa.HGT_num:
+                    break
+            f.close()
+            print ('%s scaffolds were extracted.'%(select_num))
+            # print (pure_genome_dict)
+            print ("len(pure_genome_dict)", len(pure_genome_dict))
+            if select_num ==pa.scaffold_num + pa.HGT_num:
+                seq_dict = read_fasta(all_ref)  
+                pa.add_species(species_dict, seq_dict)                  
+                if_success = random_HGT(pa, True)
+
+                ### select 60 other genome
+                other_num = 0
+                fasta_sequences = SeqIO.parse(open(pa.origin_ref),'fasta')       
+                for record in fasta_sequences:
+                    if other_num == 160:  ## 60: 1%,  160: 0.5%,  960: 0.1%
+                        break
+                    if np.random.random() < pa.random_rate:
+                        if get_pure_genome(str(record.id)) not in pure_genome_dict:
+                            pure_genome_dict[get_pure_genome(str(record.id))] = ''
+                            other_num += 1
+
+                print ("len(pure_genome_dict)", len(pure_genome_dict))
+                ### select genomes for each species
+                fasta_file = pa.outdir+'/%s.true.fasta'%(pa.sample)
+                print (fasta_file)
+                fasta = open(fasta_file, 'a')
+                fasta_sequences = SeqIO.parse(open(pa.origin_ref),'fasta')    
+                for record in fasta_sequences:
+                    if get_pure_genome(str(record.id)) in pure_genome_dict and  str(record.id) != pure_genome_dict[get_pure_genome(str(record.id))]:
+                        # print (str(record.id))
+                        print ('>%s'%(str(record.id)), file = fasta)
+                        print (str(record.seq), file = fasta)
+                fasta.close()
+  
+def abundance_fq():
+    fasta_file = workdir + "/species20_snp0.01_depth30_reads150_sample_0.true.fasta"
+    pa = Parameters(uhgg_ref)
+    pa.get_dir(workdir)
+    abundance_result_dir = "/mnt/d/breakpoints/HGT/uhgg_abundance_result/"
+
+    h = open("/mnt/d/breakpoints/HGT/run_localHGT_abundance.sh", 'w')
+
+    total_bases = get_base_number(fasta_file)
+    print ("total_bases", total_bases)
+    # for amount in range(1, 4):
+    for amount in [9, 8, 4]:
+        # read_count = amount * 3333334
+        sample = f"abun_{abun}_amount_{amount}"
+        depth = round(amount * 1000000000.0 /total_bases, 2)
+        print (amount, "depth", depth)
+        cmd = f"art_illumina -ss HS25 -nf 0 --noALN -p -i {fasta_file} -l {pa.reads_len} -m {pa.mean_frag} -s 10 --fcov {depth} -o {pa.outdir}/{sample}_ "  #-c read count
+        # cmd = f"art_illumina -ss HS25 -nf 0 --noALN -p -i {fasta_file} -l {pa.reads_len} -m {pa.mean_frag} -s 10 --rcount {read_count} -o {pa.outdir}/{sample}_ "
+        # os.system(cmd)
+
+        run = f"""/usr/bin/time -v -o {abundance_result_dir}/{sample}.time python /mnt/d/breakpoints/script/scripts/main.py -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
+        --fq1 {pa.outdir}/{sample}_1.fq --fq2 {pa.outdir}/{sample}_2.fq -s {sample} -o {abundance_result_dir}
+        """
+        # myfile = f"{abundance_result_dir}/{sample}.acc.csv"
+        # if not os.path.isfile(myfile):
+        print (run, file = h)
+    h.close()
+
 
 
 class Parameters():
@@ -823,4 +947,8 @@ if __name__ == "__main__":
     # UHGG_length(uniq_segs_loci)
     # UHGG_depth(uniq_segs_loci)
     # """
-    UHGG_amount()
+    # UHGG_amount()
+    abun = 0.5
+    workdir = "/mnt/d/HGT/abundance/abun_%s/"%(abun)
+    # UHGG_abundance(uniq_segs_loci)
+    abundance_fq()
