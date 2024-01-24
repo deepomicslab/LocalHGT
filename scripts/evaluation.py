@@ -572,6 +572,77 @@ def ultra_deep():
     give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
     plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_deep_%s.pdf'%(give_time))
 
+def read_kraken(cutoff=0.01):
+
+    kraken_result = "/mnt/d/breakpoints/HGT/UHGG/kraken/test.txt"
+    UHGG_meta = "/mnt/d/breakpoints/HGT/UHGG/genomes-all_metadata.tsv"
+
+    taxonomy_dict = {}
+    df = pd.read_table(UHGG_meta) 
+    for index, row in df.iterrows():
+        # self.read_UHGG[row["Genome"]] = row["Species_rep"]
+        genome = row["Genome"]
+        species = row["Lineage"].split(";")[-1]
+        if species != "s__":
+            taxonomy_dict[species] = genome
+
+    consider_genome = {}
+    f = open(kraken_result, 'r')
+    for line in f:
+        array = line.strip().split("\t")
+        abundance = float(array[0])
+        taxa = array[-1].strip()
+        # print (array)
+        if taxa[:3] != "s__":
+            continue
+        if abundance < cutoff:
+            continue
+        if taxa in taxonomy_dict:
+            genome = taxonomy_dict[taxa]
+        else:
+            genome = taxa[3:]
+        print (taxa, genome, abundance)
+        consider_genome[genome] = abundance
+    return consider_genome
+
+def ultra_deep_SAMEA5669780():
+    ### 	SAMEA5669781    753.73 G
+    abun_cutoff = 0
+    data = [[0,0]]
+    acc_dir = "/mnt/d/breakpoints/HGT/deep_result/acc_result/"
+    result_dict = {}
+
+    for z in range(1, 8):
+
+        prop = round(z * 0.01, 3)
+        bases = round(prop*786)
+        new_x = "%s(%sG)"%(prop, bases)
+        acc_file = acc_dir + "/SAMEA5669780_%s.acc.csv"%(prop)
+        bkp = read_localHGT(acc_file, abun_cutoff, True)
+        # print (prop, len(bkp))
+        data.append([prop, len(bkp)])
+        result_dict[prop] = bkp
+
+    consider_genome = read_kraken(0.01)
+
+    print ("len(consider_genome)", len(consider_genome))
+    
+    data = [[0,0]]
+    for prop in result_dict:
+        bkp = []
+        for each_bkp in result_dict[prop]:
+            if get_pure_genome(each_bkp[0]) in consider_genome and get_pure_genome(each_bkp[2]) in consider_genome:
+                bkp.append(each_bkp)
+        result_dict[prop] = bkp
+        data.append([prop, len(bkp), round(prop*670)])
+        print ([prop, len(bkp), round(prop*670)])
+    sns.set_style("whitegrid")
+    df=pd.DataFrame(data,columns=['fraction', 'No. of HGT breakpoint pair', "Base Number (Gbp)"])
+    # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
+    ax = sns.lineplot(data=df, x="Base Number (Gbp)", y='No. of HGT breakpoint pair', marker="o").set_title('Sample: SAMEA5669780')  
+    give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_deep_%s.pdf'%(give_time))
+
 def cal_cami_time_MEM(): # cal avergae Run time and Peak MEM with CAMI data
     time_list, mem_list, cpu_list = [], [], []
 
@@ -821,11 +892,12 @@ def abundance():
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_abundance_result//"
     true_file = true_dir + "/species20_snp0.01_depth30_reads150_sample_0.true.sv.txt"
     abun = 0.5
-    for amount in range(1, 10):
+    for amount in [20]:
+    # for amount in range(2, 17, 2):
         sample = f"abun_{abun}_amount_{amount}"
 
-        # if amount == 5:
-        #     continue
+        if amount == 8:
+            continue
         ba.sample = sample
         sa = Sample(ba.sample, true_dir)
         sa.true_bkp, sa.true_event = read_true(true_file)
@@ -858,7 +930,9 @@ if __name__ == "__main__":
     # depth_event()
     # amount()
     # ultra_deep()
-    abundance()
+    ultra_deep_SAMEA5669780()
+    # read_kraken()
+    # abundance()
     # amount_rep()
 
 
