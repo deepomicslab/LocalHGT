@@ -585,6 +585,8 @@ def read_kraken(cutoff=0.01):
         species = row["Lineage"].split(";")[-1]
         if species != "s__":
             taxonomy_dict[species] = genome
+        else:
+            taxonomy_dict["s__"+row["MGnify_accession"]] = genome
 
     consider_genome = {}
     f = open(kraken_result, 'r')
