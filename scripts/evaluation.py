@@ -572,23 +572,36 @@ def ultra_deep():
     give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
     plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_deep_%s.pdf'%(give_time))
 
-def read_kraken(cutoff=0.01):
+def get_genome_len(UHGG_fai):
+    genome_len_dict = defaultdict(int)
+    for line in open(UHGG_fai, 'r'):
+        field = line.strip().split()
+        genome = get_pure_genome(field[0])
+        contig_len = int(field[1]) 
+        genome_len_dict[genome] += contig_len
+    return genome_len_dict
 
-    kraken_result = "/mnt/d/breakpoints/HGT/UHGG/kraken/test.txt"
-    UHGG_meta = "/mnt/d/breakpoints/HGT/UHGG/genomes-all_metadata.tsv"
 
+def read_kraken(kraken_result, UHGG_meta, UHGG_fai, cutoff=0.01, read_pair_len=300):
+    ## estimate the genome depth from Kraken results
+
+    genome_len_dict = get_genome_len(UHGG_fai)
+    # print (genome_len_dict)
     taxonomy_dict = {}
     df = pd.read_table(UHGG_meta) 
     for index, row in df.iterrows():
         # self.read_UHGG[row["Genome"]] = row["Species_rep"]
         genome = row["Genome"]
+        if genome not in genome_len_dict: # only focus on representative genome
+            continue
         species = row["Lineage"].split(";")[-1]
         if species != "s__":
             taxonomy_dict[species] = genome
         else:
             taxonomy_dict["s__"+row["MGnify_accession"]] = genome
 
-    consider_genome = {}
+    consider_genome = {}  # abundance
+    genome_depth_dict = {}  # depth 
     f = open(kraken_result, 'r')
     for line in f:
         array = line.strip().split("\t")
@@ -597,21 +610,98 @@ def read_kraken(cutoff=0.01):
         # print (array)
         if taxa[:3] != "s__":
             continue
-        if abundance < cutoff:
-            continue
+        # if abundance < cutoff:
+        #     continue
+        
         if taxa in taxonomy_dict:
             genome = taxonomy_dict[taxa]
         else:
             genome = taxa[3:]
-        print (taxa, genome, abundance)
+        if genome not in genome_len_dict:
+            print ("!!!!!!!!!danger", taxa, genome)
+            continue
+        depth = round(float(int(array[1]) * read_pair_len) / genome_len_dict[genome], 2)
+        # print (taxa, genome, abundance, depth)
         consider_genome[genome] = abundance
-    return consider_genome
+        genome_depth_dict[genome] = depth
+
+    return consider_genome, genome_depth_dict
+
+def check_absence(genome, abudance_dict):
+    absence = False
+    if genome not in abudance_dict:
+        absence = True
+        return absence
+    if abudance_dict[genome] == 0:
+        return absence
+
+
+def ultra_deep_depth():
+    ### 	SAMEA5669781    753.73 G
+    abun_cutoff = 0
+    data = []
+    acc_dir = "/mnt/d/breakpoints/HGT/deep_result/acc_result/"
+    kraken_result = "/mnt/d/breakpoints/HGT/UHGG/kraken/SAMEA5669780_kraken.txt"
+    UHGG_folder = "/mnt/d/breakpoints/HGT/UHGG/"
+
+    ###  hpc location
+    # acc_dir = "/home/lijiache2/hgt/hgt_result/fastp_result_v4/"
+    # # kraken_result = acc_dir + "/SAMEA5669780_kraken.txt"
+    # UHGG_folder = "/home/lijiache2/hgt/hgt_result/ref/"
+
+    UHGG_meta = UHGG_folder + "/genomes-all_metadata.tsv"
+    UHGG_fai = UHGG_folder + "/UHGG_reference.formate.fna.fai"
+
+    for z in range(1, 8):
+
+        prop = round(z * 0.01, 3)
+        bases = round(prop*786)
+        new_x = "%s(%sG)"%(prop, bases)
+        acc_file = acc_dir + "/SAMEA5669780_%s.acc.csv"%(prop)
+        kraken_result = kraken_result
+
+        consider_genome, genome_depth_dict = read_kraken(kraken_result, UHGG_meta, UHGG_fai, 0.01)
+        print ("present genome number", len(consider_genome), len(genome_depth_dict))
+        bkp = read_localHGT(acc_file, abun_cutoff, True)
+        genome_bkp_dict = defaultdict(int)
+        for each_bkp in bkp:
+            g1, g2 = get_pure_genome(each_bkp[0]), get_pure_genome(each_bkp[2])
+
+            ## only consider one genome absent, one genome present, the presented genome can be regarded as the recipient genome
+            # if check_absence(g1, consider_genome) and not check_absence(g2, consider_genome) and consider_genome[g2] > 0:
+            #     genome_bkp_dict[g2] += 1
+            # elif check_absence(g2, consider_genome) and not check_absence(g1, consider_genome) and consider_genome[g1] > 0:
+            #     genome_bkp_dict[g1] += 1
+
+            genome_bkp_dict[g1] += 1
+            genome_bkp_dict[g2] += 1
+
+        for genome in genome_bkp_dict:
+            if genome not in genome_depth_dict:
+                continue
+
+            data.append([prop, round(prop*670), genome_depth_dict[genome], genome_bkp_dict[genome], consider_genome[genome], genome])
+            if genome == "GUT_GENOME099111":
+                print (prop, round(prop*670), genome_depth_dict[genome], genome_bkp_dict[genome], consider_genome[genome], genome)
+
+
+    
+    sns.set_style("whitegrid")
+    df=pd.DataFrame(data,columns=['fraction', "Base Number (Gbp)", "depth", 'No. of HGT breakpoint pair', "abundance", 'genome'])
+    # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
+    ax = sns.lineplot(data=df, x="Base Number (Gbp)", y='No. of HGT breakpoint pair', marker="o").set_title('Sample: SAMEA5669780')  
+    give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    plt.savefig(acc_dir + '/HGT_deep_%s.pdf'%(give_time))
 
 def ultra_deep_SAMEA5669780():
     ### 	SAMEA5669781    753.73 G
     abun_cutoff = 0
     data = [[0,0]]
     acc_dir = "/mnt/d/breakpoints/HGT/deep_result/acc_result/"
+    kraken_result = "/mnt/d/breakpoints/HGT/UHGG/kraken/test.txt"
+    UHGG_folder = "/mnt/d/breakpoints/HGT/UHGG/"
+    UHGG_meta = UHGG_folder + "/genomes-all_metadata.tsv"
+    UHGG_fai = UHGG_folder + "/UHGG_reference.formate.fna.fai"
     result_dict = {}
 
     for z in range(1, 8):
@@ -625,25 +715,24 @@ def ultra_deep_SAMEA5669780():
         data.append([prop, len(bkp)])
         result_dict[prop] = bkp
 
-    consider_genome = read_kraken(0.01)
-
-    print ("len(consider_genome)", len(consider_genome))
+    consider_genome, genome_depth_dict = read_kraken(kraken_result, UHGG_meta, UHGG_fai, 0.01)
+    # print ("len(consider_genome)", len(consider_genome))
     
-    data = [[0,0]]
-    for prop in result_dict:
-        bkp = []
-        for each_bkp in result_dict[prop]:
-            if get_pure_genome(each_bkp[0]) in consider_genome and get_pure_genome(each_bkp[2]) in consider_genome:
-                bkp.append(each_bkp)
-        result_dict[prop] = bkp
-        data.append([prop, len(bkp), round(prop*670)])
-        print ([prop, len(bkp), round(prop*670)])
-    sns.set_style("whitegrid")
-    df=pd.DataFrame(data,columns=['fraction', 'No. of HGT breakpoint pair', "Base Number (Gbp)"])
-    # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
-    ax = sns.lineplot(data=df, x="Base Number (Gbp)", y='No. of HGT breakpoint pair', marker="o").set_title('Sample: SAMEA5669780')  
-    give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
-    plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_deep_%s.pdf'%(give_time))
+    # data = [[0,0]]
+    # for prop in result_dict:
+    #     bkp = []
+    #     for each_bkp in result_dict[prop]:
+    #         if get_pure_genome(each_bkp[0]) in consider_genome and get_pure_genome(each_bkp[2]) in consider_genome:
+    #             bkp.append(each_bkp)
+    #     result_dict[prop] = bkp
+    #     data.append([prop, len(bkp), round(prop*670)])
+    #     print ([prop, len(bkp), round(prop*670)])
+    # sns.set_style("whitegrid")
+    # df=pd.DataFrame(data,columns=['fraction', 'No. of HGT breakpoint pair', "Base Number (Gbp)"])
+    # # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
+    # ax = sns.lineplot(data=df, x="Base Number (Gbp)", y='No. of HGT breakpoint pair', marker="o").set_title('Sample: SAMEA5669780')  
+    # give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    # plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_deep_%s.pdf'%(give_time))
 
 def cal_cami_time_MEM(): # cal avergae Run time and Peak MEM with CAMI data
     time_list, mem_list, cpu_list = [], [], []
@@ -932,7 +1021,8 @@ if __name__ == "__main__":
     # depth_event()
     # amount()
     # ultra_deep()
-    ultra_deep_SAMEA5669780()
+    # ultra_deep_SAMEA5669780()
+    ultra_deep_depth()
     # read_kraken()
     # abundance()
     # amount_rep()

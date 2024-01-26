@@ -103,8 +103,8 @@ class Match():
                 total_HGT_split_num += eb.cross_split_reads
                 sample_dict[eb.hgt_tag] = 1
                 my_bkps.append(eb)
-        for eb in my_bkps:
-            eb.split_abundance = eb.cross_split_reads/total_HGT_split_num
+        # for eb in my_bkps:
+        #     eb.split_abundance = eb.cross_split_reads/total_HGT_split_num
         f.close()
         return my_bkps
 
@@ -312,7 +312,7 @@ class Match():
         for bkp in sample_bkps:
             # if bkp.abundance >= abun_cutoff:
             #     valid_num += 1
-            if bkp.cross_split_reads > 1:
+            if bkp.cross_split_reads >= args['n']:
                 valid_num += 1
         print ("%s: raw bkp num is %s, filtered bkp num is %s."%(ID, len(sample_bkps), valid_num))
 
@@ -323,14 +323,14 @@ class Match():
                 continue
             # if sample_bkps[i].abundance < abun_cutoff:
             #     continue
-            if sample_bkps[i].cross_split_reads < 2:
+            if sample_bkps[i].cross_split_reads < args['n']:
                 continue
             for j in range(i+1, len(sample_bkps)):
                 if not self.check_if_bkp_at_ends(sample_bkps[j]): # the bkp should not in reference ends
                     continue
                 # if sample_bkps[j].abundance < abun_cutoff:
                 #     continue
-                if sample_bkps[j].cross_split_reads < 2:
+                if sample_bkps[j].cross_split_reads < args['n']:
                     continue
                 bkp1 = sample_bkps[i].hgt_tag
                 bkp2 = sample_bkps[j].hgt_tag
@@ -375,6 +375,7 @@ if __name__ == "__main__":
     required.add_argument("-r", type=str, help="<str> Reference file.", metavar="\b")
     required.add_argument("-b", type=str, help="<str> Folder saves all the breakpoint results from all samples.", metavar="\b")
     required.add_argument("-f", type=str, default="complete_HGT_event.csv", help="<str> Output file to save all inferred HGT events.", metavar="\b")
+    optional.add_argument("-n", type=int, default=2, help="<int> minimum supporting split read number", metavar="\b")
     optional.add_argument("-m", type=int, default=500, help="<int> minimum transfer sequence length", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
 
