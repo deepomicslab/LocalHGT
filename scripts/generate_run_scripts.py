@@ -12,8 +12,8 @@ class Batch(Parameters):
         self.workdir = "/mnt/d/breakpoints/HGT/"
         self.fq_dir = ''
         self.result_dir = ''
-        self.localHGT = "/mnt/d/breakpoints/script/pipeline.sh"
-        self.localHGT_main = "/mnt/d/breakpoints/script/main.py"
+        self.localHGT = "/mnt/d/breakpoints/script/scripts/pipeline.sh"
+        self.localHGT_main = "/mnt/d/breakpoints/script/scripts/main.py"
         self.hit = 0.1
         self.perfect_hit = 0.08
         self.fq1 = ''
@@ -474,6 +474,44 @@ def batch_depth_test_event_accuracy():
 
     h.close()
 
+def isolate():
+    reads_num=33336
+    sample = "DRR198803"
+    # rawdir= "//home/wangshuai/04.assembly/assembly/benchmark_data/"
+    # outdir="//home/wangshuai/02.hgt/my_data5/08.deep//isolate_result//"
+    rawdir="/mnt/d/breakpoints/assembly/sim/standard/filter/"
+    outdir = "/mnt/d/breakpoints/HGT/isolate_result/"
+    command_list=[]
+    for i in range(1, 6):
+        prop = i*10
+        extract_num = round(reads_num * prop)
+        order = ""
+        for i in [1, 2]:
+            raw_fq = rawdir + sample + "_%s.fastq"%(i)
+            #raw_fq = outdir + sample + "_%s.fastq"%(i)
+            new_fq = outdir + sample + "_prop%s_%s.fastq"%(prop, i)
+            cmd = f"head -n {extract_num} {raw_fq} >{new_fq}\n"
+            order += cmd
+        run = """  ref=%s
+                    main=/mnt/d/breakpoints/script/scripts/main.py
+                    sample=%s
+                    outdir=%s
+                    ID=${sample}_prop%s
+                    fq1=$outdir/${ID}_1.fastq
+                    fq2=$outdir/${ID}_2.fastq
+
+                    /usr/bin/time -v -o $outdir/$ID.time python -u $main -k 32 -a 0 --read_info 0 -t 10 -r $ref --fq1 $fq1 --fq2 $fq2 -s $ID -o $outdir >$outdir/${ID}.run.log
+                    rm $outdir/$ID.*bam*
+                    rm $fq1
+                    rm $fq2\n"""%(uhgg_ref, sample, outdir, prop)
+        order += run
+        command_list.append(order)
+
+    h = open("/mnt/d/breakpoints/HGT/isolate.sh", "w")
+    for command in command_list:
+        print (command, file = h)
+    h.close()
+
 if __name__ == "__main__":
     uhgg_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
     progenomes = '/mnt/d/breakpoints/HGT/proGenomes/proGenomes_v2.1.fasta'
@@ -484,7 +522,7 @@ if __name__ == "__main__":
     # batch_cami()
     # batch_depth()
     # batch_depth_test_event_accuracy()
-    batch_pro_cami()
+    # batch_pro_cami()
     # batch_germany()
     # batch_japan()
     # batch_USA()
@@ -492,3 +530,4 @@ if __name__ == "__main__":
     # batch_france()
     # batch_china()
     # batch_japan_reverse()
+    isolate()

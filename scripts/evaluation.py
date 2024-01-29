@@ -581,7 +581,6 @@ def get_genome_len(UHGG_fai):
         genome_len_dict[genome] += contig_len
     return genome_len_dict
 
-
 def read_kraken(kraken_result, UHGG_meta, UHGG_fai, cutoff=0.01, read_pair_len=300):
     ## estimate the genome depth from Kraken results
 
@@ -618,7 +617,7 @@ def read_kraken(kraken_result, UHGG_meta, UHGG_fai, cutoff=0.01, read_pair_len=3
         else:
             genome = taxa[3:]
         if genome not in genome_len_dict:
-            print ("!!!!!!!!!danger", taxa, genome)
+            print ("WARNING", taxa, genome)
             continue
         depth = round(float(int(array[1]) * read_pair_len) / genome_len_dict[genome], 2)
         # print (taxa, genome, abundance, depth)
@@ -635,13 +634,14 @@ def check_absence(genome, abudance_dict):
     if abudance_dict[genome] == 0:
         return absence
 
-
 def ultra_deep_depth():
     ### 	SAMEA5669781    753.73 G
+    sample_base = 786
     abun_cutoff = 0
     data = []
-    acc_dir = "/mnt/d/breakpoints/HGT/deep_result/acc_result/"
-    kraken_result = "/mnt/d/breakpoints/HGT/UHGG/kraken/SAMEA5669780_kraken.txt"
+    acc_dir = "/mnt/d/breakpoints/HGT/deep_result/backup_1_25/"
+    # kraken_result = "/mnt/d/breakpoints/HGT/UHGG/kraken/SAMEA5669780_kraken.txt"
+    kraken_dir = "/mnt/d/breakpoints/HGT/deep_result/kraken/"
     UHGG_folder = "/mnt/d/breakpoints/HGT/UHGG/"
 
     ###  hpc location
@@ -654,25 +654,20 @@ def ultra_deep_depth():
 
     for z in range(1, 8):
 
-        prop = round(z * 0.01, 3)
-        bases = round(prop*786)
+        prop = round(z * 0.08, 3)
+        bases = round(prop*sample_base)
         new_x = "%s(%sG)"%(prop, bases)
-        acc_file = acc_dir + "/SAMEA5669780_%s.acc.csv"%(prop)
+        acc_file = acc_dir + "/SAMEA5669781_prop%s.acc.csv"%(prop)
+        kraken_result = kraken_dir + "/SAMEA5669781_prop%s.kraken.txt"%(prop)
         kraken_result = kraken_result
 
         consider_genome, genome_depth_dict = read_kraken(kraken_result, UHGG_meta, UHGG_fai, 0.01)
         print ("present genome number", len(consider_genome), len(genome_depth_dict))
         bkp = read_localHGT(acc_file, abun_cutoff, True)
         genome_bkp_dict = defaultdict(int)
+        select_genome = {}
         for each_bkp in bkp:
             g1, g2 = get_pure_genome(each_bkp[0]), get_pure_genome(each_bkp[2])
-
-            ## only consider one genome absent, one genome present, the presented genome can be regarded as the recipient genome
-            # if check_absence(g1, consider_genome) and not check_absence(g2, consider_genome) and consider_genome[g2] > 0:
-            #     genome_bkp_dict[g2] += 1
-            # elif check_absence(g2, consider_genome) and not check_absence(g1, consider_genome) and consider_genome[g1] > 0:
-            #     genome_bkp_dict[g1] += 1
-
             genome_bkp_dict[g1] += 1
             genome_bkp_dict[g2] += 1
 
@@ -680,18 +675,238 @@ def ultra_deep_depth():
             if genome not in genome_depth_dict:
                 continue
 
-            data.append([prop, round(prop*670), genome_depth_dict[genome], genome_bkp_dict[genome], consider_genome[genome], genome])
-            if genome == "GUT_GENOME099111":
-                print (prop, round(prop*670), genome_depth_dict[genome], genome_bkp_dict[genome], consider_genome[genome], genome)
-
-
+            # if genome_bkp_dict[genome] > 10:
+            # if genome == "GUT_GENOME140264":
+            if genome_bkp_dict[genome] < 50 and genome_depth_dict[genome] < 100 and genome_bkp_dict[genome] > 2 and genome_depth_dict[genome] > 1:
+                data.append([prop, round(prop*sample_base), genome_depth_dict[genome], genome_bkp_dict[genome], consider_genome[genome], genome])
+                print (prop, round(prop*sample_base), genome_depth_dict[genome], genome_bkp_dict[genome], consider_genome[genome], genome)
+            if prop == 0.56:
+                # if genome_bkp_dict[genome] > 10 and genome_bkp_dict[genome] < 30 and genome_depth_dict[genome] > 50 and genome_depth_dict[genome] < 70:
+                # if genome_bkp_dict[genome] > 50 and genome_bkp_dict[genome] < 70 and genome_depth_dict[genome] > 50 and genome_depth_dict[genome] < 70:
+                if genome_bkp_dict[genome] > 30 and genome_bkp_dict[genome] < 50 and genome_depth_dict[genome] > 50 and genome_depth_dict[genome] < 70:
+                    select_genome[genome] = 1
     
+    new_data = []
+    for ele in data:
+        if ele[-1] in select_genome:
+            new_data.append(ele)
+    data = new_data
+    print ("genome number", len(data))
+
+
     sns.set_style("whitegrid")
     df=pd.DataFrame(data,columns=['fraction', "Base Number (Gbp)", "depth", 'No. of HGT breakpoint pair', "abundance", 'genome'])
     # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
-    ax = sns.lineplot(data=df, x="Base Number (Gbp)", y='No. of HGT breakpoint pair', marker="o").set_title('Sample: SAMEA5669780')  
+    ax = sns.lineplot(data=df, x="depth", y='No. of HGT breakpoint pair',hue ='genome',  marker="o", legend=False).set_title('breakpoint pair num: 30-50')
     give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
     plt.savefig(acc_dir + '/HGT_deep_%s.pdf'%(give_time))
+
+def ultra_deep_depth_small():
+    ### 	SAMEA5669781    753.73 G
+    sample_base = 786
+    abun_cutoff = 0
+    data = []
+    acc_dir = "/mnt/d/breakpoints/HGT/deep_result/small_1_29/"
+    kraken_dir = acc_dir
+    UHGG_folder = "/mnt/d/breakpoints/HGT/UHGG/"
+
+    ###  hpc location
+    # acc_dir = "/home/lijiache2/hgt/hgt_result/fastp_result_v4/"
+    # # kraken_result = acc_dir + "/SAMEA5669780_kraken.txt"
+    # UHGG_folder = "/home/lijiache2/hgt/hgt_result/ref/"
+
+    UHGG_meta = UHGG_folder + "/genomes-all_metadata.tsv"
+    UHGG_fai = UHGG_folder + "/UHGG_reference.formate.fna.fai"
+
+    for z in range(1, 8):
+
+        # prop = round(z * 0.08, 3)
+        prop = z * 5
+        bases = round(prop*sample_base)
+        new_x = "%s(%sG)"%(prop, bases)
+        acc_file = acc_dir + "/SAMEA5669781_prop%s.acc.csv"%(prop)
+        kraken_result = kraken_dir + "/SAMEA5669781_prop%s.kraken.txt"%(prop)
+        kraken_result = kraken_result
+
+        consider_genome, genome_depth_dict = read_kraken(kraken_result, UHGG_meta, UHGG_fai, 0.01)
+        print ("present genome number", len(consider_genome), len(genome_depth_dict), z)
+        bkp = read_localHGT(acc_file, abun_cutoff, True)
+        genome_bkp_dict = defaultdict(int)
+        
+        for each_bkp in bkp:
+            g1, g2 = get_pure_genome(each_bkp[0]), get_pure_genome(each_bkp[2])
+            genome_bkp_dict[g1] += 1
+            genome_bkp_dict[g2] += 1
+
+        for genome in genome_bkp_dict:
+            if genome not in genome_depth_dict:
+                continue
+            # if genome_bkp_dict[genome] > 10:
+            # if genome == "GUT_GENOME140264":
+            # if genome_bkp_dict[genome] < 50 and genome_depth_dict[genome] < 100 and genome_bkp_dict[genome] > 2 and genome_depth_dict[genome] > 1:
+            # if genome_depth_dict[genome] < 500 and genome_bkp_dict[genome] > 2 and genome_depth_dict[genome] > 1:
+            data.append([prop, round(prop*sample_base), genome_depth_dict[genome], genome_bkp_dict[genome], consider_genome[genome], genome])
+                # print (prop, round(prop*sample_base), genome_depth_dict[genome], genome_bkp_dict[genome], consider_genome[genome], genome)
+            # if prop == 35:
+            #     # if genome_bkp_dict[genome] > 10 and genome_bkp_dict[genome] < 30 and genome_depth_dict[genome] > 50 and genome_depth_dict[genome] < 70:
+            #     # if genome_bkp_dict[genome] > 50 and genome_bkp_dict[genome] < 70 and genome_depth_dict[genome] > 50 and genome_depth_dict[genome] < 70:
+            #     if genome_bkp_dict[genome] > 10 and genome_bkp_dict[genome] < 100 and genome_depth_dict[genome] > 50:
+            #     # if genome_bkp_dict[genome] > 30 and genome_bkp_dict[genome] < 50 and genome_depth_dict[genome] > 0 and genome_depth_dict[genome] < 50:
+            #         select_genome[genome] = 1
+    # print (len(select_genome))
+    # new_data = []
+    # for ele in data:
+    #     # print (ele[-1], select_genome[ele[-1]])
+    #     if select_genome[ele[-1]] > 4 and select_genome_depth[ele[-1]] < 100 and select_genome_num[ele[-1]] > 30 and select_genome_num[ele[-1]] < 50:
+    #     # if ele[-1] in select_genome:
+    #         new_data.append(ele)
+    # data = new_data
+    print ("genome number", len(data))
+    df=pd.DataFrame(data,columns=['fraction', "Base Number (Gbp)", "depth", 'No. of HGT breakpoint pair', "abundance", 'genome'])
+    df.to_csv(acc_dir + '/depth_comparison.csv', sep=',')
+    # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
+
+
+def plot_deep():
+    acc_dir = "/mnt/d/breakpoints/HGT/deep_result/small_1_29/"
+    df = pd.read_csv(acc_dir + '/depth_comparison.csv')  
+
+    select_genome = defaultdict(int)
+    select_genome_depth = defaultdict(int)
+    select_genome_num = defaultdict(int)
+
+    for index, row in df.iterrows():
+        genome = row['genome']
+        select_genome[genome] += 1
+        select_genome_depth[genome] = row['depth']
+        select_genome_num[genome] = row['No. of HGT breakpoint pair']
+    
+    delete_index = []
+    for index, row in df.iterrows():
+        genome = row['genome']
+        if select_genome[genome] > 4 and select_genome_depth[genome] > 25 and select_genome_depth[genome] < 50 and select_genome_num[genome] > 50 and select_genome_num[genome] < 100:
+            pass
+        else:
+            delete_index.append(index)
+    df = df.drop(delete_index)
+    sns.set_style("whitegrid")
+    ax = sns.lineplot(data=df, x="depth", y='No. of HGT breakpoint pair',hue ='genome',  marker="o", legend=False).set_title('breakpoint pair num: 50-100')
+    give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    plt.savefig(acc_dir + '/HGT_deep_%s.pdf'%(give_time))
+
+
+
+def ultra_deep_depth_pair():
+    ### 	SAMEA5669781    753.73 G
+    sample_base = 786
+    abun_cutoff = 0
+    data = []
+    acc_dir = "/mnt/d/breakpoints/HGT/deep_result/backup_1_25/"
+    # kraken_result = "/mnt/d/breakpoints/HGT/UHGG/kraken/SAMEA5669780_kraken.txt"
+    kraken_dir = "/mnt/d/breakpoints/HGT/deep_result/kraken/"
+    UHGG_folder = "/mnt/d/breakpoints/HGT/UHGG/"
+
+    ###  hpc location
+    # acc_dir = "/home/lijiache2/hgt/hgt_result/fastp_result_v4/"
+    # # kraken_result = acc_dir + "/SAMEA5669780_kraken.txt"
+    # UHGG_folder = "/home/lijiache2/hgt/hgt_result/ref/"
+
+    UHGG_meta = UHGG_folder + "/genomes-all_metadata.tsv"
+    UHGG_fai = UHGG_folder + "/UHGG_reference.formate.fna.fai"
+
+    for z in range(1, 8):
+
+        prop = round(z * 0.08, 3)
+        bases = round(prop*sample_base)
+        new_x = "%s(%sG)"%(prop, bases)
+        acc_file = acc_dir + "/SAMEA5669781_prop%s.acc.csv"%(prop)
+        kraken_result = kraken_dir + "/SAMEA5669781_prop%s.kraken.txt"%(prop)
+        kraken_result = kraken_result
+
+        consider_genome, genome_depth_dict = read_kraken(kraken_result, UHGG_meta, UHGG_fai, 0.01)
+        print ("present genome number", len(consider_genome), len(genome_depth_dict))
+        bkp = read_localHGT(acc_file, abun_cutoff, True)
+        genome_bkp_dict = defaultdict(int)
+        depth_pair = defaultdict(int)
+        for each_bkp in bkp:
+            g1, g2 = get_pure_genome(each_bkp[0]), get_pure_genome(each_bkp[2])
+            pair_id = "&".join(sorted([g1, g2]))
+            if g1 not in genome_depth_dict or g2 not in genome_depth_dict:
+                continue
+            depth_pair[pair_id] = genome_depth_dict[g1] + genome_depth_dict[g2]
+            genome_bkp_dict[pair_id] += 1
+        print ("pair number", len(genome_bkp_dict))
+        for pair_id in genome_bkp_dict:
+            # if genome not in genome_depth_dict:
+            #     continue
+            if pair_id == "GUT_GENOME244777&GUT_GENOME257123":
+                print (prop, round(prop*sample_base), depth_pair[pair_id], genome_bkp_dict[pair_id], pair_id)
+            # data.append([prop, round(prop*sample_base), depth_pair[pair_id], genome_bkp_dict[pair_id], pair_id])
+            # if prop == 0.56 and genome_bkp_dict[pair_id] > 20:
+            #     print (prop, round(prop*sample_base), depth_pair[pair_id], genome_bkp_dict[pair_id], pair_id)
+
+
+    sns.set_style("whitegrid")
+    df=pd.DataFrame(data,columns=['fraction', "Base Number (Gbp)", "depth", 'No. of HGT breakpoint pair', 'genome_pair'])
+    # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
+    ax = sns.lineplot(data=df, x="depth", y='No. of HGT breakpoint pair', marker="o").set_title('Sample: SAMEA5669780')  
+    give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    plt.savefig(acc_dir + '/HGT_deep_%s.pdf'%(give_time))
+
+def ultra_deep_depth_population():
+    ### 	SAMEA5669781    753.73 G
+    sample_base = 786
+    abun_cutoff = 0
+    depth_cutoff = 0
+
+    data = []
+    acc_dir = "/mnt/d/breakpoints/HGT/deep_result/backup_1_25/"
+    kraken_dir = "/mnt/d/breakpoints/HGT/deep_result/kraken/"
+    UHGG_folder = "/mnt/d/breakpoints/HGT/UHGG/"
+
+    ###  hpc location
+    # acc_dir = "/home/lijiache2/hgt/hgt_result/fastp_result_v4/"
+    # # kraken_result = acc_dir + "/SAMEA5669780_kraken.txt"
+    # UHGG_folder = "/home/lijiache2/hgt/hgt_result/ref/"
+
+    UHGG_meta = UHGG_folder + "/genomes-all_metadata.tsv"
+    UHGG_fai = UHGG_folder + "/UHGG_reference.formate.fna.fai"
+
+    for z in range(1, 13):
+
+        prop = round(z * 0.08, 3)
+        # prop = z
+        bases = round(prop*sample_base)
+        new_x = "%s(%sG)"%(prop, bases)
+        acc_file = acc_dir + "/SAMEA5669781_prop%s.acc.csv"%(prop)
+        kraken_result = kraken_dir + "/SAMEA5669781_prop%s.kraken.txt"%(prop)
+
+        consider_genome, genome_depth_dict = read_kraken(kraken_result, UHGG_meta, UHGG_fai, 0.01)
+        genome_depth_dict = {key: value for key, value in genome_depth_dict.items() if value > depth_cutoff}
+        print ("present genome number", len(consider_genome), len(genome_depth_dict))
+        bkp = read_localHGT(acc_file, abun_cutoff, True)
+        genome_bkp_dict = defaultdict(int)
+        filter_bkp = []
+        genome_dict = defaultdict(int)
+        genome_pair_dict = defaultdict(int)
+        for each_bkp in bkp:
+            
+            g1, g2 = get_pure_genome(each_bkp[0]), get_pure_genome(each_bkp[2])
+            if g1 in genome_depth_dict and g2 in genome_depth_dict:
+                filter_bkp.append(each_bkp)
+                genome_dict[g1] += 1
+                genome_dict[g2] += 1
+                pair_id = "&".join(sorted([g1, g2]))
+                if prop != 0.08:
+                    if pair_id not in focus_genome_pair:
+                        continue
+                genome_pair_dict[pair_id] += 1
+        if prop == 0.08:
+            genome_pair_dict = {key: value for key, value in genome_pair_dict.items() if value > 1}
+            focus_genome_pair = genome_pair_dict
+        median_value = np.median(list(genome_dict.values()))
+        pair_median_value = np.mean(list(genome_pair_dict.values()))
+        print (prop, len(filter_bkp), median_value, len(genome_pair_dict), pair_median_value)
 
 def ultra_deep_SAMEA5669780():
     ### 	SAMEA5669781    753.73 G
@@ -1022,7 +1237,11 @@ if __name__ == "__main__":
     # amount()
     # ultra_deep()
     # ultra_deep_SAMEA5669780()
-    ultra_deep_depth()
+    # ultra_deep_depth()
+    # ultra_deep_depth_small()
+    plot_deep()
+    # ultra_deep_depth_pair()
+    # ultra_deep_depth_population()
     # read_kraken()
     # abundance()
     # amount_rep()
