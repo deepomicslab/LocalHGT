@@ -272,11 +272,11 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
     fq_file.open(fastq_file);
     fq_file_2.open(fastq_file_2);
     string reads_seq, reads_seq_2;
-    int reads_int [300];
-    int reads_comple_int [300];
+    int reads_int [500];
+    int reads_comple_int [500];
     unsigned int lines = 0;
-    int converted_reads [900];
-    int complemented_reads [900];
+    int converted_reads [1500];
+    int complemented_reads [1500];
     int m;
     int n;
     unsigned int kmer_index, comple_kmer_index, real_index, b;   
@@ -976,12 +976,12 @@ void read_fastq(string fastq_file, int k, char* coder, int* base, char* comple,
 
 
     string reads_seq;
-    int reads_int [300];
-    int reads_comple_int [300];
+    int reads_int [500];
+    int reads_comple_int [500];
 
     unsigned int lines = 0;
-    int converted_reads [900];
-    int complemented_reads [900];
+    int converted_reads [1500];
+    int complemented_reads [1500];
     int m;
     int n;
     unsigned int kmer_index, comple_kmer_index, real_index, b;   
