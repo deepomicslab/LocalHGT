@@ -17,6 +17,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from simulation import Parameters
 from generate_run_scripts import Batch
+from scipy.optimize import curve_fit
 
 tolerate_dist = 50
 ref_gap = 50
@@ -717,8 +718,8 @@ def ultra_deep_depth_small():
 
     UHGG_meta = UHGG_folder + "/genomes-all_metadata.tsv"
     UHGG_fai = UHGG_folder + "/UHGG_reference.formate.fna.fai"
-
-    for z in range(1, 8):
+    genome_len_dict = get_genome_len(UHGG_fai)
+    for z in range(1, 11):
 
         # prop = round(z * 0.08, 3)
         prop = z * 5
@@ -741,36 +742,61 @@ def ultra_deep_depth_small():
         for genome in genome_bkp_dict:
             if genome not in genome_depth_dict:
                 continue
-            # if genome_bkp_dict[genome] > 10:
-            # if genome == "GUT_GENOME140264":
-            # if genome_bkp_dict[genome] < 50 and genome_depth_dict[genome] < 100 and genome_bkp_dict[genome] > 2 and genome_depth_dict[genome] > 1:
-            # if genome_depth_dict[genome] < 500 and genome_bkp_dict[genome] > 2 and genome_depth_dict[genome] > 1:
-            data.append([prop, round(prop*sample_base), genome_depth_dict[genome], genome_bkp_dict[genome], consider_genome[genome], genome])
-                # print (prop, round(prop*sample_base), genome_depth_dict[genome], genome_bkp_dict[genome], consider_genome[genome], genome)
-            # if prop == 35:
-            #     # if genome_bkp_dict[genome] > 10 and genome_bkp_dict[genome] < 30 and genome_depth_dict[genome] > 50 and genome_depth_dict[genome] < 70:
-            #     # if genome_bkp_dict[genome] > 50 and genome_bkp_dict[genome] < 70 and genome_depth_dict[genome] > 50 and genome_depth_dict[genome] < 70:
-            #     if genome_bkp_dict[genome] > 10 and genome_bkp_dict[genome] < 100 and genome_depth_dict[genome] > 50:
-            #     # if genome_bkp_dict[genome] > 30 and genome_bkp_dict[genome] < 50 and genome_depth_dict[genome] > 0 and genome_depth_dict[genome] < 50:
-            #         select_genome[genome] = 1
-    # print (len(select_genome))
-    # new_data = []
-    # for ele in data:
-    #     # print (ele[-1], select_genome[ele[-1]])
-    #     if select_genome[ele[-1]] > 4 and select_genome_depth[ele[-1]] < 100 and select_genome_num[ele[-1]] > 30 and select_genome_num[ele[-1]] < 50:
-    #     # if ele[-1] in select_genome:
-    #         new_data.append(ele)
-    # data = new_data
-    print ("genome number", len(data))
-    df=pd.DataFrame(data,columns=['fraction', "Base Number (Gbp)", "depth", 'No. of HGT breakpoint pair', "abundance", 'genome'])
-    df.to_csv(acc_dir + '/depth_comparison.csv', sep=',')
-    # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)   
 
+            data.append([prop, round(prop*sample_base), genome_depth_dict[genome], genome_bkp_dict[genome], consider_genome[genome], genome, genome_len_dict[genome]])
+
+    print ("genome number", len(data))
+    df=pd.DataFrame(data,columns=['fraction', "Base Number (Gbp)", "depth", 'No. of HGT breakpoint pair', "abundance", 'genome', 'length'])
+    df.to_csv(acc_dir + '/depth_comparison.csv', sep=',')
+    # ax = sns.barplot(x=self.variation, y="F1 score",hue= 'Methods',data=self.df)  
+
+def plot_abundance(df, acc_dir):
+    df = df.loc[(df['abundance'] > 0)]
+    data = []
+    for z in range(1, 11):
+        prop = z * 5
+        df2 = df.loc[df['fraction'] == prop]
+        bkp_num = sum(df2['No. of HGT breakpoint pair'].tolist())
+        print (prop*2, len(df2), bkp_num)
+        data.append([prop*2, len(df2), bkp_num])
+
+    df3=pd.DataFrame(data,columns=[ 'data amount', "genome num", 'No. of HGT breakpoint pair'])
+    sns.set_style("whitegrid")
+    ax = sns.lineplot(data=df3, x='data amount', y="genome num", marker="o", legend=False)#.set_title('breakpoint pair num: 50-100')
+    give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    plt.savefig(acc_dir + '/HGT_abun_%s.pdf'%(give_time))
+
+    plt.clf()
+    df4 = df.loc[(df['fraction'] == 50) & (df['depth'] < 100)]
+    # df4 = df.loc[(df['fraction'] == 50)]
+    ax = sns.displot(df4, x="depth")#.set_title('breakpoint pair num: 50-100')
+    give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    plt.savefig(acc_dir + '/HGT_distr_%s.pdf'%(give_time))
+
+def is_converged(x, y, max_depth = 50, num_iterations=3, slope_threshold=0.2):
+
+    new_x, new_y = [], []
+    for i in range(len(x)):
+        if x[i] <= max_depth:
+            new_x.append(x[i])
+            new_y.append(y[i])
+    x, y = new_x, new_y
+    if len(x) < num_iterations + 1:
+        return False
+    x = np.array(x[-num_iterations:])
+    y = np.array(y[-num_iterations:])
+    slope, _ = np.polyfit(x, y, 1)
+    
+    if abs(slope) <= slope_threshold:
+        return True
+    else:
+        return False
 
 def plot_deep():
     acc_dir = "/mnt/d/breakpoints/HGT/deep_result/small_1_29/"
     df = pd.read_csv(acc_dir + '/depth_comparison.csv')  
-
+    # plot_abundance(df, acc_dir)
+    
     select_genome = defaultdict(int)
     select_genome_depth = defaultdict(int)
     select_genome_num = defaultdict(int)
@@ -782,19 +808,107 @@ def plot_deep():
         select_genome_num[genome] = row['No. of HGT breakpoint pair']
     
     delete_index = []
+    genome_dict = {}
     for index, row in df.iterrows():
         genome = row['genome']
-        if select_genome[genome] > 4 and select_genome_depth[genome] > 25 and select_genome_depth[genome] < 50 and select_genome_num[genome] > 50 and select_genome_num[genome] < 100:
+        if select_genome[genome] > 4 and select_genome_depth[genome] > 30 and select_genome_num[genome] > 20 and select_genome_num[genome] <= 200:
             pass
+            genome_dict[genome] = False
         else:
             delete_index.append(index)
     df = df.drop(delete_index)
-    sns.set_style("whitegrid")
-    ax = sns.lineplot(data=df, x="depth", y='No. of HGT breakpoint pair',hue ='genome',  marker="o", legend=False).set_title('breakpoint pair num: 50-100')
+    print ("genome n.o.", len(genome_dict))
+    converged_genome_num = 0
+    for genome in genome_dict:
+        df2 = df.loc[df['genome'] == genome]
+        x = df2['depth'].tolist()
+        y = df2['No. of HGT breakpoint pair'].tolist()
+
+        converge = is_converged(x, y)
+        if converge:
+            genome_dict[genome] = True
+            converged_genome_num += 1
+        # print (genome, converge, x, y)
+    # print (genome_dict)
+
+    delete_index = []
+    for index, row in df.iterrows():
+        if genome_dict[row['genome']] == False:
+            delete_index.append(index)
+    df = df.drop(delete_index)
+    print ("converged genome n.o.", converged_genome_num)
+
+    # df['length'] = round(df['length']/1000000) * 1000000
+    # df['depth'] = round(df['depth']/5) * 5
+    # print (len(df))
+    # df = df.drop_duplicates(subset=['genome', 'depth'], keep='first')
+    # print (len(df))
+    # print (df)
+    # data_dict = {}
+    # for index, row in df.iterrows():
+    #     if row['length'] not in data_dict:
+    #         data_dict[row['length'] ] = {}
+    #     if row['depth'] not in data_dict[row['length'] ]:
+    #         data_dict[row['length'] ][row['depth']] = []
+    #     data_dict[row['length']][row['depth']].append(row['No. of HGT breakpoint pair'])
+    # data = []
+    # for length in data_dict:
+    #     for depth in data_dict[length]:
+    #         data.append([length, depth, np.mean(data_dict[length][depth])])
+    # df=pd.DataFrame(data,columns=[ 'length', "depth", 'No. of HGT breakpoint pair'])
+
+    
+    df = df.loc[(df['depth'] < 50)]
     give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
-    plt.savefig(acc_dir + '/HGT_deep_%s.pdf'%(give_time))
+
+    # sns.set_style("whitegrid")
+    # # ax = sns.lineplot(data=df, x="depth", y='No. of HGT breakpoint pair',hue ='length', style="length", marker="o", legend=False).set_title('breakpoint pair num: 50-100')
+    # ax = sns.lineplot(data=df, x="depth", y='No. of HGT breakpoint pair',hue ='genome', color = "length", style="length", marker="o", legend=False).set_title('breakpoint pair num: 50-100')
+    # plt.savefig(acc_dir + '/HGT_deep_%s.pdf'%(give_time))
+
+    # """
+    plt.clf()
+    df2 = df.loc[(df['length'] <= 3000000)]
+    x = df2['depth'].tolist()
+    y = df2['No. of HGT breakpoint pair'].tolist()
+    x = np.asarray(x)
+    y = np.asarray(y)
+    # x = [round(a) for a in x]
+
+    plt.plot(x, y, 'o', color='red', label='<=3M')
+    popt1, _ = curve_fit(saturation_curve, x, y)
+    a, b = popt1
+    print (a, b)
+    x= np.array(sorted(x))
+    plt.plot(x, saturation_curve(x, a, b), '-', color='red')
 
 
+
+    df2 = df.loc[(df['length'] > 3000000)]
+    x = df2['depth'].tolist()
+    y = df2['No. of HGT breakpoint pair'].tolist()
+    x = np.asarray(x)
+    y = np.asarray(y)
+    plt.plot(x, y, 'v', color='blue', label='>3M')
+    popt1, _ = curve_fit(saturation_curve, x, y)
+    a, b = popt1
+    print (a, b)
+    x= np.array(sorted(x))
+    plt.plot(x, saturation_curve(x, a, b), '-', color='blue')
+
+
+    plt.xlabel('depth')
+    plt.ylabel('No. of HGT breakpoint pair')
+    plt.title('5-20')
+    plt.legend(numpoints=1)
+    plt.grid(True)
+    plt.savefig(acc_dir + '/HGT_curve_%s.pdf'%(give_time))
+    # """
+
+# Define the saturation curve function
+def saturation_curve(x, a, b):
+    return a * (1 - np.exp(-b * x))
+    # return (a * x) + b 
 
 def ultra_deep_depth_pair():
     ### 	SAMEA5669781    753.73 G
