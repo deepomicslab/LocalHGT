@@ -399,11 +399,11 @@ def cami():
     print ("CPU time", np.mean(time_list), np.median(time_list))
     print ("PEAK mem", np.mean(mem_list), np.median(mem_list))
 
-def amount_rep(): # run time with increasing of sequencing data amount, with 3 replications
+def amount_rep(): # run time with increasing of sequencing data amount, with 3 replications, not using
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_result/"
     lemon_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_lemon/"
 
-    time_list, mem_list = [], []
+    
     fi = Figure()
     ba = Parameters(uhgg_ref)
     ba.depth = 30
@@ -413,13 +413,16 @@ def amount_rep(): # run time with increasing of sequencing data amount, with 3 r
     index = 0
     ba.get_ID(index)
     default_abun_cutoff = 0
-    for z in range(1,11):
+    data = []
+    for z in range(1,8):
         prop = round(z * 0.1, 2)
 
         sa = Sample(ba.sample, true_dir)
         for level in ba.complexity_level:
+            time_list, mem_list = [], []
+            time_list2, mem_list2 = [], []
             for rep in ['', '_1', '_2']:
-        # for level in ['high', 'low']:
+
                 cami_ID = ba.sample + '_' + level + '_' + str(prop) + rep
                 sa.change_ID(cami_ID)
                 sa.complexity = level
@@ -430,14 +433,24 @@ def amount_rep(): # run time with increasing of sequencing data amount, with 3 r
 
                 lemon_pe = sa.eva_tool(lemon_dir, "LEMON", default_abun_cutoff)
                 fi.add_lemon_sample(lemon_pe, prop)
-                # print ("#",cami_ID, ref_accuracy, ref_len, "Mb", local_pe.accuracy, local_pe.F1_score, local_pe.complexity)
-                # print ("############ref" ,ba.sample, ref_accuracy, ref_len, "Mb", local_pe.accuracy ,lemon_pe.accuracy)
                 time_list.append(local_pe.user_time)
                 mem_list.append(local_pe.max_mem)
-    # fi.plot_amount()
+                time_list2.append(lemon_pe.user_time)
+                mem_list2.append(lemon_pe.max_mem)
 
-    print ("CPU time", np.mean(time_list), np.median(time_list))
-    print ("PEAK mem", np.mean(mem_list), np.median(mem_list))
+            # data.append([level, np.median(time_list), np.median(mem_list), prop, "LocalHGT"])
+            # data.append([level, np.median(time_list2), np.median(mem_list2), prop, "LEMON"])
+            data.append([level, max(time_list), max(mem_list), prop, "LocalHGT"])
+            data.append([level, max(time_list2),max(mem_list2), prop, "LEMON"])
+    df=pd.DataFrame(data,columns=["Complexity", 'CPU time', 'Peak RAM', 'Fraction', 'Methods'])
+    # print (df)
+    fig, axes = plt.subplots(2, figsize=(4,10))
+    sns.lineplot(ax = axes[0], x='Fraction', y='CPU time', hue= 'Methods', style="Complexity", markers=True, data=df)
+    sns.lineplot(ax = axes[1], x='Fraction', y='Peak RAM', hue= 'Methods', style="Complexity", markers=True, data=df)
+
+    give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    plt.savefig('/mnt/d/breakpoints/HGT/figures/HGT_amount_%s.pdf'%(give_time))
+    df.to_csv('/mnt/d/R_script_files/For_methods/amount_comparison_rep.csv', sep=',')
 
 def amount(): # run time with increasing of sequencing data amount
     local_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_result/"
@@ -752,6 +765,7 @@ def ultra_deep_depth_small():
 
 def plot_abundance(df, acc_dir):
     df = df.loc[(df['abundance'] > 0)]
+
     data = []
     for z in range(1, 11):
         prop = z * 5
@@ -760,18 +774,30 @@ def plot_abundance(df, acc_dir):
         print (prop*2, len(df2), bkp_num)
         data.append([prop*2, len(df2), bkp_num])
 
-    df3=pd.DataFrame(data,columns=[ 'data amount', "genome num", 'No. of HGT breakpoint pair'])
+    df3=pd.DataFrame(data,columns=[ 'Base number (G)', "No. of detected species", 'No. of HGT breakpoint pair'])
     sns.set_style("whitegrid")
-    ax = sns.lineplot(data=df3, x='data amount', y="genome num", marker="o", legend=False)#.set_title('breakpoint pair num: 50-100')
+    ax = sns.lineplot(data=df3, x='Base number (G)', y="No. of detected species", marker="o", legend=False)#.set_title('breakpoint pair num: 50-100')
     give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
     plt.savefig(acc_dir + '/HGT_abun_%s.pdf'%(give_time))
 
     plt.clf()
+    sns.set_style("whitegrid")
     df4 = df.loc[(df['fraction'] == 50) & (df['depth'] < 100)]
-    # df4 = df.loc[(df['fraction'] == 50)]
-    ax = sns.displot(df4, x="depth")#.set_title('breakpoint pair num: 50-100')
+    df5=df4.loc[(df4['abundance'] < 0.1)]
+    print ("%s genomes abundance <0.1"%(len(df5)))
+    ax = sns.displot(df4, x="abundance", bins=25)#.set_title('breakpoint pair num: 50-100')
+    ax.set(xlabel='abundance (%)')
     give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
     plt.savefig(acc_dir + '/HGT_distr_%s.pdf'%(give_time))
+
+    plt.clf()
+    sns.set_style("whitegrid")
+    df4 = df.loc[(df['fraction'] == 50) & (df['depth'] < 100)]
+    df5=df4.loc[(df4['depth'] < 5)]
+    print ("%s genomes abundance <5"%(len(df5)))
+    ax = sns.displot(df4, x="depth")#.set_title('breakpoint pair num: 50-100')
+    give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    plt.savefig(acc_dir + '/HGT_distr2_%s.pdf'%(give_time))
 
 def is_converged(x, y, max_depth = 50, num_iterations=3, slope_threshold=0.2):
 
@@ -795,8 +821,8 @@ def is_converged(x, y, max_depth = 50, num_iterations=3, slope_threshold=0.2):
 def plot_deep():
     acc_dir = "/mnt/d/breakpoints/HGT/deep_result/small_1_29/"
     df = pd.read_csv(acc_dir + '/depth_comparison.csv')  
-    # plot_abundance(df, acc_dir)
-    
+    plot_abundance(df, acc_dir)
+    """
     select_genome = defaultdict(int)
     select_genome_depth = defaultdict(int)
     select_genome_num = defaultdict(int)
@@ -811,7 +837,7 @@ def plot_deep():
     genome_dict = {}
     for index, row in df.iterrows():
         genome = row['genome']
-        if select_genome[genome] > 4 and select_genome_depth[genome] > 30 and select_genome_num[genome] > 20 and select_genome_num[genome] <= 200:
+        if select_genome[genome] > 4 and select_genome_depth[genome] > 30 and select_genome_num[genome] > 5 and select_genome_num[genome] <= 200:
             pass
             genome_dict[genome] = False
         else:
@@ -837,26 +863,6 @@ def plot_deep():
             delete_index.append(index)
     df = df.drop(delete_index)
     print ("converged genome n.o.", converged_genome_num)
-
-    # df['length'] = round(df['length']/1000000) * 1000000
-    # df['depth'] = round(df['depth']/5) * 5
-    # print (len(df))
-    # df = df.drop_duplicates(subset=['genome', 'depth'], keep='first')
-    # print (len(df))
-    # print (df)
-    # data_dict = {}
-    # for index, row in df.iterrows():
-    #     if row['length'] not in data_dict:
-    #         data_dict[row['length'] ] = {}
-    #     if row['depth'] not in data_dict[row['length'] ]:
-    #         data_dict[row['length'] ][row['depth']] = []
-    #     data_dict[row['length']][row['depth']].append(row['No. of HGT breakpoint pair'])
-    # data = []
-    # for length in data_dict:
-    #     for depth in data_dict[length]:
-    #         data.append([length, depth, np.mean(data_dict[length][depth])])
-    # df=pd.DataFrame(data,columns=[ 'length', "depth", 'No. of HGT breakpoint pair'])
-
     
     df = df.loc[(df['depth'] < 50)]
     give_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
@@ -866,7 +872,7 @@ def plot_deep():
     # ax = sns.lineplot(data=df, x="depth", y='No. of HGT breakpoint pair',hue ='genome', color = "length", style="length", marker="o", legend=False).set_title('breakpoint pair num: 50-100')
     # plt.savefig(acc_dir + '/HGT_deep_%s.pdf'%(give_time))
 
-    # """
+
     plt.clf()
     df2 = df.loc[(df['length'] <= 3000000)]
     x = df2['depth'].tolist()
@@ -899,11 +905,11 @@ def plot_deep():
 
     plt.xlabel('depth')
     plt.ylabel('No. of HGT breakpoint pair')
-    plt.title('5-20')
+    plt.title('')
     plt.legend(numpoints=1)
     plt.grid(True)
     plt.savefig(acc_dir + '/HGT_curve_%s.pdf'%(give_time))
-    # """
+    """
 
 # Define the saturation curve function
 def saturation_curve(x, a, b):
@@ -1348,12 +1354,12 @@ if __name__ == "__main__":
     # pure_frag()
     # cal_cami_time_MEM()
     # depth_event()
-    # amount()
+    amount()
     # ultra_deep()
     # ultra_deep_SAMEA5669780()
     # ultra_deep_depth()
     # ultra_deep_depth_small()
-    plot_deep()
+    # plot_deep()
     # ultra_deep_depth_pair()
     # ultra_deep_depth_population()
     # read_kraken()

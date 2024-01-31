@@ -639,8 +639,8 @@ def UHGG_amount():   # generate complex sample to evaluate the relationship betw
         pa.change_snp_rate(snp_rate)
         index = 0
         pa.get_ID(index)
-        for level in pa.complexity_level:
-        # for level in ['low', "medium"]:
+        # for level in pa.complexity_level:
+        for level in ["high"]:
             cami_ID = pa.sample + '_' + level
             """
             for j in range(1, 3):
@@ -660,8 +660,8 @@ def UHGG_amount():   # generate complex sample to evaluate the relationship betw
                 # if prop != 0.1:
                 #     continue
                 
-                for rep in range(1, 3):
-                    run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}_{rep}.time python /mnt/d/breakpoints/script/scripts/main.py -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
+                for rep in range(5, 6):
+                    run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}_{rep}.time python /mnt/d/breakpoints/script/scripts/main.py --seed 8 -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
                     --fq1 {amount_dir}/{cami_ID}_{prop}_1.fq --fq2 {amount_dir}/{cami_ID}_{prop}_2.fq -s {cami_ID}_{prop}_{rep} -o {amount_result_dir}
                     """
                     myfile = f"{amount_result_dir}/{cami_ID}_{prop}_{rep}.acc.csv"
@@ -688,7 +688,7 @@ def get_base_number(fasta_file):
 
     return total_bases
 
-def UHGG_abundance(uniq_segs_loci): 
+def UHGG_abundance(uniq_segs_loci):  # not using
     species_dict = {} 
     pa = Parameters(uhgg_ref)
     pa.HGT_num = 20
@@ -773,7 +773,7 @@ def UHGG_abundance(uniq_segs_loci):
                         print (str(ecoli_record.seq), file = fasta)
                 fasta.close()
   
-def abundance_fq():
+def abundance_fq():  # not using
     fasta_file = workdir + "/species20_snp0.01_depth30_reads150_sample_0.true.fasta"
     # fasta_file = workdir + "/species20_snp0.01_depth30_reads150_sample_0.pure.fasta"
     small_ref = workdir + "/species20_snp0.01_depth30_reads150_sample_0.fa"
@@ -965,8 +965,9 @@ if __name__ == "__main__":
     # UHGG_length(uniq_segs_loci)
     # UHGG_depth(uniq_segs_loci)
     # """
-    # UHGG_amount()
-    abun = 0.5
-    workdir = "/mnt/d/HGT/abundance/abun_%s/"%(abun)
-    # UHGG_abundance(uniq_segs_loci)
-    abundance_fq()
+    UHGG_amount()
+
+    # abun = 0.5
+    # workdir = "/mnt/d/HGT/abundance/abun_%s/"%(abun)
+    # # UHGG_abundance(uniq_segs_loci)
+    # abundance_fq()
