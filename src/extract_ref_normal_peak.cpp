@@ -41,6 +41,53 @@ int MAX_RANDOM_NUM = 50000000;
 int READ_NUM = 0;
 std::mutex mtx;  
 
+long get_fq_start(ifstream& fq_file, long start){ // find the read name line of a fastq file
+    // third field start with +, first field start with @. 
+    // Problem is forth field can have + and @
+    // if x line start with +, and x+2 line start with @, we can say the x+2 line is the read name line (first field)
+    long pos = 0;
+    bool flag = false;
+    bool done = false;
+    int x = 0;
+    for (long i = start; i>0; i--){
+
+        for (long j = i; j < i + 1000; j ++){
+            fq_file.seekg(j, ios::beg);
+            char chr1, chr2;
+            fq_file.get(chr1);
+            fq_file.get(chr2);
+
+            if (chr1 == '\n' and chr2 == '+'){ //third field
+                flag = true;
+                x = 0;
+            }  
+            if (flag) {
+                if (chr1 == '\n'){ // forth field
+                    x += 1;
+                }
+                if (chr1 == '\n' and chr2 == '@' and x == 3){ // first field of a new read
+                    pos = j + 1;
+                    done = true;
+                    break;
+                }
+            }  
+            else{
+                if (chr1 == '\n'){
+                    x += 1;
+                }
+            }
+            if (x == 3){
+                break;
+            } 
+        }
+        // cout <<  i << "\t" << pos <<endl; 
+        if (done){
+            break;
+        }
+    }
+    return pos;
+}
+
 class Split_reads{
     public:
         map<int, int> chr_kmer_count;
@@ -291,41 +338,16 @@ void Peaks::slide_reads(string fastq_file, string fastq_file_2, char* coder, int
 
     string read_name;
 
-    // for (long i = start; i>0; i--){   // read name start with @, and shorter than 40, not work if read seq line <40 (after fastp filter)
+    // for (long i = start; i>0; i--){
     //     fq_file.seekg(i, ios::beg);
     //     char j;
     //     fq_file.get(j);
-    //     if (j == '@'){ //not only read name has this symbol.
-    //         if (i == 1){
-    //             pos = i;
-    //             break;
-    //         }
-    //         else{
-    //             fq_file.seekg(i-1, ios::beg);
-    //             char j;
-    //             fq_file.get(j);
-    //             if (j == '\n'){ //the @ should be the first char in a line
-    //                 fq_file.seekg(i, ios::beg);
-    //                 getline(fq_file,reads_seq);
-    //                 string read_name_forward = get_read_ID(reads_seq);
-    //                 if (read_name_forward.length() < 40){
-    //                     pos = i;
-    //                     break;
-    //                 }                    
-    //             }
-    //         }
+    //     if (j == '@'){ //only read name has this symbol.
+    //         pos = i;
+    //         break;
     //     }       
     // }
-
-    for (long i = start; i>0; i--){
-        fq_file.seekg(i, ios::beg);
-        char j;
-        fq_file.get(j);
-        if (j == '@'){ //only read name has this symbol.
-            pos = i;
-            break;
-        }       
-    }
+    pos = get_fq_start(fq_file, start);
 
     fq_file.seekg(pos, ios::beg);
     fq_file_2.seekg(pos, ios::beg);
@@ -961,16 +983,17 @@ void read_fastq(string fastq_file, int k, char* coder, int* base, char* comple,
     ifstream fq_file; 
     fq_file.open(fastq_file);
 
-    long pos = 0;
-    for (long i = start; i>0; i--){
-        fq_file.seekg(i, ios::beg);
-        char j;
-        fq_file.get(j);
-        if (j == '@'){ //only read name has this symbol.
-            pos = i;
-            break;
-        }       
-    }
+    // long pos = 0;
+    // for (long i = start; i>0; i--){
+    //     fq_file.seekg(i, ios::beg);
+    //     char j;
+    //     fq_file.get(j);
+    //     if (j == '@'){ //only read name has this symbol.
+    //         pos = i;
+    //         break;
+    //     }       
+    // }
+    long pos = get_fq_start(fq_file, start);
     fq_file.seekg(pos, ios::beg);
     long add_size = pos;
 

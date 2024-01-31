@@ -6,7 +6,8 @@ git clone https://github.com/deepomicslab/LocalHGT.git --depth 1
 cd LocalHGT/
 conda env create --name localhgt -f environment.yml
 conda activate localhgt
-sudo chmod 744 scripts/extract_ref
+make
+
 python scripts/main.py -h  # detect HGT breakpoints
 python scripts/infer_HGT_event.py -h # detect complete HGT events
 ```
@@ -62,7 +63,6 @@ fastp -i raw_1.fq -I raw_2.fq -o refine_1.fq -O refine_2.fq
 
 Note:
 - Currently, LocalHGT only supports paired-end short-read sequencing data (e.g., Illumina data).
-- Ensure only the read name line has the symbol `@` if you want to use multiple threads.
 
 ### Detect HGT breakpoints
 First, infer HGT breakpoints by running `python main.py` like
