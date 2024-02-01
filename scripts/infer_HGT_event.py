@@ -382,7 +382,8 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
 
     if len(sys.argv)==1:
-        print (f"see python {sys.argv[0]} -h")
+        # print (f"see python {sys.argv[0]} -h")
+        os.system(f"python {sys.argv[0]} -h")
     else:
 
         result_dir = args["b"] + "/"

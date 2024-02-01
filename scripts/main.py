@@ -120,7 +120,8 @@ if __name__ == "__main__":
     options = parser.parse_args()
 
     if len(sys.argv) == 1:
-        print (f"see python {sys.argv[0]} -h")
+        # print (f"see python {sys.argv[0]} -h")
+        os.system(f"python {sys.argv[0]} -h")
     else:
         if options.use_kmer == 1: # default
             acc_pa = Accept_Parameters(options)
