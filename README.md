@@ -21,15 +21,15 @@ sh run_event_detection.sh
 See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_output.csv` for event results.
 
 ## Construct reference database
-The reference database (a single `fasta` file) should contain all the representative genomes of your concerning bacteria. 
-For example, to analyze HGT events between bacteria A, B, and C, we should collect the representative genomes in `fasta` format for each bacterium and merge them into a single fasta file.
+Users can construct customized reference databases. The reference database (a single `fasta` file) should contain all the representative genomes of your concerning bacteria. 
+For example, to analyze HGT events between bacteria A, B, and C, we should collect the representative genomes of A, B, and C and merge them into a single fasta file.
 
-To analyze HGTs in human gut microbome, we use gut-specific representative genomes collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
+To analyze HGTs in the human gut microbiome, we use gut-specific representative genome collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
 The script `paper_results/build_UHGG_reference.py` can download the human gut-specific UHGG v1 database. The command is
 ```
 usage: python build_UHGG_reference.py -h
 
-Construct the reference from gut-specific UHGG V1 database.
+Construct the reference from the gut-specific UHGG V1 database.
 
 optional arguments:
   -r        <str> Generated reference file. (default: uhgg_v1.rep.fasta)
@@ -46,7 +46,7 @@ Then index the database using `samtools`
 ```
 samtools faidx ref_database.fasta
 ```
-Also, at the first running, `LocalHGT` will index the database automatically, and it will take several hours. 
+Also, at the first run, `LocalHGT` will index the database automatically, which will take several hours. 
 
 Note:
 - reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.
@@ -56,7 +56,7 @@ Note:
 
 ### Refine sequencing reads
 It is highly advised to refine the sequencing reads using tools like [fastp](https://github.com/OpenGene/fastp) before calling HGT.
-We include `fastp` in the conda environment, refine the reads like
+We include `fastp` in the conda environment, and refine the reads like
 ```
 fastp -i raw_1.fq -I raw_2.fq -o refine_1.fq -O refine_2.fq
 ```
@@ -105,7 +105,7 @@ A command example:
 ```
 python scripts/main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 /mnt/d/breakpoints/HGT/uhgg_length//species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
 ```
-The detected HGT breakpoints is stored in the `<sample name>.acc.csv` file within the output folder.
+The detected HGT breakpoints are stored in the `<sample name>.acc.csv` file within the output folder.
 
 Note:
 - With a small reference, we can skip the extraction of HGT-related segments by setting `--use_kmer 0`.
@@ -135,10 +135,10 @@ optional arguments:
 Note:
 - It is recommended to detect HGT breakpoints for each sample and store the results in a common output folder. Subsequently, when detecting complete HGT events, specify the output folder using the `-b` parameter. This approach allows LocalHGT to consider all the samples collectively, resulting in more reliable results for complete HGT events.
 
-## Output interpretion
+## Output interpretation
 
 ###  HGT breakpoints
-The HGT breakpoints is saved in the `*acc.csv` file. Here is an example:
+The HGT breakpoints are saved in the `*acc.csv` file. Here is an example:
 ```
 # the number of reads in the sample is: 41723899; Insert size is 681.
 from_ref,from_pos,from_side,from_strand,to_ref,to_pos,to_side,to_strand,if_reverse,read_seq,ref_seq,similarity,from_split_reads,to_split_reads,cross_split_reads,pair_end
@@ -170,7 +170,7 @@ Note:
 For example, GUT_GENOME000031_1 and GUT_GENOME000031_2 belong to the same species, the detected HGT breakpoint pairs or HGT events between them should be discarded.
 
 ###  HGT events
-HGT event result is like
+HGT event results are like
 ```
 sample,receptor,insert_locus,donor,delete_start,delete_end,reverse_flag
 species20_snp0,GUT_GENOME000149_2,369882,GUT_GENOME000537_12,40443,91965,True
@@ -184,19 +184,19 @@ Interpret each column as:
 | receptor  | receptor genome  |
 | insert_locus  | the transfer sequence is inserted at this locus |
 | donor  | donor genome  |
-| delete_start  | the start site of the transfer sequence on donor genome  |
-| delete_end  | the end site of the transfer sequence on donor genome  |
+| delete_start  | the start site of the transfer sequence on the donor genome  |
+| delete_end  | the end site of the transfer sequence on the donor genome  |
 | reverse_flag  | if the transferred gene is reversely inserted to receptor  |
 
 
 ## Dependency
-We recommand construct the environment using `conda` with the `environment.yml`.
+We recommend constructing the environment using `conda` with the `environment.yml`.
 Users can also prepare the env as follows: 
 ```
 Python 3.7+
 Python Module: scipy, numpy, pandas, sklearn, pysam, scikit-bio, biopython, pyfaidx
 ```
-Please install `samtools` and `bwa`, and add them to system path, the version 
+Please install `samtools` and `bwa`, and add them to the system path, the version 
 should be
 ```
 samtools==1.11+
