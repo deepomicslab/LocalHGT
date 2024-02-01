@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import re, os
 import csv
 from scipy import stats

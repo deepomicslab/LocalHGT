@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 some breakpoint pairs are too close, we only keep a 
 representive one from the nearby bkps. 

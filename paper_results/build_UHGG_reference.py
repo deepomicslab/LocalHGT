@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 The script to download UHGG genomes.
 
