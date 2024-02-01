@@ -99,23 +99,24 @@ def merge(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Construct the reference from gut-specific UHGG V1 database.", add_help=False, \
     usage="%(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    required = parser.add_argument_group("required arguments")
+    # required = parser.add_argument_group("required arguments")
     optional = parser.add_argument_group("optional arguments")
-    required.add_argument("-r", type=str, help="<str> Generated reference file.", metavar="\b")
-    required.add_argument("-b", type=str, default="genomes/", help="<str> Folder saves all the downloaded assemblies.", metavar="\b")
-    # required.add_argument("-f", type=str, default="./", help="<str> Output file to save all inferred HGT events.", metavar="\b")
+    optional.add_argument("-r", type=str, default="uhgg_v1.rep.fasta", help="<str> Generated reference file.", metavar="\b")
+    optional.add_argument("-b", type=str, default="genomes/", help="<str> Folder saves all the downloaded assemblies.", metavar="\b")
     optional.add_argument("-m", type=int, default=10, help="<int> Try this number of times until all the genomes are downloaded.", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
 
     args = vars(parser.parse_args())
 
 
-    if len(sys.argv)==1:
-        print (f"see python {sys.argv[0]} -h")
-    else:
-        check_software_availability("wget")
-        check_software_availability("samtools")
-        check_software_availability("seqkit")
+    # if len(sys.argv)==1:
+    #     print (f"see python {sys.argv[0]} -h")
+    # else:
+    print ("start building UHGG database...")
+    print ("result will be stored in %s"%(args['r']))
+    check_software_availability("wget")
+    check_software_availability("samtools")
+    check_software_availability("seqkit")
 
-        iterate(args)
-        merge(args)
+    iterate(args)
+    merge(args)
