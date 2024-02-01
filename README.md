@@ -108,8 +108,8 @@ python scripts/main.py -r reference.fa --fq1 /mnt/d/breakpoints/HGT/uhgg_length/
 The detected HGT breakpoints are stored in the `<sample name>.acc.csv` file within the output folder.
 
 Note:
-- With a small reference, we can skip the extraction of HGT-related segments by setting `--use_kmer 0`.
-- With a small reference, if we want to maintain the extraction of HGT-related segments, we can set a small value of `-k`. 
+- With a small reference, we can skip extracting HGT-related segments by setting `--use_kmer 0`.
+- With a small reference, while maintaining the extraction of HGT-related segments, we can set a small value of `-k` to reduce memory usage. 
 
 
 ### Detect complete HGT events
