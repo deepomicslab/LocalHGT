@@ -27,14 +27,14 @@ For example, to analyze HGT events between bacteria A, B, and C, we should colle
 To analyze HGTs in human gut microbome, we use gut-specific representative genomes collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
 The script `paper_results/build_UHGG_reference.py` can download the human gut-specific UHGG v1 database. The command is
 ```
-Construct the reference from human gut-specific UHGG V1 database.
+usage: python build_UHGG_reference.py -h
 
-required arguments:
-  -r        <str> Generated reference file. (default: None)
-  -b        <str> Folder saves all the downloaded assemblies. (default:
-              genomes/)
+Construct the reference from gut-specific UHGG V1 database.
 
 optional arguments:
+  -r        <str> Generated reference file. (default: uhgg_v1.rep.fasta)
+  -b        <str> Folder saves all the downloaded assemblies. (default:
+              genomes/)
   -m        <int> Try this number of times until all the genomes are
               downloaded. (default: 10)
   -h, --help
@@ -67,10 +67,12 @@ Note:
 ### Detect HGT breakpoints
 First, infer HGT breakpoints by running `python main.py` like
 ```
+usage: python main.py -h
+
 Detect HGT breakpoints from metagenomics sequencing data.
 
 required arguments:
-  -r             <str> Reference file which contains all the representative
+  -r             <str> reference file which contains all the representative
                    references of concerned bacteria. (default: None)
   --fq1          <str> unzipped fastq 1 file. (default: None)
   --fq2          <str> unzipped fastq 2 file. (default: None)
@@ -81,15 +83,22 @@ optional arguments:
   -k             <int> kmer length. (default: 32)
   -t             <int> number of threads. (default: 10)
   -e             <int> number of hash functions (1-9). (default: 3)
-  -d             <int> seed to initialize a pseudorandom number generator.
+  -a             <0/1> 1 indicates retain reads with XA tag. (default: 1)
+  -q             <int> minimum read mapping quality in BAM. (default: 20)
+  --seed         <int> seed to initialize a pseudorandom number generator.
                    (default: 1)
   --use_kmer     <1/0> 1 means using kmer to extract HGT-related segment, 0
                    means using original reference. (default: 1)
-  --hit_ratio    <float> Minimum fuzzy kmer match ratio to extract a
+  --hit_ratio    <float> minimum fuzzy kmer match ratio to extract a
                    reference fragment. (default: 0.1)
-  --match_ratio  <float> Minimum exact kmer match ratio to extract a
+  --match_ratio  <float> minimum exact kmer match ratio to extract a
                    reference fragment. (default: 0.08)
-  --max_peak     <int> Maximum candidate BKP count. (default: 300000000)
+  --max_peak     <int> maximum candidate BKP count. (default: 300000000)
+  --sample       <float> down-sample in kmer counting: (0-1) means sampling
+                   proportion, (>1) means sampling base count (bp). (default:
+                   2000000000)
+  --read_info    <0/1> 1 indicates including reads info, 0 indicates not
+                   (just for evaluation). (default: 1)
   -h, --help
 ```
 A command example:
@@ -106,17 +115,19 @@ Note:
 ### Detect complete HGT events
 Second, infer complete HGT events by matching breakpoints after detecting HGT breakpoints for all the samples.
 ```
-usage: infer_HGT_event.py -h
+usage: python infer_HGT_event.py -h
 
-Infer complete HGT events based on the identified HGT breakpoint pairs.
+Infer complete HGT events by matching breakpoint pairs.
 
 required arguments:
   -r        <str> Reference file. (default: None)
   -b        <str> Folder saves all the breakpoint results from all samples.
               (default: None)
-  -f        <str> Output file to save all inferred HGT events. (default: complete_HGT_event.csv)
+  -f        <str> Output file to save all inferred HGT events. (default:
+              complete_HGT_event.csv)
 
 optional arguments:
+  -n        <int> minimum supporting split read number (default: 2)
   -m        <int> minimum transfer sequence length (default: 500)
   -h, --help
 ```

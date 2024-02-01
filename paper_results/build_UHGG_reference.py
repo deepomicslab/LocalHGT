@@ -98,7 +98,7 @@ def merge(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Construct the reference from gut-specific UHGG V1 database.", add_help=False, \
-    usage="%(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    usage="python %(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # required = parser.add_argument_group("required arguments")
     optional = parser.add_argument_group("optional arguments")
     optional.add_argument("-r", type=str, default="uhgg_v1.rep.fasta", help="<str> Generated reference file.", metavar="\b")

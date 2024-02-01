@@ -1,19 +1,15 @@
+#!/usr/bin/env python3
+
 import re, os
 import csv
-from scipy import stats
-from scipy.stats import mannwhitneyu
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
-import pickle
 from pyfaidx import Fasta
 from sklearn.cluster import DBSCAN
 import random
 import argparse
 import sys
-import networkx as nx
  
-
 
 class Acc_Bkp(object):
 
@@ -369,7 +365,7 @@ if __name__ == "__main__":
     min_hgt_len = 500
 
     parser = argparse.ArgumentParser(description="Infer complete HGT events by matching breakpoint pairs.", add_help=False, \
-    usage="%(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    usage="python %(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required = parser.add_argument_group("required arguments")
     optional = parser.add_argument_group("optional arguments")
     required.add_argument("-r", type=str, help="<str> Reference file.", metavar="\b")

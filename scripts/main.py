@@ -94,7 +94,7 @@ def direct_alignment(options):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Detect HGT breakpoints from metagenomics sequencing data.", add_help=False, \
-    usage="%(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    usage="python %(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required = parser.add_argument_group("required arguments")
     optional = parser.add_argument_group("optional arguments")
     required.add_argument("-r", type=str, help="<str> reference file which contains all the representative references of concerned bacteria.", metavar="\b")
