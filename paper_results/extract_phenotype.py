@@ -367,7 +367,8 @@ def get_pheno_for_wenkui_CRC(wenkui_dir):
 if __name__ == "__main__":
 
     pheno_file = "/mnt/d/breakpoints/script/analysis/allmetadata.xlsx"
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
+    # hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
     
     pheno_result = "/mnt/d/HGT/association/phenotype.csv"
     tgs_dir = "/mnt/d/HGT/time_lines/SRP366030/"
