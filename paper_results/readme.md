@@ -16,7 +16,6 @@
 ### Real-data analyses
 | Files  | Description |
 | :------------- | :------------- |
-|build_UHGG_reference.py| Download and prepare the UHGG reference database| 
 | basic_statistics.py | Characterize HKP distribution among samples |
 | analyze_transfer_gene.py | Analyze the function of HGT-related genes and analyze the HGT transfer patterns  |
 | microhomology.py | Test the enrichment of microhomology in HGT breakpoint junctions |

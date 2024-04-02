@@ -33,7 +33,7 @@ See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_out
 | --- | --- |
 |scripts/infer_HGT_breakpoint.py|detect HGT breakpoints|
 |scripts/infer_HGT_event.py|detect complete HGT events|
-|paper_results/build_UHGG_reference.py| construct the UHGG reference|
+|scripts/build_UHGG_reference.py| construct the UHGG reference|
 |paper_results/*|scripts to produce the results in the paper|
 
 
@@ -42,7 +42,7 @@ Users can construct customized reference databases. The reference database (a si
 For example, to analyze HGT events between bacteria A, B, and C, we should collect the representative genomes of A, B, and C and merge them into a single fasta file.
 
 To analyze HGTs in the human gut microbiome, we use gut-specific representative genome collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
-The script `paper_results/build_UHGG_reference.py` can download the human gut-specific UHGG v1 database. The command is
+The script `scripts/build_UHGG_reference.py` can download the human gut-specific UHGG v1 database. The command is
 ```
 usage: python build_UHGG_reference.py -h
 
@@ -56,7 +56,7 @@ optional arguments:
               downloaded. (default: 10)
   -h, --help
 
-Example: python paper_results/build_UHGG_reference.py -r my_ref.fasta -b genomes_dir -m 4
+Example: python scripts/build_UHGG_reference.py -r my_ref.fasta -b genomes_dir -m 4
 ```
 
 Then index the database using `samtools`
@@ -163,15 +163,15 @@ GUT_GENOME096518_4,725079,head,+,GUT_GENOME000031_3,41992,tail,+,False,TACGCGGAG
 Interpret each column as:
 | Header  | Description |
 | :-------------:| :-------------: |
-| from_ref  | from reference ID  |
-| from_pos  | from reference breakpoint position  |
-| from_side  | from reference side  |
-| from_strand  | from reference strand  |
-| to_ref  | to reference ID  |
-| to_pos  | to reference breakpoint position  |
-| to_side  | to reference side  |
-| to_strand  | to reference strand  |
-| if_reverse  | if the transferred gene is reversely inserted to receptor  |
+| from_ref  | first genome ID  |
+| from_pos  | first genome breakpoint position  |
+| from_side  | first genome side  |
+| from_strand  | first genome strand  |
+| to_ref  | second genome ID  |
+| to_pos  | second genome breakpoint position  |
+| to_side  | second genome side  |
+| to_strand  | second genome strand  |
+| if_reverse  | if the transferred sequence is reversely inserted to recipient  |
 | read_seq  | used reads sequence in local alignment  |
 | ref_seq  | aligned reference sequence in local alignment  |
 | similarity  | alignment similarity in local alignment  |
@@ -196,12 +196,12 @@ Interpret each column as:
 | Header  | Description |
 | :-------------:| :-------------: |
 | sample  | Sample ID  |
-| receptor  | receptor genome  |
-| insert_locus  | the transfer sequence is inserted at this locus |
+| receptor  | recipient genome  |
+| insert_locus  | the transferred sequence is inserted at this locus of the recipient |
 | donor  | donor genome  |
-| delete_start  | the start site of the transfer sequence on the donor genome  |
-| delete_end  | the end site of the transfer sequence on the donor genome  |
-| reverse_flag  | if the transferred gene is reversely inserted to receptor  |
+| delete_start  | the start site of the transferred sequence on the donor genome  |
+| delete_end  | the end site of the transferred sequence on the donor genome  |
+| reverse_flag  | if the transferred sequence is reversely inserted to recipient  |
 
 
 ## Dependencies
@@ -209,7 +209,7 @@ We recommend constructing the environment using `conda` with the `environment.ym
 Users can also prepare the env as follows: 
 ```
 Python 3.7+
-Python Module: scipy, numpy, pandas, sklearn, pysam, scikit-bio, biopython, pyfaidx
+Python Module: scipy, numpy, pandas, sklearn, pysam, scikit-bio, biopython, pyfaidx, networkx
 ```
 Please install these tools and add them to the system path, the version 
 should be

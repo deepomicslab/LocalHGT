@@ -390,8 +390,13 @@ if __name__ == "__main__":
 
         tim = Match()
         tim.read_samples()
-        print ("load is done.")
+        print ("data load is done.")
         sample_list = list(tim.cohort_data.keys())
+
+        if len(sample_list) == 0:
+            print ("Error: there is no HGT breakpoint file in the given folder")
+            sys.exit(1)
+            
         sample_index = 1
         for sample in sample_list:
             print ("%s, process %s."%(sample_index, sample))

@@ -3,6 +3,8 @@
 import os
 import sys
 import argparse
+import subprocess
+from shutil import which
 
 class Accept_Parameters:
 
@@ -103,6 +105,27 @@ def refine_fastq(options):
     
     return fastq_1, fastq_2
 
+def is_tool(name):
+    """Check whether `name` is on PATH and marked as executable."""
+    return which(name) is not None
+
+def check_input(options):
+    if options.r[-3:] == ".gz":
+        print ("Error: reference file should be uncompressed.")
+        sys.exit(1)
+
+    if not is_tool("samtools"):
+        print ("Error: samtools is not installed.")
+        sys.exit(1)
+
+    if not is_tool("bwa"):
+        print ("Error: bwa is not installed.")
+        sys.exit(1)
+
+    if not is_tool("fastp"):
+        print ("Error: fastp is not installed.")
+        sys.exit(1)
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Detect HGT breakpoints from metagenomics sequencing data.", add_help=False, \
@@ -136,6 +159,7 @@ if __name__ == "__main__":
         # print (f"see python {sys.argv[0]} -h")
         os.system(f"python {sys.argv[0]} -h")
     else:
+        check_input(options)
         fastq_1, fastq_2 = refine_fastq(options)
         if options.use_kmer == 1: # default
             acc_pa = Accept_Parameters(options)

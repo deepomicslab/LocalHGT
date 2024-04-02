@@ -16,6 +16,7 @@ import os
 import argparse
 import sys
 import shutil
+from shutil import which
 
 
 def check_software_availability(software_name):
