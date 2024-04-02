@@ -60,11 +60,7 @@ optional arguments:
 Example: build_UHGG_reference.py -r my_ref.fasta -b genomes_dir -m 4
 ```
 
-Then index the database using `samtools`
-```
-samtools faidx ref_database.fasta
-```
-Also, at the first run, `LocalHGT` will index the database automatically, which will take several hours. 
+At the first run, `LocalHGT` will index the database automatically, which will take several hours. 
 
 Note:
 - reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.

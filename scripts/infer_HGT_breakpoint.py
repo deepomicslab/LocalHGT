@@ -126,6 +126,10 @@ def check_input(options):
         print ("Error: fastp is not installed.")
         sys.exit(1)
 
+    if not os.path.isfile(options.r + ".fai"):
+        print ("construct samtools index for the refernece...")
+        os.system(f"samtools faidx {options.r}")
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Detect HGT breakpoints from metagenomics sequencing data.", add_help=False, \
