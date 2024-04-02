@@ -112,14 +112,15 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
 
 
-    # if len(sys.argv)==1:
-    #     print (f"see python {sys.argv[0]} -h")
-    # else:
-    print ("start building UHGG database...")
-    print ("result will be stored in %s"%(args['r']))
-    check_software_availability("wget")
-    check_software_availability("samtools")
-    check_software_availability("seqkit")
+    if len(sys.argv)==1:
+        # print (f"see python {sys.argv[0]} -h")
+        os.system(f"python {sys.argv[0]} -h")
+    else:
+        print ("start building UHGG database...")
+        print ("result will be stored in %s"%(args['r']))
+        check_software_availability("wget")
+        check_software_availability("samtools")
+        check_software_availability("seqkit")
 
-    iterate(args)
-    merge(args)
+        iterate(args)
+        merge(args)

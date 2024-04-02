@@ -16,3 +16,7 @@ test/output
 test/ref.fa.*
 test/fastp.*
 paper_results/nohup.out
+.vscode/
+dist/
+build/
+localhgt.egg-info/

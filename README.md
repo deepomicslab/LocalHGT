@@ -7,11 +7,12 @@ cd LocalHGT/
 conda env create --name localhgt -f environment.yml
 conda activate localhgt
 make
+python setup.py install
 ```
 Perform LocalHGT with
 ```
-python scripts/infer_HGT_breakpoint.py -h  # detect HGT breakpoints
-python scripts/infer_HGT_event.py -h # detect complete HGT events
+infer_HGT_breakpoint.py -h  # detect HGT breakpoints
+infer_HGT_event.py -h # detect complete HGT events
 ```
 Note:
 - LocalHGT only accept paired-end reads (e.g., Illumina data).
@@ -42,9 +43,9 @@ Users can construct customized reference databases. The reference database (a si
 For example, to analyze HGT events between bacteria A, B, and C, we should collect the representative genomes of A, B, and C and merge them into a single fasta file.
 
 To analyze HGTs in the human gut microbiome, we use gut-specific representative genome collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
-The script `scripts/build_UHGG_reference.py` can download the human gut-specific UHGG v1 database. The command is
+The script `build_UHGG_reference.py` can download the human gut-specific UHGG v1 database. The command is
 ```
-usage: python build_UHGG_reference.py -h
+usage: build_UHGG_reference.py -h
 
 Construct the reference from the gut-specific UHGG V1 database.
 
@@ -56,7 +57,7 @@ optional arguments:
               downloaded. (default: 10)
   -h, --help
 
-Example: python scripts/build_UHGG_reference.py -r my_ref.fasta -b genomes_dir -m 4
+Example: build_UHGG_reference.py -r my_ref.fasta -b genomes_dir -m 4
 ```
 
 Then index the database using `samtools`
@@ -70,9 +71,9 @@ Note:
 - the reference file should be uncompressed.
 
 ### Detect HGT breakpoints
-First, infer HGT breakpoints by running `python scripts/infer_HGT_breakpoint.py` like
+First, infer HGT breakpoints by running `infer_HGT_breakpoint.py` like
 ```
-usage: python infer_HGT_breakpoint.py -h
+usage: infer_HGT_breakpoint.py -h
 
 Detect HGT breakpoints from metagenomics sequencing data.
 
@@ -110,7 +111,7 @@ optional arguments:
 ```
 A command example:
 ```
-python scripts/infer_HGT_breakpoint.py -r reference.fa --fq1 species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
+infer_HGT_breakpoint.py -r reference.fa --fq1 species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
 ```
 The detected HGT breakpoints are stored in the `<sample name>.acc.csv` file within the output folder.
 
@@ -205,17 +206,23 @@ Interpret each column as:
 
 
 ## Dependencies
-We recommend constructing the environment using `conda` with the `environment.yml`.
-Users can also prepare the env as follows: 
+### Python modules:
 ```
-Python 3.7+
-Python Module: scipy, numpy, pandas, sklearn, pysam, scikit-bio, biopython, pyfaidx, networkx
+python=3.7.12
+scikit-bio=0.5.6
+scikit-learn=1.0.2
+scipy=1.7.3
+biopython=1.79
+networkx=2.6.3
+numpy=1.21.5
+pandas=1.2.3
+pysam=0.17.0
+pyfaidx=0.7.1
 ```
-Please install these tools and add them to the system path, the version 
-should be
+### Third-party software
 ```
-samtools==1.11+
-bwa-0.7.17+
+samtools==1.11
+bwa=0.7.17
 fastp=0.23.2
 seqkit=2.6.1
 ```
