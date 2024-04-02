@@ -69,17 +69,6 @@ Note:
 - reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.
 - the reference file should be uncompressed.
 
-
-### Refine sequencing reads
-It is highly advised to refine the sequencing reads using tools like [fastp](https://github.com/OpenGene/fastp) before calling HGT.
-We include `fastp` in the conda environment; please refine the reads like
-```
-fastp -i raw_1.fq -I raw_2.fq -o refine_1.fq -O refine_2.fq
-```
-
-Note:
-- The fastq files should be uncompressed.
-
 ### Detect HGT breakpoints
 First, infer HGT breakpoints by running `python scripts/infer_HGT_breakpoint.py` like
 ```
@@ -113,6 +102,8 @@ optional arguments:
   --sample       <float> down-sample in kmer counting: (0-1) means sampling
                    proportion, (>1) means sampling base count (bp). (default:
                    2000000000)
+  --refine_fq    <0/1> 1 indicates refine the input fastq file using fastp
+                   (recommended). (default: 0)
   --read_info    <0/1> 1 indicates including reads info, 0 indicates not
                    (just for evaluation). (default: 1)
   -h, --help
@@ -124,6 +115,7 @@ python scripts/infer_HGT_breakpoint.py -r reference.fa --fq1 species20_snp0.01_d
 The detected HGT breakpoints are stored in the `<sample name>.acc.csv` file within the output folder.
 
 Note:
+- The fastq files should be uncompressed.
 - With a small reference, we can skip extracting HGT-related segments by setting `--use_kmer 0`.
 - With a small reference, while maintaining the extraction of HGT-related segments, we can set a small value of `-k` to reduce memory usage. 
 

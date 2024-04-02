@@ -21,7 +21,7 @@ class Accept_Parameters:
         self.threads = options.t
 
     def get_order(self):
-        self.run_order = f"bash {self.shell_script} {self.reference} {self.fq1} {self.fq2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak} {options.e} {options.seed} {options.sample} {options.read_info} {options.a} {options.q}\n"
+        self.run_order = f"bash {self.shell_script} {self.reference} {fastq_1} {fastq_2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak} {options.e} {options.seed} {options.sample} {options.read_info} {options.a} {options.q}\n"
         print ("Running command:")
         print (self.run_order)
 
@@ -88,8 +88,20 @@ def direct_alignment(options):
         echo "Final result is in $sample.acc.csv"
         echo "--------------------------"
         echo "Finished!"
-    """%(options.r, options.fq1, options.fq2, options.s, options.o, options.t, sys.path[0], options.read_info, options.q, options.a)
+    """%(options.r, fastq_1, fastq_2, options.s, options.o, options.t, sys.path[0], options.read_info, options.q, options.a)
     os.system(command)
+
+def refine_fastq(options):
+    fastq_1 = options.o + "/" + options.s + "_refined_1.fq"
+    fastq_2 = options.o + "/" + options.s + "_refined_2.fq"
+    if options.refine_fq == 1:
+        print ("refine input fastq files...")
+        os.system(f'fastp -i {options.fq1} -I {options.fq2} -o {fastq_1} -O {fastq_2}')
+    else:
+        fastq_1 = options.fq1
+        fastq_2 = options.fq2
+    
+    return fastq_1, fastq_2
 
 if __name__ == "__main__":
 
@@ -114,6 +126,7 @@ if __name__ == "__main__":
     optional.add_argument("--match_ratio", type=float, default=0.08, help="<float> minimum exact kmer match ratio to extract a reference fragment.", metavar="\b")
     optional.add_argument("--max_peak", type=int, default=300000000, help="<int> maximum candidate BKP count.", metavar="\b")
     optional.add_argument("--sample", type=float, default=2000000000, help="<float> down-sample in kmer counting: (0-1) means sampling proportion, (>1) means sampling base count (bp).", metavar="\b")
+    optional.add_argument("--refine_fq", type=int, default=0, help="<0/1> 1 indicates refine the input fastq file using fastp (recommended).", metavar="\b")
     optional.add_argument("--read_info", type=int, default=1, help="<0/1> 1 indicates including reads info, 0 indicates not (just for evaluation).", metavar="\b")
     optional.add_argument("-h", "--help", action="help")
 
@@ -123,6 +136,7 @@ if __name__ == "__main__":
         # print (f"see python {sys.argv[0]} -h")
         os.system(f"python {sys.argv[0]} -h")
     else:
+        fastq_1, fastq_2 = refine_fastq(options)
         if options.use_kmer == 1: # default
             acc_pa = Accept_Parameters(options)
             acc_pa.get_order()
