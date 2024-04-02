@@ -7,10 +7,15 @@ cd LocalHGT/
 conda env create --name localhgt -f environment.yml
 conda activate localhgt
 make
-
+```
+Perform LocalHGT with
+```
 python scripts/infer_HGT_breakpoint.py -h  # detect HGT breakpoints
 python scripts/infer_HGT_event.py -h # detect complete HGT events
 ```
+Note:
+- LocalHGT only accept paired-end reads (e.g., Illumina data).
+- LocalHGT now supports Linux and Windows WSL systems.
 
 ## Test
 ```
@@ -27,7 +32,7 @@ See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_out
 | Scripts | Description |
 | --- | --- |
 |scripts/infer_HGT_breakpoint.py|detect HGT breakpoints|
-|scripts/infer_HGT_event.py|detect HGT events|
+|scripts/infer_HGT_event.py|detect complete HGT events|
 |paper_results/build_UHGG_reference.py| construct the UHGG reference|
 |paper_results/*|scripts to produce the results in the paper|
 
@@ -62,17 +67,18 @@ Also, at the first run, `LocalHGT` will index the database automatically, which 
 
 Note:
 - reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.
+- the reference file should be uncompressed.
 
 
 ### Refine sequencing reads
 It is highly advised to refine the sequencing reads using tools like [fastp](https://github.com/OpenGene/fastp) before calling HGT.
-We include `fastp` in the conda environment, and refine the reads like
+We include `fastp` in the conda environment; please refine the reads like
 ```
 fastp -i raw_1.fq -I raw_2.fq -o refine_1.fq -O refine_2.fq
 ```
 
 Note:
-- Currently, LocalHGT only supports paired-end short-read sequencing data (e.g., Illumina data).
+- The fastq files should be uncompressed.
 
 ### Detect HGT breakpoints
 First, infer HGT breakpoints by running `python scripts/infer_HGT_breakpoint.py` like
@@ -82,10 +88,10 @@ usage: python infer_HGT_breakpoint.py -h
 Detect HGT breakpoints from metagenomics sequencing data.
 
 required arguments:
-  -r             <str> reference file which contains all the representative
+  -r             <str> Uncompressed reference file, which contains all the representative
                    references of concerned bacteria. (default: None)
-  --fq1          <str> unzipped fastq 1 file. (default: None)
-  --fq2          <str> unzipped fastq 2 file. (default: None)
+  --fq1          <str> Uncompressed fastq 1 file. (default: None)
+  --fq2          <str> Uncompressed fastq 2 file. (default: None)
   -s             <str> Sample name. (default: sample)
   -o             <str> Output folder. (default: ./)
 
@@ -206,18 +212,20 @@ Interpret each column as:
 | reverse_flag  | if the transferred gene is reversely inserted to receptor  |
 
 
-## Dependency
+## Dependencies
 We recommend constructing the environment using `conda` with the `environment.yml`.
 Users can also prepare the env as follows: 
 ```
 Python 3.7+
 Python Module: scipy, numpy, pandas, sklearn, pysam, scikit-bio, biopython, pyfaidx
 ```
-Please install `samtools` and `bwa`, and add them to the system path, the version 
+Please install these tools and add them to the system path, the version 
 should be
 ```
 samtools==1.11+
 bwa-0.7.17+
+fastp=0.23.2
+seqkit=2.6.1
 ```
 
 ## Getting help

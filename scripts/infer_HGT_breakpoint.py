@@ -97,9 +97,9 @@ if __name__ == "__main__":
     usage="python %(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required = parser.add_argument_group("required arguments")
     optional = parser.add_argument_group("optional arguments")
-    required.add_argument("-r", type=str, help="<str> reference file which contains all the representative references of concerned bacteria.", metavar="\b")
-    required.add_argument("--fq1", type=str, help="<str> unzipped fastq 1 file.", metavar="\b")
-    required.add_argument("--fq2", type=str, help="<str> unzipped fastq 2 file.", metavar="\b")
+    required.add_argument("-r", type=str, help="<str> Uncompressed reference file, which contains all the representative references of concerned bacteria.", metavar="\b")
+    required.add_argument("--fq1", type=str, help="<str> Uncompressed fastq 1 file.", metavar="\b")
+    required.add_argument("--fq2", type=str, help="<str> Uncompressed fastq 2 file.", metavar="\b")
     required.add_argument("-s", type=str, default="sample", help="<str> Sample name.", metavar="\b")
     required.add_argument("-o", type=str, default="./", help="<str> Output folder.", metavar="\b")
 
