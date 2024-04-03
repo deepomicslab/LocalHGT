@@ -8,11 +8,13 @@ from shutil import which
 
 class Accept_Parameters:
 
-    def __init__(self, options):
+    def __init__(self, options, fastq_1, fastq_2):
 
         self.reference = options.r
         self.fq1 = options.fq1
         self.fq2 = options.fq2
+        self.fastq_1 = fastq_1
+        self.fastq_2 = fastq_2
         self.sample_ID = options.s
         self.outdir = options.o
         self.shell_script = os.path.dirname(sys.argv[0]) + "/pipeline.sh"
@@ -24,16 +26,14 @@ class Accept_Parameters:
         self.options = options
 
     def get_order(self):
-        fastq_1 = self.options.o + "/" + self.options.s + "_refined_1.fq"
-        fastq_2 = self.options.o + "/" + self.options.s + "_refined_2.fq"
-        self.run_order = f"bash {self.shell_script} {self.reference} {fastq_1} {fastq_2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {self.options.max_peak} {self.options.e} {self.options.seed} {self.options.sample} {self.options.read_info} {self.options.a} {self.options.q}\n"
+        self.run_order = f"bash {self.shell_script} {self.reference} {self.fastq_1} {self.fastq_2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {self.options.max_peak} {self.options.e} {self.options.seed} {self.options.sample} {self.options.read_info} {self.options.a} {self.options.q}\n"
         print ("Running command:")
         print (self.run_order)
 
     def run(self):
         os.system(self.run_order)
 
-def direct_alignment(options):
+def direct_alignment(options, fastq_1, fastq_2):
     command = """
         ref=%s
         fq1=%s
@@ -138,11 +138,11 @@ def detect_breakpoint(options):
     check_input(options)
     fastq_1, fastq_2 = refine_fastq(options)
     if options.use_kmer == 1: # default
-        acc_pa = Accept_Parameters(options)
+        acc_pa = Accept_Parameters(options, fastq_1, fastq_2)
         acc_pa.get_order()
         acc_pa.run()
     elif options.use_kmer == 0:
-        direct_alignment(options)
+        direct_alignment(options, fastq_1, fastq_2)
     else:
         print ("## wrong value for the parameter --use_kmer. ")
 
