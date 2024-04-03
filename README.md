@@ -50,7 +50,7 @@ https://github.com/deepomicslab/LocalHGT
 
 ### Construct reference 
 LocalHGT require a reference, which contains the representative genomes of your interested bacteria. The reference should be a single `fasta` file.
-We have prepared [UHGG](https://www.nature.com/articles/s41587-020-0603-3) v1 and UHGG v2 references, which can be obtained at [Zenodo](xx).
+We have prepared the [UHGG v1](https://doi.org/10.5281/zenodo.10908234) reference on Zenodo.
 UHGG v1 can also be obtained by running `python paper_results/build_UHGG_reference.py`. UHGG is used to analyze human gut microbiome. Moreover, users can construct your customized reference. 
 
 At the first run, `LocalHGT` will index the reference automatically (e.g., it will take several hours for UHGG v1). 
