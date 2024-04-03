@@ -125,13 +125,19 @@ def check_input(options):
         print ("Error: bwa is not installed.")
         sys.exit(1)
 
-    if not is_tool("fastp"):
-        print ("Error: fastp is not installed.")
-        sys.exit(1)
+    if options.refine_fq == 1:
+        if not is_tool("fastp"):
+            print ("Error: fastp is not installed.")
+            sys.exit(1)
 
     if not os.path.isfile(options.r + ".fai"):
         print ("construct samtools index for the refernece...")
         os.system(f"samtools faidx {options.r}")
+
+    if options.fq1[-3:] == ".gz" or options.fq2[-3:] == ".gz":
+        if options.refine_fq == 0:
+            print ("Error: input fastq file should be uncompressed.")
+            sys.exit(1)
 
 def detect_breakpoint(options):
     

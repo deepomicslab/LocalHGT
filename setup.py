@@ -36,5 +36,5 @@ setup(
     ],
     },
 
-    scripts=['scripts/build_UHGG_reference.py', 'scripts/infer_HGT_breakpoint.py','scripts/infer_HGT_event.py', 'scripts/localhgt.py', 'scripts/accurate_bkp.py', 'scripts/extractSplitReads_BwaMem.py', 'scripts/get_bed_file.py', 'scripts/get_raw_bkp.py', 'scripts/pipeline.sh', 'scripts/remove_repeat.py']
+    scripts=['scripts/infer_HGT_breakpoint.py','scripts/infer_HGT_event.py', 'scripts/localhgt.py', 'scripts/accurate_bkp.py', 'scripts/extractSplitReads_BwaMem.py', 'scripts/get_bed_file.py', 'scripts/get_raw_bkp.py', 'scripts/pipeline.sh', 'scripts/remove_repeat.py']
 )

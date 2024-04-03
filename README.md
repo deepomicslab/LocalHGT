@@ -11,8 +11,7 @@ python setup.py install
 ```
 Perform LocalHGT with
 ```
-infer_HGT_breakpoint.py -h  # detect HGT breakpoints
-infer_HGT_event.py -h # detect complete HGT events
+localhgt --help
 ```
 Note:
 - LocalHGT only accept paired-end reads (e.g., Illumina data).
@@ -21,21 +20,32 @@ Note:
 ## Test
 ```
 cd test/
-sh run_BKP_detection.sh # detect HGT breakpoints
-sh run_event_detection.sh # detect complete HGT events
+sh run_BKP_detection.sh # test HGT breakpoint detection
+sh run_event_detection.sh # test HGT event detection
 ```
 See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_output.csv` for event results.
 
 
 ## Basic Usage 
 ### Main functions
+```
+usage: localhgt [-h] {bkp,event} ...
 
-| Scripts | Description |
-| --- | --- |
-|scripts/infer_HGT_breakpoint.py|detect HGT breakpoints|
-|scripts/infer_HGT_event.py|detect complete HGT events|
-|scripts/build_UHGG_reference.py| construct the UHGG reference|
-|paper_results/*|scripts to produce the results in the paper|
+LocalHGT: an ultrafast HGT detection method from large microbial communities
+
+optional arguments:
+  -h, --help   show this help message and exit
+
+Command:
+  {bkp,event}
+    bkp        Detect HGT breakpoints from metagenomic sequencing data.
+    event      Infer complete HGT events based on detected HGT breakpoints.
+
+Note: To use LocalHGT, first detect HGT breakpoints with 'localhgt bkp'. After
+that, detect HGT events based on the detected HGT breakpoints with 'localhgt
+event'. Detailed documentation can be found at
+https://github.com/deepomicslab/LocalHGT
+```
 
 
 ### Construct reference database
@@ -43,7 +53,7 @@ Users can construct customized reference databases. The reference database (a si
 For example, to analyze HGT events between bacteria A, B, and C, we should collect the representative genomes of A, B, and C and merge them into a single fasta file.
 
 To analyze HGTs in the human gut microbiome, we use gut-specific representative genome collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
-The script `build_UHGG_reference.py` can download the human gut-specific UHGG v1 database. The command is
+The script `paper_results/build_UHGG_reference.py` can download the human gut-specific UHGG v1 database. The command is
 ```
 usage: build_UHGG_reference.py -h
 
@@ -67,15 +77,20 @@ Note:
 - the reference file should be uncompressed.
 
 ### Detect HGT breakpoints
-First, infer HGT breakpoints by running `infer_HGT_breakpoint.py` like
+First, infer HGT breakpoints by running `localhgt bkp` like
 ```
-usage: infer_HGT_breakpoint.py -h
+usage: localhgt bkp [-r] [--fq1] [--fq2] [-s] [-o] [-k] [-t]
+                    [-e] [-a] [-q] [--seed] [--use_kmer]
+                    [--hit_ratio] [--match_ratio] [--max_peak]
+                    [--sample] [--refine_fq] [--read_info] [-h]
 
-Detect HGT breakpoints from metagenomics sequencing data.
+Detect HGT breakpoints from metagenomic sequencing data. Example: localhgt bkp
+-r reference.fa --fq1 test.1.fq --fq2 test.2.fq -s test -o outdir
 
 required arguments:
-  -r             <str> Uncompressed reference file, which contains all the representative
-                   references of concerned bacteria. (default: None)
+  -r             <str> Uncompressed reference file, which contains all the
+                   representative references of concerned bacteria. (default:
+                   None)
   --fq1          <str> Uncompressed fastq 1 file. (default: None)
   --fq2          <str> Uncompressed fastq 2 file. (default: None)
   -s             <str> Sample name. (default: sample)
@@ -105,10 +120,6 @@ optional arguments:
                    (just for evaluation). (default: 1)
   -h, --help
 ```
-A command example:
-```
-infer_HGT_breakpoint.py -r reference.fa --fq1 species20_snp0.01_depth50_reads100_sample_0.1.fq --fq2 species20_snp0.01_depth50_reads100_sample_0.2.fq -s species20_snp0.01_depth50_reads100_sample_0  -o test
-```
 The detected HGT breakpoints are stored in the `<sample name>.acc.csv` file within the output folder.
 
 Note:
@@ -118,16 +129,19 @@ Note:
 
 
 ### Detect complete HGT events
-Second, infer complete HGT events by matching breakpoints after detecting HGT breakpoints for all the samples.
+Second, infer complete HGT events by running `localhgt event` like
 ```
-usage: python infer_HGT_event.py -h
+usage: localhgt event [-r] [-b] [-f] [-n] [-m] [-h]
 
-Infer complete HGT events by matching breakpoint pairs.
+Infer complete HGT events based on detected HGT breakpoints. Example: localhgt
+event -r reference.fa -b outdir -f test_event.csv
 
 required arguments:
-  -r        <str> Reference file. (default: None)
-  -b        <str> Folder saves all the breakpoint results from all samples.
-              (default: None)
+  -r        <str> <str> Uncompressed reference file, which contains all the
+              representative references of concerned bacteria. (default: None)
+  -b        <str> the folder stores all the breakpoint results from all
+              samples, i.e., a folder stores all the *acc.csv files generated
+              by 'localhgt bkp' (default: None)
   -f        <str> Output file to save all inferred HGT events. (default:
               complete_HGT_event.csv)
 
@@ -138,11 +152,6 @@ optional arguments:
 ```
 
 A command example:
-```
-python scripts/infer_HGT_event.py -r ref.fa -b output -f test_event_output.csv
-```
-The `output` folder contain the HGT breakpoint results generated by `infer_HGT_breakpoint.py`.
-
 
 Note:
 - It is recommended to detect HGT breakpoints for each sample and store the results in a common output folder. Subsequently, when detecting complete HGT events, specify the output folder using the `-b` parameter. This approach allows LocalHGT to consider all the samples collectively, resulting in more reliable results for complete HGT events.
@@ -222,6 +231,10 @@ bwa=0.7.17
 fastp=0.23.2
 seqkit=2.6.1
 ```
+The above tools should be installed in the system path.
+
+### Paper results generation
+The scripts to produce the results in the paper can be found in `paper_results/*`.
 
 ## Getting help
 Should you have any queries, please feel free to contact us, we will reply as soon as possible (swang66-c@my.cityu.edu.hk).
