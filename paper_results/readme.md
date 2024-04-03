@@ -7,7 +7,7 @@
 | ../simulation.py| simulate benchmark data to evaluate LocalHGT|
 |../generate_run_scripts.py| generate batch running scripts for LocalHGT in evaluation|
 |../evaluation.py| evaluate LocalHGT's accuracy in benchmark data|
-|../count_table_empty_with_k.py| evaluate hash collision after kmer counting in the complex sample|
+|count_table_empty_with_k.py| evaluate hash collision after kmer counting in the complex sample|
 |validate_bkp_match.py|Validate the identified HGT events using matched long-read data|
 | batch_validate_match.py | Perform the event validation in a batch manner |
 

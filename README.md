@@ -48,29 +48,12 @@ https://github.com/deepomicslab/LocalHGT
 ```
 
 
-### Construct reference database
-Users can construct customized reference databases. The reference database (a single `fasta` file) should contain all the representative genomes of your concerning bacteria. 
-For example, to analyze HGT events between bacteria A, B, and C, we should collect the representative genomes of A, B, and C and merge them into a single fasta file.
+### Construct reference 
+LocalHGT require a reference, which contains the representative genomes of your interested bacteria. The reference should be a single `fasta` file.
+We have prepared [UHGG](https://www.nature.com/articles/s41587-020-0603-3) v1 and UHGG v2 references, which can be obtained at [Zenodo](xx).
+UHGG v1 can also be obtained by running `python paper_results/build_UHGG_reference.py`. UHGG is used to analyze human gut microbiome. Moreover, users can construct your customized reference. 
 
-To analyze HGTs in the human gut microbiome, we use gut-specific representative genome collection of the [UHGG](https://www.nature.com/articles/s41587-020-0603-3) database. 
-The script `paper_results/build_UHGG_reference.py` can download the human gut-specific UHGG v1 database. The command is
-```
-usage: build_UHGG_reference.py -h
-
-Construct the reference from the gut-specific UHGG V1 database.
-
-optional arguments:
-  -r        <str> Generated reference file. (default: uhgg_v1.rep.fasta)
-  -b        <str> Folder saves all the downloaded assemblies. (default:
-              genomes/)
-  -m        <int> Try this number of times until all the genomes are
-              downloaded. (default: 10)
-  -h, --help
-
-Example: build_UHGG_reference.py -r my_ref.fasta -b genomes_dir -m 4
-```
-
-At the first run, `LocalHGT` will index the database automatically, which will take several hours. 
+At the first run, `LocalHGT` will index the reference automatically (e.g., it will take several hours for UHGG v1). 
 
 Note:
 - reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.
@@ -150,8 +133,6 @@ optional arguments:
   -m        <int> minimum transfer sequence length (default: 500)
   -h, --help
 ```
-
-A command example:
 
 Note:
 - It is recommended to detect HGT breakpoints for each sample and store the results in a common output folder. Subsequently, when detecting complete HGT events, specify the output folder using the `-b` parameter. This approach allows LocalHGT to consider all the samples collectively, resulting in more reliable results for complete HGT events.
@@ -234,7 +215,7 @@ seqkit=2.6.1
 The above tools should be installed in the system path.
 
 ### Paper results generation
-The scripts to produce the results in the paper can be found in `paper_results/*`.
+The scripts to produce the results in the paper can be found in `paper_results/*`. HGT breakpoints and events detected by LocalHGT from all real samples can be seen at [Detected HGTs in real data](https://doi.org/10.5281/zenodo.10906354).
 
 ## Getting help
 Should you have any queries, please feel free to contact us, we will reply as soon as possible (swang66-c@my.cityu.edu.hk).
