@@ -21,9 +21,12 @@ class Accept_Parameters:
         self.run_order = ''
         self.k = options.k
         self.threads = options.t
+        self.options = options
 
     def get_order(self):
-        self.run_order = f"bash {self.shell_script} {self.reference} {fastq_1} {fastq_2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {options.max_peak} {options.e} {options.seed} {options.sample} {options.read_info} {options.a} {options.q}\n"
+        fastq_1 = self.options.o + "/" + self.options.s + "_refined_1.fq"
+        fastq_2 = self.options.o + "/" + self.options.s + "_refined_2.fq"
+        self.run_order = f"bash {self.shell_script} {self.reference} {fastq_1} {fastq_2} {self.sample_ID} {self.outdir} {self.hit_ratio} {self.match_ratio} {self.threads} {self.k} {self.options.max_peak} {self.options.e} {self.options.seed} {self.options.sample} {self.options.read_info} {self.options.a} {self.options.q}\n"
         print ("Running command:")
         print (self.run_order)
 
@@ -130,6 +133,20 @@ def check_input(options):
         print ("construct samtools index for the refernece...")
         os.system(f"samtools faidx {options.r}")
 
+def detect_breakpoint(options):
+    
+    check_input(options)
+    fastq_1, fastq_2 = refine_fastq(options)
+    if options.use_kmer == 1: # default
+        acc_pa = Accept_Parameters(options)
+        acc_pa.get_order()
+        acc_pa.run()
+    elif options.use_kmer == 0:
+        direct_alignment(options)
+    else:
+        print ("## wrong value for the parameter --use_kmer. ")
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Detect HGT breakpoints from metagenomics sequencing data.", add_help=False, \
@@ -163,13 +180,14 @@ if __name__ == "__main__":
         # print (f"see python {sys.argv[0]} -h")
         os.system(f"python {sys.argv[0]} -h")
     else:
-        check_input(options)
-        fastq_1, fastq_2 = refine_fastq(options)
-        if options.use_kmer == 1: # default
-            acc_pa = Accept_Parameters(options)
-            acc_pa.get_order()
-            acc_pa.run()
-        elif options.use_kmer == 0:
-            direct_alignment(options)
-        else:
-            print ("## wrong value for the parameter --use_kmer. ")
+        detect_breakpoint(options)
+        # check_input(options)
+        # fastq_1, fastq_2 = refine_fastq(options)
+        # if options.use_kmer == 1: # default
+        #     acc_pa = Accept_Parameters(options)
+        #     acc_pa.get_order()
+        #     acc_pa.run()
+        # elif options.use_kmer == 0:
+        #     direct_alignment(options)
+        # else:
+        #     print ("## wrong value for the parameter --use_kmer. ")
