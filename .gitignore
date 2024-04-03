@@ -20,3 +20,4 @@ paper_results/nohup.out
 dist/
 build/
 localhgt.egg-info/
+upload2anaconda/construction/LocalHGT
