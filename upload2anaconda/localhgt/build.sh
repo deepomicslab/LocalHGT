@@ -1,3 +1,5 @@
+#!/bin/sh
+
 make
 mkdir -p $PREFIX/bin
 cp $SRC_DIR/*py $PREFIX/bin
