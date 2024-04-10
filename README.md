@@ -3,34 +3,34 @@
 ## Install
 There are three methods to install LocalHGT:
 
-### Conda install
+### 1. conda install
 First, install it by conda
 ```
 conda install localhgt
 ```
-It is recommanded to create a new conda environment and then install LocalHGT
+Notably, it is recommanded to create a new conda environment and then install LocalHGT
 ```
 conda create --name localhgt --channel wshuai294 localhgt
 conda activate localhgt
 ```
 
-### Source code install with Conda environment
+### 2. source code install with Conda environment
 Second, obtain the source code from github, construct the env with conda, and then compile and install
 ```
 git clone https://github.com/deepomicslab/LocalHGT.git --depth 1
 cd LocalHGT/
-conda env create --name localhgt -f environment.yml
+conda env create --name localhgt -f brief_env.yml
 conda activate localhgt
-make
-python setup.py install
+sh install.sh
 ```
 
-### Source code install
+### 3. source code install with self-build environment
 Third, obtain the source code from github, install the dependencies by yourself (which are listed at the bottom in `Dependencies` section), and then compile and install
 ```
 make
 python setup.py install
 ```
+Ensure your platform has `c++ compiler` (g++/clang++) and `make`.
 
 ### Run
 After installation, perform LocalHGT with
@@ -42,7 +42,11 @@ localhgt event --help
 Note:
 - LocalHGT only accept paired-end reads (e.g., Illumina data).
 - LocalHGT now supports Linux and Windows WSL systems.
-- Ensure the platform has `c++ compiler` (e.g., g++) and `make`.
+- If you meet the issue: `No module named _sysconfigdata_x86_64_conda_cos7_linux_gnu`, just run 
+```
+cp ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos6_linux_gnu.py ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos7_linux_gnu.py
+```
+which is referred to the [solution](https://stackoverflow.com/questions/68261254/conda-error-sysconfigdata-x86-64-conda-linux-gnu).
 
 ## Test
 ```
