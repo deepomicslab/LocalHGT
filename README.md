@@ -1,6 +1,21 @@
 # LocalHGT: an ultrafast horizontal gene transfer detection method from large microbial communities
 
 ## Install
+There are three methods to install LocalHGT:
+
+### Conda install
+First, install it by conda
+```
+conda install localhgt
+```
+It is recommanded to create a new conda environment and then install LocalHGT
+```
+conda create --name localhgt --channel wshuai294 localhgt
+conda activate localhgt
+```
+
+### Source code install with Conda environment
+Second, obtain the source code from github, construct the env with conda, and then compile and install
 ```
 git clone https://github.com/deepomicslab/LocalHGT.git --depth 1
 cd LocalHGT/
@@ -9,13 +24,25 @@ conda activate localhgt
 make
 python setup.py install
 ```
-Perform LocalHGT with
+
+### Source code install
+Third, obtain the source code from github, install the dependencies by yourself (which are listed at the bottom in `Dependencies` section), and then compile and install
+```
+make
+python setup.py install
+```
+
+### Run
+After installation, perform LocalHGT with
 ```
 localhgt --help
+localhgt bkp --help
+localhgt event --help
 ```
 Note:
 - LocalHGT only accept paired-end reads (e.g., Illumina data).
 - LocalHGT now supports Linux and Windows WSL systems.
+- Ensure the platform has `c++ compiler` (e.g., g++) and `make`.
 
 ## Test
 ```
@@ -194,23 +221,25 @@ Interpret each column as:
 ## Dependencies
 ### Python modules:
 ```
-python=3.7.12
+python>=3.7.12
 scikit-bio=0.5.6
-scikit-learn=1.0.2
-scipy=1.7.3
-biopython=1.79
 networkx=2.6.3
-numpy=1.21.5
-pandas=1.2.3
-pysam=0.17.0
-pyfaidx=0.7.1
+scikit-learn
+scipy
+biopython
+numpy
+pandas
+pysam
+pyfaidx
 ```
 ### Third-party software
 ```
-samtools==1.11
-bwa=0.7.17
-fastp=0.23.2
-seqkit=2.6.1
+samtools>=1.11
+bwa>=0.7.17
+fastp>=0.23.2
+seqkit>=2.6.1
+make
+cxx-compiler
 ```
 The above tools should be installed in the system path.
 
