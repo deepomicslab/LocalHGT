@@ -21,3 +21,4 @@ dist/
 build/
 localhgt.egg-info/
 upload2anaconda/localhgt/LocalHGT
+scripts/extract_ref
