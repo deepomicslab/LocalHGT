@@ -9,6 +9,7 @@ dependencies:
   - pyfaidx
   - scikit-bio
   - networkx
+  - setuptools==58.2.0
   - samtools==1.11
   - bwa==0.7.17
   - seqkit

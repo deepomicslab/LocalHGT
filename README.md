@@ -83,7 +83,7 @@ https://github.com/deepomicslab/LocalHGT
 LocalHGT require a reference, which contains the representative genome of your interested microbes. The reference should be a single `fasta` file.
 We have prebuilt several references for users to conveniently use: 
 - [human-gut-v1 (UHGG v1)](https://doi.org/10.5281/zenodo.10908234)
-- [human-oral-v1-0-1)](https://doi.org/10.5281/zenodo.10959731)
+- [human-oral-v1-0-1](https://doi.org/10.5281/zenodo.10959731)
 - [human-vaginal-v1-0](https://doi.org/10.5281/zenodo.10952065)
 
 These data and related annotation information can be obtained from [MGnify](https://www.ebi.ac.uk/metagenomics/browse/genomes).
