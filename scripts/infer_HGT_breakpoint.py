@@ -88,7 +88,7 @@ def direct_alignment(options, fastq_1, fastq_2):
         fi
 
         
-        # rm $sample.splitters.bam
+        rm $sample.splitters.bam*
 
         echo "Final result is in $sample.acc.csv"
         echo "--------------------------"
@@ -112,8 +112,17 @@ def is_tool(name):
     """Check whether `name` is on PATH and marked as executable."""
     return which(name) is not None
 
+def is_file_zipped(file_path):
+    zip_suffixes = ['.gz', '.bz2', '.xz', '.zip', '.tar', '.tgz']
+    if file_path[-3:].lower() in zip_suffixes:
+        return True
+    elif file_path[-4:].lower() in zip_suffixes:
+        return True
+    return False
+
 def check_input(options):
-    if options.r[-3:] == ".gz":
+    # if options.r[-3:] == ".gz":
+    if is_file_zipped(options.r):
         print ("Error: reference file should be uncompressed.")
         sys.exit(1)
 
@@ -129,15 +138,24 @@ def check_input(options):
         if not is_tool("fastp"):
             print ("Error: fastp is not installed.")
             sys.exit(1)
+    
+    if not os.path.isdir(options.o):
+        print (f"Output folder {options.o} is constructed.")
+        os.system(f"mkdir {options.o}")
 
     if not os.path.isfile(options.r + ".fai"):
         print ("construct samtools index for the refernece...")
         os.system(f"samtools faidx {options.r}")
 
-    if options.fq1[-3:] == ".gz" or options.fq2[-3:] == ".gz":
+    # if options.fq1[-3:] == ".gz" or options.fq2[-3:] == ".gz":
+    if is_file_zipped(options.fq1) or is_file_zipped(options.fq2):
         if options.refine_fq == 0:
             print ("Error: input fastq file should be uncompressed.")
             sys.exit(1)
+        else:
+            if options.fq1[-3:] != ".gz":
+                print ("Error: input fastq file should be uncompressed.")
+                sys.exit(1)             
 
 def detect_breakpoint(options):
     

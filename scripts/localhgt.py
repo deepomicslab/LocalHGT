@@ -41,7 +41,7 @@ def main():
     # usage="python %(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required = parser_script1.add_argument_group("required arguments")
     optional = parser_script1.add_argument_group("optional arguments")
-    required.add_argument("-r", type=str, help="<str> Uncompressed reference file, which contains all the representative references of concerned bacteria.", metavar="\b")
+    required.add_argument("-r", type=str, help="<str> Uncompressed reference file, which contains the representative genome of each concerned bacteria.", metavar="\b")
     required.add_argument("--fq1", type=str, help="<str> Uncompressed fastq 1 file.", metavar="\b")
     required.add_argument("--fq2", type=str, help="<str> Uncompressed fastq 2 file.", metavar="\b")
     required.add_argument("-s", type=str, default="sample", help="<str> Sample name.", metavar="\b")

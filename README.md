@@ -4,7 +4,7 @@
 There are three methods to install LocalHGT:
 
 ### 1. conda install
-First, install it by conda
+First, install it by conda via the bioconda channel
 ```
 conda install localhgt
 ```
@@ -15,7 +15,7 @@ conda activate localhgt
 ```
 
 ### 2. source code install with Conda environment
-Second, obtain the source code from github, construct the env with conda, and then compile and install
+Second, obtain the source code, construct the environment with conda, and then install
 ```
 git clone https://github.com/deepomicslab/LocalHGT.git --depth 1
 cd LocalHGT/
@@ -25,7 +25,7 @@ sh install.sh
 ```
 
 ### 3. source code install with self-build environment
-Third, obtain the source code from github, install the dependencies by yourself (which are listed at the bottom in `Dependencies` section), and then compile and install
+Third, obtain the source code from github, install the dependencies by yourself (which are listed at the bottom in `Dependencies` section), and then install
 ```
 make
 python setup.py install
@@ -41,7 +41,7 @@ localhgt event --help
 ```
 Note:
 - LocalHGT only accept paired-end reads (e.g., Illumina data).
-- LocalHGT now supports Linux and Windows WSL systems.
+- LocalHGT supports Linux and MacOS platforms.
 - If you meet the issue: `No module named _sysconfigdata_x86_64_conda_cos7_linux_gnu`, just run 
 ```
 cp ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos6_linux_gnu.py ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos7_linux_gnu.py

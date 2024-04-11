@@ -82,7 +82,7 @@ fi
 rm $extracted_ref*
 rm $sample.unsort.splitters.bam
 rm $sample.unsort.bam
-# rm $sample.splitters.bam
+rm $sample.splitters.bam*
 
 end=$(date +%s)
 take=$(( end - start ))
