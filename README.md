@@ -40,7 +40,7 @@ localhgt bkp --help
 localhgt event --help
 ```
 Note:
-- LocalHGT only accept paired-end reads (e.g., Illumina data).
+- LocalHGT only accept paired-end shotgun metagenomic sequencing data.
 - LocalHGT supports Linux and MacOS platforms.
 - If you meet the issue: `No module named _sysconfigdata_x86_64_conda_cos7_linux_gnu`, just run 
 ```
@@ -80,10 +80,13 @@ https://github.com/deepomicslab/LocalHGT
 
 
 ### Construct reference 
-LocalHGT require a reference, which contains the representative genomes of your interested bacteria. The reference should be a single `fasta` file.
-We have prepared the [UHGG v1](https://doi.org/10.5281/zenodo.10908234) reference on Zenodo.
-UHGG v1 can also be obtained by running `python paper_results/build_UHGG_reference.py`. UHGG is used to analyze human gut microbiome. Moreover, users can construct your customized reference. 
+LocalHGT require a reference, which contains the representative genome of your interested bacteria. The reference should be a single `fasta` file.
+We have prebuilt several references for users to conveniently use: 
+- [human-gut-v1 (UHGG v1)](https://doi.org/10.5281/zenodo.10908234)
+- [human-oral-v1-0-1)](xx)
+- [human-vaginal-v1-0](xx)
 
+These data and related annotation information can be obtained from [MGnify](https://www.ebi.ac.uk/metagenomics/browse/genomes).
 At the first run, `LocalHGT` will index the reference automatically (e.g., it will take several hours for UHGG v1). 
 
 Note:
