@@ -83,8 +83,8 @@ https://github.com/deepomicslab/LocalHGT
 LocalHGT require a reference, which contains the representative genome of your interested microbes. The reference should be a single `fasta` file.
 We have prebuilt several references for users to conveniently use: 
 - [human-gut-v1 (UHGG v1)](https://doi.org/10.5281/zenodo.10908234)
-- [human-oral-v1-0-1)](xx)
-- [human-vaginal-v1-0](xx)
+- [human-oral-v1-0-1)](https://doi.org/10.5281/zenodo.10959731)
+- [human-vaginal-v1-0](https://doi.org/10.5281/zenodo.10952065)
 
 These data and related annotation information can be obtained from [MGnify](https://www.ebi.ac.uk/metagenomics/browse/genomes).
 
@@ -264,7 +264,7 @@ cxx-compiler
 The above tools should be installed in the system path.
 
 ### Paper results generation
-The scripts to produce the results in the paper can be found in `paper_results/*`. HGT breakpoints and events detected by LocalHGT from all real samples can be seen at [Detected HGTs in real data](https://doi.org/10.5281/zenodo.10906354).
+The scripts to produce the results in the paper can be found in `paper_results/*`, where some scripts might require additional python modules. HGT breakpoints and events detected by LocalHGT from all real samples can be seen at [Detected HGTs in real data](https://doi.org/10.5281/zenodo.10906354).
 
 ## Getting help
 Should you have any queries, please feel free to contact us, we will reply as soon as possible (swang66-c@my.cityu.edu.hk).
