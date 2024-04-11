@@ -370,6 +370,13 @@ def detect_event(args):
     identified_hgt = args.f
     min_hgt_len = args.m
 
+    if not os.path.isfile(args.r):
+        print ("Error: reference file is not detected.")
+        sys.exit(1)
+    if not os.path.isdir(args.b):
+        print (f"Error: Input breakpoint result folder is not detected.")
+        sys.exit(1)
+
     tim = Match(result_dir, database, min_hgt_len, args)
     tim.read_samples()
     print ("data load is done.")
