@@ -122,6 +122,14 @@ def is_file_zipped(file_path):
 
 def check_input(options):
     # if options.r[-3:] == ".gz":
+    if not os.path.isfile(options.r):
+        print ("Error: reference file is not detected.")
+        sys.exit(1)
+
+    if not os.path.isfile(options.fq1) or not os.path.isfile(options.fq2):
+        print ("Error: fastq file is not detected.")
+        sys.exit(1)
+
     if is_file_zipped(options.r):
         print ("Error: reference file should be uncompressed.")
         sys.exit(1)
@@ -149,7 +157,7 @@ def check_input(options):
 
     # if options.fq1[-3:] == ".gz" or options.fq2[-3:] == ".gz":
     if is_file_zipped(options.fq1) or is_file_zipped(options.fq2):
-        if options.refine_fq == 0:
+        if options.refine_fq == 0 and options.use_kmer == 1:
             print ("Error: input fastq file should be uncompressed.")
             sys.exit(1)
         else:
