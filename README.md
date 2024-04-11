@@ -80,11 +80,12 @@ https://github.com/deepomicslab/LocalHGT
 
 
 ### Construct reference 
-LocalHGT require a reference, which contains the representative genome of your interested bacteria. The reference should be a single `fasta` file.
+LocalHGT require a reference, which contains the representative genome of your interested microbes. The reference should be a single `fasta` file.
 We have prebuilt several references for users to conveniently use: 
 - [human-gut-v1 (UHGG v1)](https://doi.org/10.5281/zenodo.10908234)
 - [human-oral-v1-0-1)](xx)
 - [human-vaginal-v1-0](xx)
+
 These data and related annotation information can be obtained from [MGnify](https://www.ebi.ac.uk/metagenomics/browse/genomes).
 
 Moreover, [ProGenomes3](https://progenomes.embl.de/) provides several representative genome sets:
@@ -98,10 +99,10 @@ Moreover, [ProGenomes3](https://progenomes.embl.de/) provides several representa
 - [Sediment mud](https://progenomes.embl.de/data/habitats/representatives.sediment_mud.contigs.fasta.gz)
 - [Soil](https://progenomes.embl.de/data/habitats/representatives.soil.contigs.fasta.gz)
 
-At the first run, `LocalHGT` will index the reference automatically, and it will take a few time (e.g., several hours for UHGG v1). 
 
 Note:
 - the reference file should be uncompressed.
+- given a new reference, `LocalHGT` will index it automatically, and it will take a few time (e.g., several hours for UHGG v1). 
 - reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.
 
 
