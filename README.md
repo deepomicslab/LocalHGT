@@ -85,13 +85,25 @@ We have prebuilt several references for users to conveniently use:
 - [human-gut-v1 (UHGG v1)](https://doi.org/10.5281/zenodo.10908234)
 - [human-oral-v1-0-1)](xx)
 - [human-vaginal-v1-0](xx)
-
 These data and related annotation information can be obtained from [MGnify](https://www.ebi.ac.uk/metagenomics/browse/genomes).
-At the first run, `LocalHGT` will index the reference automatically (e.g., it will take several hours for UHGG v1). 
+
+Moreover, [ProGenomes3](https://progenomes.embl.de/) provides several representative genome sets:
+- [all microbial representative genomes ](https://progenomes.embl.de/data/repGenomes/progenomes3.contigs.representatives.fasta.bz2)
+- [Aquatic](https://progenomes.embl.de/data/habitats/representatives.aquatic.contigs.fasta.gz)
+- [Disease associated](https://progenomes.embl.de/data/habitats/representatives.disease_associated.contigs.fasta.gz)
+- [Food associated](https://progenomes.embl.de/data/habitats/representatives.food_associated.contigs.fasta.gz)
+- [Freshwater](https://progenomes.embl.de/data/habitats/representatives.freshwater.contigs.fasta.gz)
+- [Host associated](https://progenomes.embl.de/data/habitats/representatives.host_associated.contigs.fasta.gz)
+- [Host plant associated](https://progenomes.embl.de/data/habitats/representatives.host_plant_associated.contigs.fasta.gz)
+- [Sediment mud](https://progenomes.embl.de/data/habitats/representatives.sediment_mud.contigs.fasta.gz)
+- [Soil](https://progenomes.embl.de/data/habitats/representatives.soil.contigs.fasta.gz)
+
+At the first run, `LocalHGT` will index the reference automatically, and it will take a few time (e.g., several hours for UHGG v1). 
 
 Note:
-- reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.
 - the reference file should be uncompressed.
+- reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.
+
 
 ### Detect HGT breakpoints
 First, infer HGT breakpoints by running `localhgt bkp` like
