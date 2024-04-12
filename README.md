@@ -3,7 +3,7 @@
 ## Install
 There are three methods to install LocalHGT:
 
-### 1. conda install
+### 1. conda install (still testing)
 First, install it by conda via the bioconda channel
 ```
 conda install localhgt
@@ -89,8 +89,8 @@ https://github.com/deepomicslab/LocalHGT
 
 
 ### Construct reference 
-LocalHGT require a reference, which contains the representative genome of your interested microbes. The reference should be a single `fasta` file.
-We have prebuilt several references for users to conveniently use: 
+LocalHGT require a reference, and LocalHGT accept the reference by parameter `localhgt bwa -r`; please give the full path of the reference to `-r`.  The reference contains the representative genome of your interested microbes, and it should be a single `fasta` file.
+We have prebuilt several references for users to conveniently use. It is recommended to choose a habitat-specific reference. For example, if you want to analyze human oral microbiome, you can use [human-oral-v1-0-1](https://doi.org/10.5281/zenodo.10959731).
 - [human-gut-v1 (UHGG v1)](https://doi.org/10.5281/zenodo.10908234)
 - [human-oral-v1-0-1](https://doi.org/10.5281/zenodo.10959731)
 - [human-vaginal-v1-0](https://doi.org/10.5281/zenodo.10952065)
@@ -191,6 +191,7 @@ optional arguments:
 ```
 
 Note:
+- the reference file (given by `-r`) should be the same as the reference file used in `localhgt bkp` (also given by `-r`).
 - It is recommended to detect HGT breakpoints for each sample and store the results in a common output folder. Subsequently, when detecting complete HGT events, specify the output folder using the `-b` parameter. This approach allows LocalHGT to consider all the samples collectively, resulting in more reliable results for complete HGT events.
 
 ## Output interpretation

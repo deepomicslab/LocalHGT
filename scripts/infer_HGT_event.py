@@ -404,7 +404,7 @@ if __name__ == "__main__":
     usage="python %(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required = parser.add_argument_group("required arguments")
     optional = parser.add_argument_group("optional arguments")
-    required.add_argument("-r", type=str, help="<str> Reference file.", metavar="\b")
+    required.add_argument("-r", type=str, help="<str> Reference file, and it should be the same as the reference file used in localhgt bkp -r.", metavar="\b")
     required.add_argument("-b", type=str, help="<str> Folder saves all the breakpoint results from all samples.", metavar="\b")
     required.add_argument("-f", type=str, default="complete_HGT_event.csv", help="<str> Output file to save all inferred HGT events.", metavar="\b")
     optional.add_argument("-n", type=int, default=2, help="<int> minimum supporting split read number", metavar="\b")
