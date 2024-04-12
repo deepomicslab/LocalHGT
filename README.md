@@ -25,12 +25,16 @@ sh install.sh
 ```
 
 ### 3. source code install with self-build environment
-Third, obtain the source code from github, install the dependencies (listed at the bottom in `Dependencies` section), and then install
+Third, obtain the source code from github, install the dependencies (listed at the bottom in `Dependencies` section), and then install.
+Ensure your platform has `c++ compiler` (g++/clang++) and `make`.
+
+If you have the root access, just run
 ```
 make
 python3 setup.py install
 ```
-Ensure your platform has `c++ compiler` (g++/clang++) and `make`. Also, you should have the root access.
+If you don't have the root access, run `make`. Then add the `scripts/` folder to the system path by adding `export PATH="/path-to/scripts/:$PATH"` to `.bashrc`. In this case, you should use LocalHGT through `localhgt.py --help`.
+
 
 ### Run
 After installation, perform LocalHGT with
