@@ -170,6 +170,11 @@ def detect_breakpoint(options):
     check_input(options)
     fastq_1, fastq_2 = refine_fastq(options)
     if options.use_kmer == 1: # default
+
+        if not is_tool("extract_ref"):
+            print ("Error: extract_ref is not installed, please check the installation.")
+            sys.exit(1)
+
         acc_pa = Accept_Parameters(options, fastq_1, fastq_2)
         acc_pa.get_order()
         acc_pa.run()

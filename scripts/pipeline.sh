@@ -32,7 +32,7 @@ fi
 
 # :<<!
 #### Extract HGT-related segments using fuzzy kmer matching
-$dir/extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak $coder_num $seed $base_num
+extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak $coder_num $seed $base_num
 python3 $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
 
