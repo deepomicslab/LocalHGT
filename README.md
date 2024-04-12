@@ -25,7 +25,7 @@ sh install.sh
 ```
 
 ### 3. source code install with self-build environment
-Third, obtain the source code from github, install the dependencies by yourself (which are listed at the bottom in `Dependencies` section), and then install
+Third, obtain the source code from github, install the dependencies (listed at the bottom in `Dependencies` section), and then install
 ```
 make
 python3 setup.py install
@@ -53,18 +53,18 @@ sh run_event_detection.sh # test HGT event detection
 See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_output.csv` for event results.
 
 ## Bug fix
-- If you meet `No module named _sysconfigdata_x86_64_conda_cos7_linux_gnu`, just run 
+- If you meet `No module named _sysconfigdata_x86_64_conda_cos7_linux_gnu`, according to the [solution](https://stackoverflow.com/questions/68261254/conda-error-sysconfigdata-x86-64-conda-linux-gnu), just run 
 ```
 cp ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos6_linux_gnu.py ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos7_linux_gnu.py
 ```
-referred to [solution](https://stackoverflow.com/questions/68261254/conda-error-sysconfigdata-x86-64-conda-linux-gnu).
-- If you meet `cannot import name TypeAlias from typing_extensions`, run
+- If you meet `cannot import name TypeAlias from typing_extensions`, according to the [solution](https://github.com/alexdelorenzo/cast_control/issues/16), run
 ```
 pip install typing-extensions --upgrade
 ```
-referred to [solution](https://github.com/alexdelorenzo/cast_control/issues/16).
-
-
+- If you meet `ERROR: Could not build wheels for scikit-bio, hdmedians, which is required to install pyproject.toml-based projects` or `Python.h: No such file or directory`, according to the [solution](https://stackoverflow.com/questions/21530577/fatal-error-python-h-no-such-file-or-directory), run 
+```
+sudo apt-get install python3-dev
+```
 
 ## Basic Usage 
 ### Main functions

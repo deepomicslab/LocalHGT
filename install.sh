@@ -11,4 +11,4 @@ cp ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos6_linux_gnu.py $
 
 fi
 
-python setup.py install
+python3 setup.py install
