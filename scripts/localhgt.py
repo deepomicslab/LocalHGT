@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-
+import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import argparse
 import textwrap
 import subprocess
 from infer_HGT_breakpoint import detect_breakpoint
 from infer_HGT_event import detect_event
 import sys
-import os
+
 
 def script1_function(arg1, arg2):
     # Implement the logic for script1_function
