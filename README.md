@@ -30,7 +30,7 @@ Third, obtain the source code from github, install the dependencies by yourself 
 make
 python3 setup.py install
 ```
-Ensure your platform has `c++ compiler` (g++/clang++) and `make`.
+Ensure your platform has `c++ compiler` (g++/clang++) and `make`. Also, you should have the root access.
 
 ### Run
 After installation, perform LocalHGT with
@@ -42,11 +42,7 @@ localhgt event --help
 Note:
 - LocalHGT only accept paired-end shotgun metagenomic sequencing data.
 - LocalHGT supports Linux and MacOS platforms.
-- If you meet the issue: `No module named _sysconfigdata_x86_64_conda_cos7_linux_gnu`, just run 
-```
-cp ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos6_linux_gnu.py ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos7_linux_gnu.py
-```
-which is referred to the [solution](https://stackoverflow.com/questions/68261254/conda-error-sysconfigdata-x86-64-conda-linux-gnu).
+
 
 ## Test
 ```
@@ -55,6 +51,19 @@ sh run_BKP_detection.sh # test HGT breakpoint detection
 sh run_event_detection.sh # test HGT event detection
 ```
 See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_output.csv` for event results.
+
+## Bug fix
+- If you meet `No module named _sysconfigdata_x86_64_conda_cos7_linux_gnu`, just run 
+```
+cp ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos6_linux_gnu.py ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos7_linux_gnu.py
+```
+referred to [solution](https://stackoverflow.com/questions/68261254/conda-error-sysconfigdata-x86-64-conda-linux-gnu).
+- If you meet `cannot import name TypeAlias from typing_extensions`, run
+```
+pip install typing-extensions --upgrade
+```
+referred to [solution](https://github.com/alexdelorenzo/cast_control/issues/16).
+
 
 
 ## Basic Usage 
@@ -242,13 +251,10 @@ Interpret each column as:
 ### Python modules:
 ```
 python>=3.7.12
-scikit-bio=0.5.6
+scikit-bio=0.5.6 (install this module will install scikit-learn, scipy, numpy, and pandas simultaneously)
 networkx=2.6.3
-scikit-learn
-scipy
+typing-extensions>=4.11.0
 biopython
-numpy
-pandas
 pysam
 pyfaidx
 ```

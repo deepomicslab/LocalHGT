@@ -74,10 +74,10 @@ def direct_alignment(options, fastq_1, fastq_2):
         samtools index $sample.splitters.bam
         samtools index $sample.unique.bam
 
-        python $dir/get_raw_bkp.py -t $thread -u $sample.unique.bam -o $sample.raw.csv -n 0 -a %s
-        python $dir/accurate_bkp.py -g $ref -u $sample.unique.bam -b None -s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv -n 0 --read_info $info
+        python3 $dir/get_raw_bkp.py -t $thread -u $sample.unique.bam -o $sample.raw.csv -n 0 -a %s
+        python3 $dir/accurate_bkp.py -g $ref -u $sample.unique.bam -b None -s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv -n 0 --read_info $info
 
-        python $dir/remove_repeat.py $sample.repeat.acc.csv $sample.acc.csv
+        python3 $dir/remove_repeat.py $sample.repeat.acc.csv $sample.acc.csv
         rm $sample.repeat.acc.csv
 
         if [ ! -f "$sample.acc.csv" ]; then
@@ -187,7 +187,7 @@ def detect_breakpoint(options):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Detect HGT breakpoints from metagenomics sequencing data.", add_help=False, \
-    usage="python %(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    usage="python3 %(prog)s -h", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required = parser.add_argument_group("required arguments")
     optional = parser.add_argument_group("optional arguments")
     required.add_argument("-r", type=str, help="<str> Uncompressed reference file, which contains all the representative references of concerned bacteria.", metavar="\b")
@@ -215,7 +215,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 1:
         # print (f"see python {sys.argv[0]} -h")
-        os.system(f"python {sys.argv[0]} -h")
+        os.system(f"python3 {sys.argv[0]} -h")
     else:
         detect_breakpoint(options)
         # check_input(options)
