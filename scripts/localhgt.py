@@ -84,18 +84,18 @@ def main():
     if args.function == 'bkp':
         # script1_function(args.arg1, args.arg2)
         if args.r == None:
-            os.system(f"python {sys.argv[0]} bkp -h")
+            os.system(f"python3 {sys.argv[0]} bkp -h")
         else:
             detect_breakpoint(args)
     elif args.function == 'event':
         # script2_function(args.arg)
         if args.r == None:
-            os.system(f"python {sys.argv[0]} event -h")
+            os.system(f"python3 {sys.argv[0]} event -h")
         else:
             detect_event(args)
     else:
         # print('Invalid function choice')
-        os.system(f"python {sys.argv[0]} -h")
+        os.system(f"python3 {sys.argv[0]} -h")
 
 if __name__ == '__main__':
     main()

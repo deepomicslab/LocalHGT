@@ -33,7 +33,7 @@ fi
 # :<<!
 #### Extract HGT-related segments using fuzzy kmer matching
 $dir/extract_ref $fq1 $fq2 $original_ref $interval_file $accept_hit_ratio $accept_perfect_hit_ratio $thread $k $max_peak $coder_num $seed $base_num
-python $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
+python3 $dir/get_bed_file.py $original_ref $interval_file > ${sample}.log
 samtools faidx -r ${interval_file}.bed $original_ref > $extracted_ref
 
 bwa index $extracted_ref
@@ -64,12 +64,12 @@ take=$(( end - start ))
 echo Time taken to map reads is ${take} seconds. >> ${sample}.log
 
 #### Identify precise HGT breakpoints
-python $dir/get_raw_bkp.py -t $thread -u $sample.unique.bam -o $sample.raw.csv -a $xa_tag 
+python3 $dir/get_raw_bkp.py -t $thread -u $sample.unique.bam -o $sample.raw.csv -a $xa_tag 
 # !
-python $dir/accurate_bkp.py -g $original_ref -u $sample.unique.bam -b ${interval_file}.bed \
+python3 $dir/accurate_bkp.py -g $original_ref -u $sample.unique.bam -b ${interval_file}.bed \
 -s $sample.splitters.bam -a $sample.raw.csv -o $sample.repeat.acc.csv --read_info $read_info
 
-python $dir/remove_repeat.py $sample.repeat.acc.csv $sample.acc.csv
+python3 $dir/remove_repeat.py $sample.repeat.acc.csv $sample.acc.csv
 rm $sample.repeat.acc.csv
 
 if [ ! -f "$sample.acc.csv" ]; then

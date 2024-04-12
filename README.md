@@ -28,7 +28,7 @@ sh install.sh
 Third, obtain the source code from github, install the dependencies by yourself (which are listed at the bottom in `Dependencies` section), and then install
 ```
 make
-python setup.py install
+python3 setup.py install
 ```
 Ensure your platform has `c++ compiler` (g++/clang++) and `make`.
 
@@ -103,7 +103,7 @@ Moreover, [ProGenomes3](https://progenomes.embl.de/) provides several representa
 Note:
 - the reference file should be uncompressed.
 - given a new reference, `LocalHGT` will index it automatically, and it will take a few time (e.g., several hours for UHGG v1). 
-- reference index file size is approx (reference size) * 4 * (number of denoted hash functions), make sure the disk has enough space.
+- reference index file size is approx (reference size) * 4 * (number of hash functions), make sure the disk has enough space. Number of hash functions is defaulted by 3, and is denoted by the parameter `-e`.
 
 
 ### Detect HGT breakpoints
