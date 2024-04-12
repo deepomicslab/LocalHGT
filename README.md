@@ -28,12 +28,12 @@ sh install.sh
 Third, obtain the source code from github, install the dependencies (listed at the bottom in `Dependencies` section), and then install.
 Ensure your platform has `c++ compiler` (g++/clang++) and `make`.
 
-If you have the root access, just run
+If you have the root access, just install by:
 ```
 make
 python3 setup.py install
 ```
-If you don't have the root access, run 
+Otherwise, run 
 ```
 make
 chmod 744 scripts/*
