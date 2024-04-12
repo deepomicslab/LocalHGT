@@ -33,7 +33,12 @@ If you have the root access, just run
 make
 python3 setup.py install
 ```
-If you don't have the root access, run `make`. Then add the `scripts/` folder to the system path by adding `export PATH="/path-to/scripts/:$PATH"` to `.bashrc`. In this case, you should use LocalHGT through `localhgt.py --help`.
+If you don't have the root access, run 
+```
+make
+chmod 744 scripts/*
+```
+Then add the full path of `scripts/` to the system path by adding `export PATH="/path-to/scripts/:$PATH"` to `.bashrc`. In this case, you should use LocalHGT through `localhgt.py --help`.
 
 
 ### Run
