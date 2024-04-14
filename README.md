@@ -8,7 +8,7 @@ First, install it by conda via the bioconda channel
 ```
 conda install localhgt
 ```
-Notably, it is recommanded to create a new conda environment and then install LocalHGT
+Notably, it is recommanded to create a new conda environment and install LocalHGT simutaneously.
 ```
 conda create --name localhgt --channel wshuai294 localhgt
 conda activate localhgt
@@ -38,7 +38,8 @@ Otherwise, run
 make
 chmod 744 scripts/*
 ```
-Then add the full path of `scripts/` to the system path by adding `export PATH="/path-to/scripts/:$PATH"` to `.bashrc`. In this case, you should use LocalHGT through `localhgt.py --help`.
+Then add the full path of `scripts/` to the system path by adding `export PATH="/full-
+path-to/scripts/:$PATH"` to `.bashrc`. In this case, you should use LocalHGT through `localhgt.py --help`.
 
 
 ### Run
@@ -107,7 +108,7 @@ We have prebuilt several references for users to conveniently use. It is recomme
 
 These data and related annotation information can be obtained from [MGnify](https://www.ebi.ac.uk/metagenomics/browse/genomes).
 
-Moreover, [ProGenomes3](https://progenomes.embl.de/) provides several representative genome sets:
+Moreover, [ProGenomes3](https://progenomes.embl.de/) provides several representative genome sets. Please click the below link to download it, and then unzip it. Subsequently, pass its path to `-r`. 
 - [all microbial representative genomes ](https://progenomes.embl.de/data/repGenomes/progenomes3.contigs.representatives.fasta.bz2)
 - [Aquatic](https://progenomes.embl.de/data/habitats/representatives.aquatic.contigs.fasta.gz)
 - [Disease associated](https://progenomes.embl.de/data/habitats/representatives.disease_associated.contigs.fasta.gz)
@@ -187,7 +188,8 @@ event -r reference.fa -b outdir -f test_event.csv
 
 required arguments:
   -r        <str> <str> Uncompressed reference file, which contains all the
-              representative references of concerned bacteria. (default: None)
+              representative references of concerned bacteria. It should be
+              the same as the reference file used in localhgt bkp -r. (default: None)
   -b        <str> the folder stores all the breakpoint results from all
               samples, i.e., a folder stores all the *acc.csv files generated
               by 'localhgt bkp' (default: None)
