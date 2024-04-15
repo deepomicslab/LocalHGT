@@ -3,16 +3,18 @@
 ## Install
 There are three methods to install LocalHGT:
 
-### 1. conda install (still testing)
-First, install it by conda via the bioconda channel
+### 1. conda install
+First, install LocalHGT by conda via the [bioconda](https://anaconda.org/bioconda/localhgt) channel.
+It is recommanded to create a new conda environment and install LocalHGT simutaneously.
 ```
-conda install localhgt
-```
-Notably, it is recommanded to create a new conda environment and install LocalHGT simutaneously.
-```
-conda create --name localhgt --channel wshuai294 localhgt
+conda create --name localhgt --channel bioconda localhgt
 conda activate localhgt
 ```
+Also, you can install LocalHGT in existing conda environment. Notably, you might face incompatible packages in this way.
+```
+conda install bioconda::localhgt
+```
+
 
 ### 2. source code install with Conda environment
 Second, obtain the source code, construct the environment with conda, and then install
@@ -107,7 +109,7 @@ We have prebuilt several references for users to conveniently use. It is recomme
 - [human-oral-v1-0-1](https://doi.org/10.5281/zenodo.10959731)
 - [human-vaginal-v1-0](https://doi.org/10.5281/zenodo.10952065)
 
-These data and related annotation information can be obtained from [MGnify](https://www.ebi.ac.uk/metagenomics/browse/genomes).
+These data and related annotation information can be obtained from [MGnify](https://www.ebi.ac.uk/metagenomics/browse/genomes). If you cannot visit these links, please wait a while and try it again.
 
 Moreover, [ProGenomes3](https://progenomes.embl.de/) provides several representative genome sets. Please click the below link to download it, and then unzip it. Subsequently, pass its path to `-r`. 
 - [all microbial representative genomes ](https://progenomes.embl.de/data/repGenomes/progenomes3.contigs.representatives.fasta.bz2)
