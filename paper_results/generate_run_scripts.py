@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+Generate commands to automatically run LocalHGT and LEMON. 
+Remember to replace the path with yours to use this script.
+"""
+
 from simulation import Parameters
 import re
 import os
@@ -12,14 +17,14 @@ class Batch(Parameters):
         self.workdir = "/mnt/d/breakpoints/HGT/"
         self.fq_dir = ''
         self.result_dir = ''
-        self.localHGT = "/mnt/d/breakpoints/script/scripts/pipeline.sh"
-        self.localHGT_main = "/mnt/d/breakpoints/script/scripts/main.py"
+        self.localHGT = localhgt_pipeline
+        self.localHGT_main = localhgt_code
         self.hit = 0.1
         self.perfect_hit = 0.08
         self.fq1 = ''
         self.fq2 = ''
         self.sample_fasta = ''
-        self.LEMON = "/mnt/d/breakpoints/lemon/pipeline.sh"
+        self.LEMON = lemon_code
         self.lemon_outdir = "/mnt/e/HGT/lemon_snp/"
 
     def change_lemon_dir(self, my_dir):
@@ -493,7 +498,7 @@ def isolate():
             cmd = f"head -n {extract_num} {raw_fq} >{new_fq}\n"
             order += cmd
         run = """  ref=%s
-                    main=/mnt/d/breakpoints/script/scripts/main.py
+                    main=%s
                     sample=%s
                     outdir=%s
                     ID=${sample}_prop%s
@@ -503,7 +508,7 @@ def isolate():
                     /usr/bin/time -v -o $outdir/$ID.time python -u $main -k 32 -a 0 --read_info 0 -t 10 -r $ref --fq1 $fq1 --fq2 $fq2 -s $ID -o $outdir >$outdir/${ID}.run.log
                     rm $outdir/$ID.*bam*
                     rm $fq1
-                    rm $fq2\n"""%(uhgg_ref, sample, outdir, prop)
+                    rm $fq2\n"""%(uhgg_ref, localhgt_code, sample, outdir, prop)
         order += run
         command_list.append(order)
 
@@ -512,9 +517,17 @@ def isolate():
         print (command, file = h)
     h.close()
 
-if __name__ == "__main__":
-    uhgg_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
-    progenomes = '/mnt/d/breakpoints/HGT/proGenomes/proGenomes_v2.1.fasta'
+if __name__ == "__main__": 
+    uhgg_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'  ## UHGG v1 reference
+    progenomes = '/mnt/d/breakpoints/HGT/proGenomes/proGenomes_v2.1.fasta' ## proGenomes_v2.1 reference
+    localhgt_pipeline = "/mnt/d/breakpoints/script/scripts/pipeline.sh" ## i.e., LocalHGT/scripts/pipeline.sh
+    localhgt_code = "/mnt/d/breakpoints/script/scripts/main.py"  ## i.e., LocalHGT/scripts/main.py
+    lemon_code = "/mnt/d/breakpoints/lemon/pipeline.sh"  ## i.e., run_lemon.sh in this folder
+
+
+    ######### these functions are used generated commands for different simulated datasets
+    ######### please change the inside paths if you want to use these functions
+    ######### the main inputs of each function is: raw data folder, truth, output file to store localhgt's commands, and output file to store LEMON's commands
     # batch_frag()
     # batch_donor()
     # batch_snp_pure()
