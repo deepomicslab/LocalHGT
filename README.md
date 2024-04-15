@@ -112,7 +112,7 @@ We have prebuilt several references for users to conveniently use. It is recomme
 - [human-oral-v1-0-1](https://doi.org/10.5281/zenodo.10959731)
 - [human-vaginal-v1-0](https://doi.org/10.5281/zenodo.10952065)
 
-These data and related annotation information can be obtained from [MGnify](https://www.ebi.ac.uk/metagenomics/browse/genomes). If you cannot visit these links, please wait a while and try it again.
+If you cannot visit these links, please wait a while and try it again. The related annotation information can be obtained from [MGnify](https://www.ebi.ac.uk/metagenomics/browse/genomes). 
 
 Moreover, [ProGenomes3](https://progenomes.embl.de/) provides several representative genome sets. Please click the below link to download it, and then unzip it. Subsequently, pass its path to `-r`. 
 - [all microbial representative genomes ](https://progenomes.embl.de/data/repGenomes/progenomes3.contigs.representatives.fasta.bz2)
@@ -286,9 +286,9 @@ seqkit>=2.6.1
 make
 cxx-compiler
 ```
-The above tools should be installed in the system path.
+The above tools should be installed in the system path. While the installation process using conda can be expedited by not specifying the version, it is important to note that this approach may potentially introduce unexpected bugs.
 
-### Paper results generation
+## Paper results generation
 The scripts to produce the results in the paper can be found in `paper_results/*`, where some scripts might require additional python modules. HGT breakpoints and events detected by LocalHGT from all real samples can be seen at [Detected HGTs in real data](https://doi.org/10.5281/zenodo.10906354).
 
 ## Getting help
