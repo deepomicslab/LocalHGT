@@ -1337,13 +1337,18 @@ def abundance():
 if __name__ == "__main__":
     default_abun_cutoff = 1e-7
 
-    true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"
-    lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/"
-    local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results_paper/"
-
     uhgg_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
     progenomes = '/mnt/d/breakpoints/HGT/proGenomes/proGenomes_v2.1.fasta'
 
+
+    ####### these paths should be edited for each dataset 
+    true_dir = "/mnt/d/breakpoints/HGT/uhgg_snp/"  ## folder to save truth
+    lemon_dir = "/mnt/d/breakpoints/HGT/lemon_snp/" ## folder to results of LEMON
+    local_dir = "/mnt/d/breakpoints/HGT/uhgg_snp_results_paper/" ## folder to results of LocalHGT
+
+
+    ######### these functions are used calcualte the accuracy of HGT detection
+    ######### please change the inside paths if you want to use these functions
     print ("evaluation")
     # cami()
     # snp()
