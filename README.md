@@ -84,6 +84,10 @@ conda install numpy==1.24
 ```
 conda install urllib3<2.0
 ```
+- If you meet `No module named 'pexpect'`, `No module named 'decorator'`, or `No module named 'cachecontrol'`, run
+```
+conda install scikit-bio==0.5.6
+```
 
 ## Basic Usage 
 ### Main functions
