@@ -40,8 +40,7 @@ Otherwise, run
 make
 chmod 744 scripts/*
 ```
-Then add the full path of `scripts/` to the system path by adding `export PATH="/full-
-path-to/scripts/:$PATH"` to `.bashrc`. In this case, you should use LocalHGT through `localhgt.py --help`.
+Then add the full path of `scripts/` to the system path by adding `export PATH="/full-path-to/scripts/:$PATH"` to `.bashrc`. In this case, you should use LocalHGT through `localhgt.py --help`.
 
 
 ### Run
@@ -76,6 +75,10 @@ pip install typing-extensions --upgrade
 - If you meet `ERROR: Could not build wheels for scikit-bio, hdmedians, which is required to install pyproject.toml-based projects` or `Python.h: No such file or directory`, according to the [solution](https://stackoverflow.com/questions/21530577/fatal-error-python-h-no-such-file-or-directory), run 
 ```
 sudo apt-get install python3-dev
+```
+- If you meet `UserWarning: Signature b'\x00\xd0\xcc\xcc\xcc\xcc\xcc\xcc\xfb\xbf\x00\x00\x00\x00\x00\x00' for <class 'numpy.longdouble'> does not match any known type: falling back to type probe function.`, according to the [solution](https://github.com/nipy/nibabel/issues/1309), run
+```
+conda install numpy==1.24
 ```
 
 ## Basic Usage 
