@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+"""
+Simulate samples with HGT events to evaluate LocalHGT. Remember to replace the path with yours to use this script.
+
+dependencies: blastn, art_illumina, wgsim
+
+"""
+
 import os
 import numpy as np
 import random
@@ -329,10 +336,10 @@ def uniq_seg(chrom_len, chrom_uniq_segs):
             # break
             return 0, 0
 
-def UHGG_snp(uniq_segs_loci): 
+def UHGG_snp(uniq_segs_loci, outdir="/mnt/d/breakpoints/HGT/uhgg_snp/"): 
     species_dict = {} 
     pa = Parameters()
-    pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
+    pa.get_dir(outdir)
     pa.add_segs(uniq_segs_loci)
     pa.get_uniq_len()
 
@@ -369,12 +376,12 @@ def UHGG_snp(uniq_segs_loci):
                     pa.add_species(species_dict, seq_dict)                  
                     if_success = random_HGT(pa)
 
-def pro_snp(uniq_segs_loci): 
+def pro_snp(uniq_segs_loci, outdir="/mnt/d/breakpoints/HGT/pro_snp/"): 
     species_dict = {} 
     pa = Parameters(progenomes)
     # print (pa.seq_len['1105367.SAMN02673274.JFZB01000004'])
     print (len(pa.seq_len))
-    pa.get_dir("/mnt/d/breakpoints/HGT/pro_snp/")
+    pa.get_dir(outdir)
     pa.add_segs(uniq_segs_loci)
     pa.get_uniq_len()
     pa.iteration_times = 1
@@ -411,9 +418,9 @@ def pro_snp(uniq_segs_loci):
                     pa.add_species(species_dict, seq_dict)                  
                     if_success = random_HGT(pa)
 
-def pro_cami(): 
+def pro_cami(outdir="/mnt/d/breakpoints/HGT/pro_snp/"): 
     pa = Parameters(progenomes)
-    pa.get_dir("/mnt/d/breakpoints/HGT/pro_snp/")
+    pa.get_dir(outdir)
 
     for snp_rate in pa.snp_level: #[0.02, 0.04]:
         pa.change_snp_rate(snp_rate)
@@ -427,11 +434,11 @@ def pro_cami():
                 print (combine)
                 os.system(combine)
 
-def UHGG_length(uniq_segs_loci): 
+def UHGG_length(uniq_segs_loci, outdir="/mnt/d/breakpoints/HGT/uhgg_length/"): 
     # different read length
     species_dict = {} 
     pa = Parameters()
-    pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_length/")
+    pa.get_dir(outdir)
     pa.add_segs(uniq_segs_loci)
     pa.get_uniq_len()
 
@@ -467,10 +474,10 @@ def UHGG_length(uniq_segs_loci):
                     pa.add_species(species_dict, seq_dict)                  
                     if_success = random_HGT(pa)
 
-def UHGG_depth(uniq_segs_loci): 
+def UHGG_depth(uniq_segs_loci, outdir="/mnt/d/breakpoints/HGT/uhgg_depth/"): 
     species_dict = {} 
     pa = Parameters()
-    pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_depth/")
+    pa.get_dir(outdir)
     pa.add_segs(uniq_segs_loci)
     pa.get_uniq_len()
 
@@ -509,10 +516,9 @@ def UHGG_depth(uniq_segs_loci):
                     pa.add_species(species_dict, seq_dict)                  
                     if_success = random_HGT(pa)
 
-def UHGG_donor(uniq_segs_loci): 
+def UHGG_donor(uniq_segs_loci, outdir="/mnt/d/breakpoints/HGT/donor/"): 
     species_dict = {} 
     pa = Parameters()
-    # pa.get_dir("/mnt/d/breakpoints/HGT/donor/")
     pa.add_segs(uniq_segs_loci)
     pa.get_uniq_len()
     pa.HGT_num = 5
@@ -522,7 +528,7 @@ def UHGG_donor(uniq_segs_loci):
     folders = ["in", "not_in"]
     for i in range(2):
         pa.donor_in_flag =  flag[i]
-        pa.get_dir("/mnt/d/breakpoints/HGT/donor/" + folders[i] + "/" )
+        pa.get_dir(outdir + folders[i] + "/" )
         for index in range(pa.iteration_times):
             pa.get_ID(index)
             if_success = 0
@@ -553,7 +559,7 @@ def UHGG_donor(uniq_segs_loci):
                     pa.add_species(species_dict, seq_dict)                  
                     if_success = random_HGT(pa)
 
-def UHGG_frag(uniq_segs_loci): 
+def UHGG_frag(uniq_segs_loci, outdir="/mnt/d/breakpoints/HGT/frag_size/"): 
     species_dict = {} 
     pa = Parameters()
     # pa.get_dir("/mnt/d/breakpoints/HGT/donor/")
@@ -562,8 +568,8 @@ def UHGG_frag(uniq_segs_loci):
 
     for frag in [200, 350, 500, 650, 800, 950]:
         pa.mean_frag = frag
-        os.system("mkdir /mnt/d/breakpoints/HGT/frag_size/f%s/"%(frag))
-        pa.get_dir("/mnt/d/breakpoints/HGT/frag_size/f%s/"%(frag) )
+        os.system("mkdir %s/f%s/"%(outdir, frag))
+        pa.get_dir("%s/f%s/"%(outdir,frag) )
         for index in range(pa.iteration_times):
             pa.get_ID(index)
             if_success = 0
@@ -595,9 +601,9 @@ def UHGG_frag(uniq_segs_loci):
                     pa.add_species(species_dict, seq_dict)                  
                     if_success = random_HGT(pa)
 
-def UHGG_cami(): 
+def UHGG_cami(outdir="/mnt/d/breakpoints/HGT/uhgg_snp/"): 
     pa = Parameters(uhgg_ref)
-    pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
+    pa.get_dir(outdir)
 
     for snp_rate in pa.snp_level: #[0.02, 0.04]:
         pa.change_snp_rate(snp_rate)
@@ -611,9 +617,9 @@ def UHGG_cami():
                 print (combine)
                 os.system(combine)
 
-def UHGG_cami2():  # discarded function
+def UHGG_cami2(outdir="/mnt/d/breakpoints/HGT/uhgg_snp/"):  # discarded function
     pa = Parameters()
-    pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
+    pa.get_dir(outdir)
     com = Complexity(uhgg_ref)
     for snp_rate in [0.02, 0.04]:
         pa.change_snp_rate(snp_rate)
@@ -625,15 +631,19 @@ def UHGG_cami2():  # discarded function
                 print (combine)
                 os.system(combine)
 
-def UHGG_amount():   # generate complex sample to evaluate the relationship between data amount and speed
-    h = open("/mnt/d/breakpoints/HGT/run_localHGT_amount.sh", 'w')
-    f = open("/mnt/d/breakpoints/HGT/run_lemon_amount.sh", 'w')
-    print ("export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/wangshuai/miniconda3/envs/lemon/lib", file = f)
+def UHGG_amount(workdir = "/mnt/d/breakpoints/HGT/"):   # generate complex sample to evaluate the relationship between data amount and speed
+
+    localhgt_code = "/mnt/d/breakpoints/script/scripts/main.py"  ## i.e., LocalHGT/scripts/main.py
+    lemon_code = "/mnt/d/breakpoints/lemon/pipeline.sh"  ## i.e., run_lemon.sh in this folder
+
+    h = open("%s/run_localHGT_amount.sh"%(workdir), 'w') # script to run in batch
+    f = open("%s/run_lemon_amount.sh"%(workdir), 'w') # script to run in batch
+    print ("export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/wangshuai/miniconda3/envs/lemon/lib", file = f)  ## solve the env bug in running LEMON
     pa = Parameters(uhgg_ref)
-    pa.get_dir("/mnt/d/breakpoints/HGT/uhgg_snp/")
-    amount_dir = "/mnt/d/breakpoints/HGT/uhgg_amount"
-    amount_result_dir = "/mnt/d/breakpoints/HGT/uhgg_amount_result/"
-    amount_result_lemon = "/mnt/d/breakpoints/HGT/uhgg_amount_lemon/"
+    pa.get_dir("%s/uhgg_snp/"%(workdir))  ## store the truth
+    amount_dir = "%s/uhgg_amount"%(workdir) ## store the simulated data
+    amount_result_dir = "%s/uhgg_amount_result/"%(workdir) ## store results
+    amount_result_lemon = "%s/uhgg_amount_lemon/"%(workdir) ## store results
     com = Complexity()
     for snp_rate in [0.01]:
         pa.change_snp_rate(snp_rate)
@@ -661,14 +671,14 @@ def UHGG_amount():   # generate complex sample to evaluate the relationship betw
                 #     continue
                 
                 for rep in range(5, 6):
-                    run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}_{rep}.time python /mnt/d/breakpoints/script/scripts/main.py --seed 8 -r /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
+                    run = f"""/usr/bin/time -v -o {amount_result_dir}/{cami_ID}_{prop}_{rep}.time python {localhgt_code} --seed 8 -r {uhgg_ref}\
                     --fq1 {amount_dir}/{cami_ID}_{prop}_1.fq --fq2 {amount_dir}/{cami_ID}_{prop}_2.fq -s {cami_ID}_{prop}_{rep} -o {amount_result_dir}
                     """
                     myfile = f"{amount_result_dir}/{cami_ID}_{prop}_{rep}.acc.csv"
                     if not os.path.isfile(myfile):
                         print (run, file = h)
 
-                    run = f"""/usr/bin/time -v -o {amount_result_lemon}/{cami_ID}_{prop}_{rep}.time bash /mnt/d/breakpoints/lemon/pipeline.sh /mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna\
+                    run = f"""/usr/bin/time -v -o {amount_result_lemon}/{cami_ID}_{prop}_{rep}.time bash {lemon_code    } {uhgg_ref}\
                     {amount_dir}/{cami_ID}_{prop}_1.fq  {amount_dir}/{cami_ID}_{prop}_2.fq {cami_ID}_{prop}_{rep} {amount_result_lemon}
                     """
                     myfile = f"{amount_result_lemon}/{cami_ID}_{prop}_{rep}.acc.csv"
@@ -806,8 +816,6 @@ def abundance_fq():  # not using
         print (run, file = h)
     h.close()
 
-
-
 class Parameters():
     def __init__(self, reference):
         self.HGT_num = 20
@@ -833,7 +841,7 @@ class Parameters():
         self.sample = ''
         self.outdir = ''
         self.origin_ref = reference  #'/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
-        self.cami_dir = '/mnt/d/breakpoints/HGT/CAMI/'
+        self.cami_dir = cami_dir
         self.seq_dict = {}
         self.seq_len = {}
         self.cal_genome_len()
@@ -884,12 +892,12 @@ class Parameters():
 
 class Complexity():## discarded function 
     
-    def __init__(self):
+    def __init__(self, complexity_dir='/mnt/d/breakpoints/HGT/complexity/'):
         self.levels = ['low', 'medium', 'high']
         self.size = {'high':1000000000, 'medium':500000000, 'low':100000000}
         self.depths = {'high':10, 'medium':20, 'low':100}
-        self.origin_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
-        self.complexity_dir = '/mnt/d/breakpoints/HGT/complexity/'
+        self.origin_ref = uhgg_ref
+        self.complexity_dir = complexity_dir
         self.random_rate = 0.1
         self.read_pair_num = int(10000000000/300)
 
@@ -923,7 +931,7 @@ class Complexity():## discarded function
             print (level)
             self.select_genome(level)
 
-def generate_complexity():
+def generate_complexity():  # not using
     ## discarded function 
     ## because data is too larger
     com = Complexity()
@@ -932,24 +940,24 @@ def generate_complexity():
 if __name__ == "__main__":
 
     t0 = time.time()
-    # pa = Parameters()
 
-    uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"
-    blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'
-    uhgg_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'
+    ######## extract the unique region of reference
+    # run this function first: blast_map2_self()
+    # uniq_segs_loci = extract_uniq_region(blast_file)   #### extract the unique region of the fasta based on the blast_file
+    # np.save(uniq_segs_file, uniq_segs_loci)   #### store the unique region in uniq_segs_file
 
+    ######## UHGG V1 database
+    uniq_segs_file = "/mnt/d/breakpoints/HGT/UHGG/uniq_region_uhgg.npy"    ### store the unique region of the fasta based on the blast_file using the function: extract_uniq_region
+    blast_file = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.blast.out'   ### map the reference to itself by the function: blast_map2_self
+    uhgg_ref = '/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna'   ### the reference genomes used to simulate data
+
+    ######## proGenomes database
     # uniq_segs_file = "/mnt/d/breakpoints/HGT/proGenomes/uniq_region_proGenomes.npy"
     # blast_file = '/mnt/d/breakpoints/HGT/proGenomes/freeze12.contigs.representatives.fasta.blast.out.xz'
     # progenomes = '/mnt/d/breakpoints/HGT/proGenomes/proGenomes_v2.1.fasta'
 
 
-    # uniq_segs_loci = extract_uniq_region(blast_file)  
-    # np.save(uniq_segs_file, uniq_segs_loci)
-
-    # generate_complexity()
-    
-
-    # """
+    ########  load the data
     if os.path.isfile(uniq_segs_file):
         uniq_segs_loci = np.load(uniq_segs_file, allow_pickle='TRUE').item()
     else:
@@ -958,16 +966,14 @@ if __name__ == "__main__":
     t1 = time.time()
     print ('Uniq extraction is done.', t1 - t0)
     print ("genome num:", len(uniq_segs_loci))
-    # pro_snp(uniq_segs_loci)
-    # pro_cami()
-    # UHGG_donor(uniq_segs_loci)
-    # UHGG_frag(uniq_segs_loci)
-    # UHGG_length(uniq_segs_loci)
-    # UHGG_depth(uniq_segs_loci)
-    # """
-    UHGG_amount()
+    cami_dir = '/mnt/d/breakpoints/HGT/CAMI/' ## the folder stores collected CAMI data
 
-    # abun = 0.5
-    # workdir = "/mnt/d/HGT/abundance/abun_%s/"%(abun)
-    # # UHGG_abundance(uniq_segs_loci)
-    # abundance_fq()
+    ######## start simulation
+    # pro_snp(uniq_segs_loci)   # simulate different snp rate based on the progenomes reference
+    # pro_cami()  # combine the CAMI datasets with samples generated based on progenomes
+    # UHGG_donor(uniq_segs_loci)  # simulate with the presence of absence of the donor genome based on UHGG 
+    # UHGG_frag(uniq_segs_loci)  # simulate with different length of insert sizes of paired-end reads based on UHGG 
+    # UHGG_length(uniq_segs_loci) # simulate with different length of insert sizes of paired-end reads based on UHGG 
+    # UHGG_depth(uniq_segs_loci)  # simulate with different read lengths based on UHGG
+    # """
+    UHGG_amount()  # downsampling the CAMI datasets to generate different data amounts
