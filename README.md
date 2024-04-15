@@ -103,6 +103,7 @@ LocalHGT require a reference, and LocalHGT accept the reference by parameter `lo
 
 We have prebuilt several references for users to conveniently use. It is recommended to choose a habitat-specific reference. For example, if you want to analyze human oral microbiome, you can use [human-oral-v1-0-1](https://doi.org/10.5281/zenodo.10959731). The prebuilt references are:
 - [human-gut-v1 (UHGG v1)](https://doi.org/10.5281/zenodo.10908234)
+- [human-gut-v2 (UHGG v2)](https://doi.org/10.5281/zenodo.10959929)
 - [human-oral-v1-0-1](https://doi.org/10.5281/zenodo.10959731)
 - [human-vaginal-v1-0](https://doi.org/10.5281/zenodo.10952065)
 
