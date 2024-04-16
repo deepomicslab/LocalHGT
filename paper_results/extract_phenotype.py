@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+
+"""
+extract the phenotype information for real data
+prepare the Table S1
+"""
+
 import csv
 import pysam
 import random

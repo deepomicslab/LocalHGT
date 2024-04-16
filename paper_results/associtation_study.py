@@ -1047,11 +1047,11 @@ if __name__ == "__main__":
     abun_cutoff = 1e-7  #1e-7
     cutoff = 0.1
     level = 5
-
     bin_size = 5000
 
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/" # HGT breakpoint results detected by LocalHGT, can be downloaded from https://doi.org/10.5281/zenodo.10906354
     gff = "/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.gff"
+    
     phenotype_dict = read_phenotype()
     taxonomy = Taxonomy()
     dat = Data_load()

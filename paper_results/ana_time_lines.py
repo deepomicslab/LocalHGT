@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Examine whether HGT can serve as fingerprints in time-series cohort
+"""
+
 import re, os
 import csv
 from scipy import stats
@@ -692,13 +696,11 @@ def get_pure_genome(del_genome):
     return "_".join(del_genome.split("_")[:-1])
 
 if __name__ == "__main__":
-    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
-    result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    hgt_table = "/mnt/d/HGT/time_lines/SRP366030.HGT.table.csv"
-    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-
-    all_identified_hgt = "/mnt/d/HGT/seq_ana/bk/identified_event.csv"
+    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"  # metabata of SRP366030
+    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv" # record corresponding individual ID for each sample
+    result_dir = "/mnt/d/HGT/time_lines/SRP366030/" # HGT breakpoint results of the hybrid cohorts (SRP366030) detected by LocalHGT, can be downloaded from https://doi.org/10.5281/zenodo.10906354
+    hgt_table = "/mnt/d/HGT/time_lines/SRP366030.HGT.table.csv" 
+    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv" # the file to save the complete HGT events detected by LocalHGT
 
     bin_size = 500
     sample_cutoff = 8  # 8

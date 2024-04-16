@@ -28,6 +28,7 @@
 | CRC_LODO_Analysis_v2.py | Evaluate the integration of HGT and abundance biomarkers in eight CRC cohorts |
 | additional_validation.py  | Get information on the independent CRC cohort|
 | HGT_network.py | Perform individual HGT network analyses |
+| extract_phenotype.py | Extract the phenotype information for real data |
 | network_analysis/* | Perform populational HGT network analyses |
 | mge_annotation/* | Perform mobile gene element (MGE) analyses in HGT events |
 |[Detected HGTs in real data](https://doi.org/10.5281/zenodo.10906354)|HGT breakpoints and events detected by LocalHGT from all real samples. |

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Validate the complete HGT events detected by LocalHGT in a cohort with both Illumina and Nanopore data available.
+Validate the complete HGT events detected by LocalHGT in cohorts with both Illumina and Nanopore data available.
 Use Illumina data to detect complete HGT events with LocalHGT, and use Nanopore data to validate them.
 
 Reconstruct the recipient genome by inserting the transferred sequence into it, 
