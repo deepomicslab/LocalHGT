@@ -33,7 +33,7 @@ sh install.sh
 ```
 
 ### 3. source code install with self-build environment
-Third, obtain the source code from github, install the dependencies (listed at the bottom in [Dependencies](#dependencies), and then install.
+Third, obtain the source code from github, install the dependencies (listed at [Dependencies](#dependencies), and then install.
 Ensure your platform has `c++ compiler` (g++/clang++) and `make`.
 
 If you have the root access, just install by:
