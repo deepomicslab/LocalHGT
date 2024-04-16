@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 
 """
-The script to download UHGG genomes.
-
-Sometimes, we fail to download some species, we download iteratively until all species are downloaded.
-
+The script to download UHGG v1 genomes.
 After downloading, cat all the genomes to a single reference file.
 
-Sometimes the fasta formate might have error, we use the tool "seqkit seq" to refine the reference file.
+The UHGG v1 can be also directly downloaded from https://doi.org/10.5281/zenodo.10908234
 
 """
 
@@ -47,7 +44,7 @@ def download(args):
         link, file = get_link(i)
         #print (i, pre, link)
         if not os.path.isfile(file):
-            print ('download %s...'%(file))
+            # print ('download %s...'%(file))
             down = "wget %s -P %s/"%(link, args['b'])
             os.system(down)
         else:

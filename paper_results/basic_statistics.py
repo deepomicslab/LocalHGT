@@ -1,5 +1,10 @@
 
 #!/usr/bin/env python3
+"""
+Characterize HGT breakpoint distribution among samples
+
+to use this script, remember to edit the file path
+"""
 
 import re, os
 import csv
@@ -355,15 +360,15 @@ def read_file_to_string(file_path):
         file_contents = f.read()
     return file_contents
 
-def prepare_tree(): # just use genome name
-    gradient_template = "/mnt/d/HGT/time_lines/distribution/dataset_gradient_template.txt"
+def prepare_tree(workdir="/mnt/d/HGT/time_lines/distribution/"): # just use genome name
+    gradient_template = workdir + "/dataset_gradient_template.txt"
     # Load a tree structure from a newick file.
-    f = open("/mnt/d/HGT/time_lines/distribution/hgt_tree.nwk", 'w')
-    a = open("/mnt/d/HGT/time_lines/distribution/tree_annotation.txt", 'w')
-    b = open("/mnt/d/HGT/time_lines/distribution/bar_annotation.txt", 'w')
-    c = open("/mnt/d/HGT/time_lines/distribution/connection.txt", 'w')
-    g = open("/mnt/d/HGT/time_lines/distribution/gradient_annotation.txt", 'w')
-    t = Tree("/mnt/d/HGT/time_lines/distribution/bac120_iqtree.nwk")
+    f = open("%s/hgt_tree.nwk"%(workdir), 'w')
+    a = open("%s/tree_annotation.txt"%(workdir), 'w')
+    b = open("%s/bar_annotation.txt"%(workdir), 'w')
+    c = open("%s/connection.txt"%(workdir), 'w')
+    g = open("%s/gradient_annotation.txt"%(workdir), 'w')
+    t = Tree("%s/bac120_iqtree.nwk"%(workdir))
 
 
     sorted_dict = ba.sort_taxa_by_freq(8) # 8 means genome level
@@ -535,43 +540,28 @@ if __name__ == "__main__":
     bin_size = 100
     abun_cutoff = 1e-7  #1e-7
 
+    # load annotation info
     taxonomy = Taxonomy()
     phenotype_dict = read_phenotype()
-
 
     # hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
     # tgs_dir = "/mnt/d/HGT/time_lines/SRP366030/"
     # wenkui_dir = "/mnt/d/breakpoints/HGT/CRC/wenkui/"
 
 
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"  # HGT breakpoint results detected by LocalHGT, can be downloaded from https://doi.org/10.5281/zenodo.10906354
 
     ba = Basic_count()
-    ba.read_samples()
-    ba.count()  
-    ba.analyze_amount()
+    ba.read_samples() # load data
+    ba.count()  # count breakpoint number distribution across all the samples
+    ba.analyze_amount() # analyze the association between called BKP num and sequencing amount
     # ba.count_inter_taxa_HGT()
 
     # ################## cal the correlation between HGT frequency and phylogenetic distance
     # genome_pair_dict = ba.count_genome_pair()
     # cal_corr(genome_pair_dict)
 
-
-
-    # ##################  try to normalize the HGT frequency by the microbial abundance
-    # taxa_average_abun_dict = taxa_average_abun()
-    # # print (taxa_average_abun_dict)
-    # taxa_sort_data = []
-    # for level in range(1, 2):
-    #     sorted_dict = ba.sort_taxa_by_freq_norm(level)
-    #     top_sum = 0
-    #     for i in range(5):
-    #         print (i, sorted_dict[i][0], sorted_dict[i][1])
-    #         taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
-
-
-
-    # ######## just sort taxa by HGT freq
+    # ######## just sort taxa by HGT frequency
     # taxa_sort_data = []
     # for level in range(1, 7):
     #     sorted_dict = ba.sort_taxa_by_freq(level)
@@ -587,7 +577,7 @@ if __name__ == "__main__":
     # df = pd.DataFrame(taxa_sort_data, columns = ["Taxa", "Frequency", "Level"])
     # df.to_csv('/mnt/d/R_script_files/taxa_sort.csv', sep=',')
 
-    #### prepare count tree
+    #### prepare config files to construct the phylogenetic tree of HGT-involved genomes, the tree is constructed by iTOL
     # prepare_tree()
 
     # ######## get intra-taxa HGT freq
@@ -602,5 +592,17 @@ if __name__ == "__main__":
 
     ######## get inter-taxa HGT count
     # ba.count_inter_taxa_HGT()
+
+
+    # ##################  try to normalize the HGT frequency by the microbial abundance, not used
+    # taxa_average_abun_dict = taxa_average_abun()
+    # # print (taxa_average_abun_dict)
+    # taxa_sort_data = []
+    # for level in range(1, 2):
+    #     sorted_dict = ba.sort_taxa_by_freq_norm(level)
+    #     top_sum = 0
+    #     for i in range(5):
+    #         print (i, sorted_dict[i][0], sorted_dict[i][1])
+    #         taxa_sort_data.append([sorted_dict[i][0], sorted_dict[i][1], level_list[level-1]])
 
     

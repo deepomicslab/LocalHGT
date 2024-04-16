@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+"""
+Test the enrichment of microhomology in HGT breakpoint junctions
+"""
+
 
 import sys
 import re, os
@@ -140,11 +146,11 @@ def read_design():
 
 class Micro_homo():
 
-    def __init__(self):
+    def __init__(self, workdir="/mnt/d/breakpoints/HGT/micro_homo/"):
         self.all_data, self.sample_num = None, None
         
-        self.ref = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
-        self.workdir = "/mnt/d/breakpoints/HGT/micro_homo/"
+        self.ref = database
+        self.workdir = workdir
         self.ref_fasta = Fasta(self.ref)        
         self.cutoff = 10
         self.min_score = 8
@@ -479,18 +485,17 @@ def length_cutoff_count(raw_len_list, cutoff):
 
 if __name__ == "__main__":
 
-    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
-    result_dir = "/mnt/d/HGT/time_lines/SRP366030/"
-    identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-    saved_can_match_bkp = "/mnt/d/HGT/time_lines/SRP366030.can_match.pickle"
+    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt" # meta data of the time-lines cohort
+    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv" # record the time point and corresponding individual of the time-lines cohort
+    result_dir = "/mnt/d/HGT/time_lines/SRP366030/"  # HGT breakpoint results of the time-lines cohort detected by LocalHGT, can be downloaded from https://doi.org/10.5281/zenodo.10906354
+    database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna" # UHGG v1 reference
 
-
+    # load data
     sra_sample_dict = read_meta()
     sample_individual_dict, sample_time_point = read_design()
     all_bkps = read_samples()
 
-    
+    # compare the microhomology length between HGT breakpoint pairs and random two HGT breakpoints 
     mic = Micro_homo()
     mic.sam_number = 10000
     all_bkps_dict = {}
@@ -520,7 +525,7 @@ if __name__ == "__main__":
         data.append([hgt_homo[i], "HGT_Junction"])
         data.append([random_homo[i], "Expected"])
     df = pd.DataFrame(data, columns = ["Microhomology", "Group"])
-    df.to_csv('/mnt/d/R_script_files//microhomology_length.csv', sep=',')  
+    df.to_csv('/mnt/d/R_script_files//microhomology_length.csv', sep=',')  # the file to make figure
 
     cutoff = 5
     cut_hgt_homo, hgt_ratio = length_cutoff_count(hgt_homo, cutoff)

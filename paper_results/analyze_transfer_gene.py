@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Analyze the function of HGT-related genes and analyze the HGT transfer patterns
+"""
+
 import re, os
 import csv
 from scipy import stats
@@ -1264,33 +1268,30 @@ if __name__ == "__main__":
 
     # identified_hgt = "/mnt/d/HGT/seq_ana/bk/identified_event.csv"
     # identified_hgt = "/mnt/d/HGT/time_lines/SRP366030.identified_event.csv"
-    identified_hgt = "/mnt/d/HGT/seq_ana/identified_event.csv"
-    gff = "/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.gff"
-    database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna"
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
-    all_kos_file = "/mnt/d/HGT/seq_ana/all_kos.txt"
-    transfer_cds_fasta = "/mnt/d/HGT/seq_ana/transfer_cds.fasta"
-    no_transfer_cds_fasta = "/mnt/d/HGT/seq_ana/no_transfer_cds.fasta"
+    identified_hgt = "/mnt/d/HGT/seq_ana/identified_event.csv" # HGT event results detected by LocalHGT, can be downloaded from https://doi.org/10.5281/zenodo.10906354
+    gff = "/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.gff" # gene annotation for UHGG, can be get from  https://ftp.ebi.ac.uk/pub/databases/metagenomics/mgnify_genomes/human-gut/v1.0/
+    database = "/mnt/d/breakpoints/HGT/micro_homo/UHGG_reference.formate.fna" # UHGG v1 reference
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/" # HGT breakpoint results detected by LocalHGT, can be downloaded from https://doi.org/10.5281/zenodo.10906354
+    all_kos_file = "/mnt/d/HGT/seq_ana/all_kos.txt" # to save all KOs
+    transfer_cds_fasta = "/mnt/d/HGT/seq_ana/transfer_cds.fasta" # to save the CDS in transferred sequence
+    no_transfer_cds_fasta = "/mnt/d/HGT/seq_ana/no_transfer_cds.fasta" # to save the CDS in non-transferred sequence
 
-    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"
-    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv"
+    meta_data = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"  # meta data of the time-lines cohort
+    design_file = "/mnt/d/HGT/time_lines/sample_design.tsv" # record the time point and corresponding individual of the time-lines cohort
     sra2individual_ID = get_individual_ID()
 
-    phage_db = "/mnt/d/HGT/seq_ana/BlastDB/allprophage_DB"
-    plasmid_db = "/mnt/d/HGT/seq_ana/database/plsdb.fna"
 
+    transfer_ko_file = "/mnt/d/HGT/seq_ana/transfer_ko.txt" # to save the gene KO in transferred sequence
+    no_transfer_ko_file = "/mnt/d/HGT/seq_ana/no_transfer_ko.txt" # to save the gene KO in non-transferred sequence
 
-    transfer_ko_file = "/mnt/d/HGT/seq_ana/transfer_ko.txt"
-    no_transfer_ko_file = "/mnt/d/HGT/seq_ana/no_transfer_ko.txt"
-
-    insert_ko_file = "/mnt/d/HGT/seq_ana/insert_ko.txt"
+    insert_ko_file = "/mnt/d/HGT/seq_ana/insert_ko.txt" # to save the gene KO in insertion breakpoints of HGT events
     no_insert_ko_file = "/mnt/d/HGT/seq_ana/no_insert_ko.txt"
 
-    bkp_ko_file = "/mnt/d/HGT/seq_ana/bkp_ko.txt"
+    bkp_ko_file = "/mnt/d/HGT/seq_ana/bkp_ko.txt" # to save the gene KO in all HGT breakpoints
     no_bkp_ko_file = "/mnt/d/HGT/seq_ana/no_bkp_ko.txt"
 
-    cog_enrich = "/mnt/d/R_script_files/cog_enrich.csv"
-    product_enrich = "/mnt/d/R_script_files/product_enrich.csv"
+    cog_enrich = "/mnt/d/R_script_files/cog_enrich.csv"  # to save the enriched COG categories
+    product_enrich = "/mnt/d/R_script_files/product_enrich.csv" # to save the enriched gene product categories
     # cog_insert = "/mnt/d/R_script_files/cog_insert.csv"
 
     COG_dict, COG_profile_dict = get_COG_dict()
@@ -1299,11 +1300,11 @@ if __name__ == "__main__":
     remove_transposon_flag = False
     only_healthy = False  # only check healthy persons
 
-    # annotation = Annotation(gff)
+    # annotation = Annotation(gff) # load gene annotation
     # annotation.read_gff()
 
-    # count_transfer_times()
-    get_gene_lengths(identified_hgt)
+    # count_transfer_times() # analyze gene transfer pattern
+    get_gene_lengths(identified_hgt)  # get transferred sequence length distribution 
 
     # trans = Transfer_times()
     # trans.read_events(identified_hgt)
@@ -1312,17 +1313,6 @@ if __name__ == "__main__":
 
     # extract_seq = Extract_seq(trans.HGT_event_dict)
     # extract_seq.transfer_cds()
-
-    
-    # phage_trans, all_trans = blast_main(transfer_cds_fasta, plasmid_db)
-    # phage_no, all_no = blast_main(no_transfer_cds_fasta, plasmid_db) 
-    # a = phage_trans
-    # b = all_trans - a
-    # c = phage_no
-    # d = all_no -c 
-    # oddsratio, p_value = fisher_exact([[a, b], [c, d]])
-    # print (oddsratio, p_value)
-
 
     # extract = Extract_KO(trans.HGT_event_dict)
     # extract.classify_bkp_kos()
@@ -1339,11 +1329,21 @@ if __name__ == "__main__":
     # prod = Extract_product(trans.HGT_event_dict)
     # prod.main()
 
-
-
-
-    # classify = Classify(trans.HGT_event_dict)
+    # classify = Classify(trans.HGT_event_dict) # count insertion sequence element and transposon frequency in the transferred sequences
     # classify.main()
+
+
+    ###############to analyze if phage and plasmid is enriched in transferred sequences, not used anymore
+    # phage_db = "/mnt/d/HGT/seq_ana/BlastDB/allprophage_DB"
+    # plasmid_db = "/mnt/d/HGT/seq_ana/database/plsdb.fna"  
+    # phage_trans, all_trans = blast_main(transfer_cds_fasta, plasmid_db)
+    # phage_no, all_no = blast_main(no_transfer_cds_fasta, plasmid_db) 
+    # a = phage_trans
+    # b = all_trans - a
+    # c = phage_no
+    # d = all_no -c 
+    # oddsratio, p_value = fisher_exact([[a, b], [c, d]])
+    # print (oddsratio, p_value)
 
 
 
