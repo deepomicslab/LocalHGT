@@ -58,7 +58,7 @@ localhgt bkp --help
 localhgt event --help
 ```
 Note:
-- LocalHGT only accept paired-end shotgun metagenomic sequencing data.
+- LocalHGT only accepts paired-end shotgun metagenomic sequencing data.
 - LocalHGT supports Linux, MacOS, and Windows WSL platforms.
 
 
@@ -119,9 +119,9 @@ https://github.com/deepomicslab/LocalHGT
 
 
 ### Construct reference 
-LocalHGT require a reference, and LocalHGT accept the reference by parameter `localhgt bkp -r`; please give the full path of the reference to `-r`.  The reference contains the representative genome of your interested microbes, and it should be a single `fasta` file.
+LocalHGT requires a reference, and LocalHGT accepts the reference by parameter `localhgt bkp -r`; please give the full path of the reference to `-r`.  The reference contains the representative genome of your interested microbes, and it should be a single `fasta` file.
 
-We have prebuilt several references for users to conveniently use. It is recommended to choose a habitat-specific reference. For example, if you want to analyze human oral microbiome, you can use [human-oral-v1-0-1](https://doi.org/10.5281/zenodo.10959731). The prebuilt references are:
+We have prebuilt several references for users to conveniently use. It is recommended to choose a habitat-specific reference. For example, if you want to analyze the human oral microbiome, you can use [human-oral-v1-0-1](https://doi.org/10.5281/zenodo.10959731). The prebuilt references are:
 - [human-gut-v1 (UHGG v1)](https://doi.org/10.5281/zenodo.10908234)
 - [human-gut-v2 (UHGG v2)](https://doi.org/10.5281/zenodo.10959929)
 - [human-oral-v1-0-1](https://doi.org/10.5281/zenodo.10959731)
@@ -143,8 +143,8 @@ Moreover, [ProGenomes3](https://progenomes.embl.de/) provides several representa
 
 Note:
 - the reference file should be uncompressed.
-- given a new reference, `LocalHGT` will index it automatically, and it will take a few time (e.g., several hours for UHGG v1). 
-- reference index file size is approx (reference size) * 4 * (number of hash functions), make sure the disk has enough space. Number of hash functions is defaulted by 3, and is denoted by the parameter `-e`.
+- given a new reference, `LocalHGT` will index it automatically, and it will take a few hours (e.g., several hours for UHGG v1). 
+- reference index file size is approx (reference size) * 4 * (number of hash functions), make sure the disk has enough space. The number of hash functions is defaulted by 3, and is denoted by the parameter `-e`.
 
 
 ### Detect HGT breakpoints
@@ -191,7 +191,7 @@ optional arguments:
                    (just for evaluation). (default: 1)
   -h, --help
 ```
-The detected HGT breakpoints are stored in the `<sample name>.acc.csv` file within the output folder.
+The detected HGT breakpoints are stored in the `<sample name>.acc.csv` file within the output folder. See [how to interpret results](#hgt-breakpoints).
 
 Note:
 - The fastq files should be uncompressed.
@@ -222,7 +222,7 @@ optional arguments:
   -m        <int> minimum transfer sequence length (default: 500)
   -h, --help
 ```
-
+See [how to interpret results](#hgt-events).
 Note:
 - the reference file (given by `-r`) should be the same as the reference file used in `localhgt bkp` (also given by `-r`).
 - It is recommended to detect HGT breakpoints for each sample and store the results in a common output folder. Subsequently, when detecting complete HGT events, specify the output folder using the `-b` parameter. This approach allows LocalHGT to consider all the samples collectively, resulting in more reliable results for complete HGT events.
