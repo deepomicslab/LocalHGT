@@ -5,7 +5,7 @@ There are three methods to install LocalHGT:
 
 ### 1. conda install
 First, install LocalHGT by conda via the [bioconda](https://anaconda.org/bioconda/localhgt) channel.
-It is recommanded to create a new conda environment and install LocalHGT simutaneously.
+It is recommended to create a new conda environment and install LocalHGT simultaneously.
 ```
 conda create --name localhgt -c bioconda -c conda-forge localhgt
 conda activate localhgt
@@ -33,7 +33,7 @@ sh install.sh
 ```
 
 ### 3. source code install with self-build environment
-Third, obtain the source code from github, install the dependencies (listed at the bottom in `Dependencies` section), and then install.
+Third, obtain the source code from github, install the dependencies (listed at the bottom in [Dependencies](#dependencies), and then install.
 Ensure your platform has `c++ compiler` (g++/clang++) and `make`.
 
 If you have the root access, just install by:
@@ -278,7 +278,7 @@ Interpret each column as:
 | donor  | donor genome  |
 | delete_start  | the start site of the transferred sequence on the donor genome  |
 | delete_end  | the end site of the transferred sequence on the donor genome  |
-| reverse_flag  | if the transferred sequence is reversely inserted to recipient  |
+| reverse_flag  | if the transferred sequence is reversely inserted into recipient  |
 
 
 ## Dependencies
