@@ -5,11 +5,12 @@ analysis/new_result
 analysis/abd_files
 analysis/use
 *pdf
-*csv
+./*csv
+test/*csv
 *pkl
 *xlsx
 *list
-*xls
+./*xls
 *npy
 #src
 test/output
