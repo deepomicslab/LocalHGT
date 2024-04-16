@@ -62,7 +62,7 @@ Note:
 - LocalHGT supports Linux, MacOS, and Windows WSL platforms.
 
 
-## Test
+### Test
 ```
 cd test/
 sh run_BKP_detection.sh # test HGT breakpoint detection
@@ -70,31 +70,9 @@ sh run_event_detection.sh # test HGT event detection
 ```
 See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_output.csv` for event results.
 
-## Bug fix
-- If you meet `No module named _sysconfigdata_x86_64_conda_cos7_linux_gnu`, according to the [solution](https://stackoverflow.com/questions/68261254/conda-error-sysconfigdata-x86-64-conda-linux-gnu), just run 
-```
-cp ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos6_linux_gnu.py ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos7_linux_gnu.py
-```
-- If you meet `cannot import name TypeAlias from typing_extensions`, according to the [solution](https://github.com/alexdelorenzo/cast_control/issues/16), run
-```
-pip install typing-extensions --upgrade
-```
-- If you meet `ERROR: Could not build wheels for scikit-bio, hdmedians, which is required to install pyproject.toml-based projects` or `Python.h: No such file or directory`, according to the [solution](https://stackoverflow.com/questions/21530577/fatal-error-python-h-no-such-file-or-directory), run 
-```
-sudo apt-get install python3-dev
-```
-- If you meet `UserWarning: Signature b'\x00\xd0\xcc\xcc\xcc\xcc\xcc\xcc\xfb\xbf\x00\x00\x00\x00\x00\x00' for <class 'numpy.longdouble'> does not match any known type: falling back to type probe function.`, according to the [solution](https://github.com/nipy/nibabel/issues/1309), run
-```
-conda install numpy==1.24
-```
-- If you meet `urllib3 v2.0 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with LibreSSL 2.8.3.`, according to the [solution](https://stackoverflow.com/questions/76187256/importerror-urllib3-v2-0-only-supports-openssl-1-1-1-currently-the-ssl-modu), run 
-```
-conda install urllib3<2.0
-```
-- If you meet `No module named 'pexpect'`, `No module named 'decorator'`, or `No module named 'cachecontrol'`, run
-```
-conda install scikit-bio==0.5.6
-```
+If you meet any issues, take a look at [Bug fix](#bug-fix).
+
+
 
 ## Basic Usage 
 ### Main functions
@@ -302,6 +280,32 @@ make
 cxx-compiler
 ```
 The above tools should be installed in the system path. While the installation process using conda can be expedited by not specifying the version, it is important to note that this approach may potentially introduce unexpected bugs.
+
+## Bug fix
+- If you meet `No module named _sysconfigdata_x86_64_conda_cos7_linux_gnu`, according to the [solution](https://stackoverflow.com/questions/68261254/conda-error-sysconfigdata-x86-64-conda-linux-gnu), just run 
+```
+cp ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos6_linux_gnu.py ${CONDA_PREFIX}/lib/python3.7/_sysconfigdata_x86_64_conda_cos7_linux_gnu.py
+```
+- If you meet `cannot import name TypeAlias from typing_extensions`, according to the [solution](https://github.com/alexdelorenzo/cast_control/issues/16), run
+```
+pip install typing-extensions --upgrade
+```
+- If you meet `ERROR: Could not build wheels for scikit-bio, hdmedians, which is required to install pyproject.toml-based projects` or `Python.h: No such file or directory`, according to the [solution](https://stackoverflow.com/questions/21530577/fatal-error-python-h-no-such-file-or-directory), run 
+```
+sudo apt-get install python3-dev
+```
+- If you meet `UserWarning: Signature b'\x00\xd0\xcc\xcc\xcc\xcc\xcc\xcc\xfb\xbf\x00\x00\x00\x00\x00\x00' for <class 'numpy.longdouble'> does not match any known type: falling back to type probe function.`, according to the [solution](https://github.com/nipy/nibabel/issues/1309), run
+```
+conda install numpy==1.24
+```
+- If you meet `urllib3 v2.0 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with LibreSSL 2.8.3.`, according to the [solution](https://stackoverflow.com/questions/76187256/importerror-urllib3-v2-0-only-supports-openssl-1-1-1-currently-the-ssl-modu), run 
+```
+conda install urllib3<2.0
+```
+- If you meet `No module named 'pexpect'`, `No module named 'decorator'`, or `No module named 'cachecontrol'`, run
+```
+conda install scikit-bio==0.5.6
+```
 
 ## Paper results generation
 The scripts to produce the results in the paper can be found in `paper_results/*`, where some scripts might require additional python modules. HGT breakpoints and events detected by LocalHGT from all real samples can be seen at [Detected HGTs in real data](https://doi.org/10.5281/zenodo.10906354).
