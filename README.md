@@ -49,6 +49,13 @@ cd scripts && ln -s localhgt.py localhgt
 ```
 Then add the full path of `scripts/` to the system path by adding `export PATH="/full-path-to/scripts/:$PATH"` to `.bashrc`. 
 
+### Test
+```
+cd test/
+sh run_BKP_detection.sh # test HGT breakpoint detection
+sh run_event_detection.sh # test HGT event detection
+```
+See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_output.csv` for event results.
 
 ### Run
 After installation, perform LocalHGT with
@@ -58,20 +65,9 @@ localhgt bkp --help
 localhgt event --help
 ```
 Note:
+- If you meet any issues, take a look at [Bug fix](#bug-fix).
 - LocalHGT only accepts paired-end shotgun metagenomic sequencing data.
 - LocalHGT supports Linux, MacOS, and Windows WSL platforms.
-
-
-### Test
-```
-cd test/
-sh run_BKP_detection.sh # test HGT breakpoint detection
-sh run_event_detection.sh # test HGT event detection
-```
-See `output/test_sample.acc.csv` for breakpoint results, and see `test_event_output.csv` for event results.
-
-If you meet any issues, take a look at [Bug fix](#bug-fix).
-
 
 
 ## Basic Usage 
