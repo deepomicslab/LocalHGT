@@ -197,6 +197,7 @@ optional arguments:
   -h, --help
 ```
 See [how to interpret results](#hgt-events).
+
 Note:
 - the reference file (given by `-r`) should be the same as the reference file used in `localhgt bkp` (also given by `-r`).
 - It is recommended to detect HGT breakpoints for each sample and store the results in a common output folder. Subsequently, when detecting complete HGT events, specify the output folder using the `-b` parameter. This approach allows LocalHGT to consider all the samples collectively, resulting in more reliable results for complete HGT events.
