@@ -373,10 +373,11 @@ def get_pheno_for_wenkui_CRC(wenkui_dir):
 
 if __name__ == "__main__":
 
-    pheno_file = "/mnt/d/breakpoints/script/analysis/allmetadata.xlsx"
+    pheno_file = "/mnt/d/breakpoints/script/analysis/allmetadata.xlsx"  # can be seen in meta_data
     # hgt_result_dir = "/mnt/d/breakpoints/script/analysis/hgt_results/"
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/" # HGT breakpoint results detected by LocalHGT, can be downloaded from https://doi.org/10.5281/zenodo.10906354
     
+    ## can be seen in meta_data
     pheno_result = "/mnt/d/HGT/association/phenotype.csv"
     tgs_dir = "/mnt/d/HGT/time_lines/SRP366030/"
     tgs_meta = "/mnt/d/HGT/time_lines/SRP366030.csv.txt"

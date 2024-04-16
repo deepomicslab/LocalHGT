@@ -1,3 +1,7 @@
+"""
+Perform individual HGT network analyses
+"""
+
 import re, os
 import csv
 from scipy import stats
@@ -365,7 +369,7 @@ class Network():
                 matrix_dat = new_matrix_dat
 
                 df = pd.DataFrame(matrix_dat, columns = ["group"] + group_list)
-                df.to_csv('/mnt/d/R_script_files/network_comparison_matrix_%s.csv'%(proper), sep=',')
+                df.to_csv('/mnt/d/R_script_files/network_comparison_matrix_%s.csv'%(proper), sep=',')  # store the results
                         
                 print ("<<<<<<<<<<<<<<<<")
         df = pd.DataFrame(data, columns = ["Property", "Value", "Group", "Cohort", "Level", "Origin"])
@@ -403,9 +407,9 @@ class Network():
         df = pd.DataFrame(new_data, columns = ["level_index", "level", "scale_free_num", "network_num", "Frequency"])
         df.to_csv('/mnt/d/R_script_files//scale_free.csv', sep=',')
 
-def read_phenotype():
+def read_phenotype(pheno_result):
     phenotype_dict = {}
-    pheno_result = "/mnt/d/HGT/association/phenotype.csv"
+    
     for line in open(pheno_result):
         array = line.strip().split(",")
         ID = array[1]
@@ -553,8 +557,9 @@ class FR_matrix(Data_load):
 if __name__ == "__main__":
 
     abun_cutoff = 1e-7  #1e-7
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
-    phenotype_dict = read_phenotype()
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"  # HGT breakpoint results detected by LocalHGT, can be downloaded from https://doi.org/10.5281/zenodo.10906354
+    pheno_result = "/mnt/d/HGT/association/phenotype.csv" # Table S1
+    phenotype_dict = read_phenotype(pheno_result)
     taxonomy = Taxonomy()
 
     dat = Data_load()
