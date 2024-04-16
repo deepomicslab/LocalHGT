@@ -1050,31 +1050,29 @@ if __name__ == "__main__":
     bin_size = 5000
 
     hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/" # HGT breakpoint results detected by LocalHGT, can be downloaded from https://doi.org/10.5281/zenodo.10906354
-    gff = "/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.gff"
-    
-    phenotype_dict = read_phenotype()
-    taxonomy = Taxonomy()
-    dat = Data_load()
-    dat.read_samples()
-    print (dat.cohort_set)
-    # tree = Tree("/mnt/d/HGT/time_lines/distribution/bac120_iqtree.nwk")
-
+    gff = "/mnt/d/breakpoints/HGT/UHGG/UHGG_reference.formate.fna.gff" # gene annotation for UHGG, can be get from  https://ftp.ebi.ac.uk/pub/databases/metagenomics/mgnify_genomes/human-gut/v1.0/
     f = open('/mnt/d/HGT/seq_ana/ko_pathway_dict.pickle', 'rb')
     ko_pathway_dict = pickle.load(f)
     print ("pathway dict loaded", len(ko_pathway_dict))
     # Shigellosis_related_kos = get_Shigellosis_kos()
     Shigellosis_related_kos = {'K04551', 'K12785', 'K03221', 'K02977', 'K13450', 'K07345', 'K13285', 'K13792', 'K13085', 'K12679', 'K13743', 'K13284', 'K13791', 'K02927', 'K12800', 'K22487', 'K03094', 'K08738', 'K13286', 'K05692', 'K10704', 'K12757', 'K02580', 'K00844', 'K02406', 'K13520', 'K08770', 'K13287'}
 
+
+    #### load annotation results
+    phenotype_dict = read_phenotype()
+    taxonomy = Taxonomy()
+    dat = Data_load()
+    dat.read_samples()
+    print (dat.cohort_set)
+    # tree = Tree("/mnt/d/HGT/time_lines/distribution/bac120_iqtree.nwk")
     annotation = Annotation(gff)
     annotation.read_gff()
-
     scfa_dict = get_SCFA_genes()
-
     shuffle(dat.sample_obj_list)
-
     focus_cohort = "all"
     # focus_cohort = "YachidaS_2019"
 
+    ###### prepare groups and compare
     combination_dict = {}
     data = []
     group_auc = []
@@ -1086,10 +1084,9 @@ if __name__ == "__main__":
     #         group1 = group_list[i]
     #         group2 = group_list[j]
 
+    #### compare two groups: group1 vs. group2
     group1 = "acute_diarrhoea"
     group2 = "control"
-
-    # for group1 in  ["CRC", "IGT", "adenoma", "T2D", "acute_diarrhoea", "IBD"]:
 
     combination = group1 + " vs. " + group2
     name = group1 + "_" + group2

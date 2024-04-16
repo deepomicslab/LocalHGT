@@ -61,8 +61,9 @@ from scipy.stats import fisher_exact
 level_dict = {"phylum":1, "class":2, "order":3, "family":4, "genus":5, "species":6}
 gender_dict = {"male":0, "female":1, "nan": 2}
 # sra_meta = "italy.csv"
-pheno_file = "/mnt/d/breakpoints/script/analysis/allmetadata.xlsx"#"CRC.xlsx"
-UHGG_meta = "/mnt/d/breakpoints/HGT/UHGG/genomes-all_metadata.tsv"
+pheno_file = "/mnt/d/breakpoints/script/analysis/allmetadata.xlsx"#"CRC.xlsx"  # these metadata can be seen in the folder meta_data/
+UHGG_meta = "/mnt/d/breakpoints/HGT/UHGG/genomes-all_metadata.tsv"  # https://ftp.ebi.ac.uk/pub/databases/metagenomics/mgnify_genomes/human-gut/v1.0/genomes-all_metadata.tsv
+# these abudance files can be seen in the folder meta_data/
 cohort_abd = {"YuJ_2015":"2021-03-31.YuJ_2015.relative_abundance.xls",
 "WirbelJ_2018":"2021-03-31.WirbelJ_2018.relative_abundance.xls",
 "HanniganGD_2017":"2021-03-31.HanniganGD_2017.relative_abundance.xls",
@@ -170,7 +171,6 @@ def get_tag(bkp, level):
     node1 = from_tax  
     node2 = to_tax  
     return new_tag
-
 
 class Sample():
 
@@ -289,9 +289,9 @@ def read_bkp(bkp_file):
     f.close()
     return my_bkps, reads_num
 
-def read_phenotype():
+def read_phenotype(pheno_result):
     phenotype_dict = {}
-    pheno_result = "/mnt/d/HGT/association/phenotype.csv"
+    
     for line in open(pheno_result):
         array = line.strip().split(",")
         ID = array[1]
@@ -315,7 +315,7 @@ def get_abd():
     # print (marker_species_dict)
     return marker_species_dict
 
-def get_genus_abd(marker_genus):
+def get_genus_abd(marker_genus, abudance_folder="/mnt/d/breakpoints/script/analysis/use/"): # abudance file can be found in meta_data/
     sample_abd = {}
     marker_species_num = len(marker_genus)
     i = 0
@@ -325,7 +325,7 @@ def get_genus_abd(marker_genus):
     # print (marker_species_num, marker_genus)
     for cohort in cohort_abd:
         abd_file = cohort_abd[cohort]
-        f = open("/mnt/d/breakpoints/script/analysis/use/" + abd_file, 'r')
+        f = open(abudance_folder + abd_file, 'r')
         i = 0
         for line in f:
             array = line.strip().split()
@@ -353,26 +353,6 @@ def get_genus_abd(marker_genus):
             i += 1
     return sample_abd
 
-def get_abd_file_name():
-    ID_abd_file = {} 
-    file = "/mnt/d/breakpoints/script/analysis/last_gutmeta_sample.tsv"
-    df = pd.read_csv(file, sep = "\t")
-    for i in range(len(df.index)):
-        sra_ID = df["run_name"][i]
-        sample_name = df["sample_name"][i]
-        project_name  = df["project_name"][i]
-        if pd.isnull(sra_ID):
-            continue
-        #     print ("******")
-        # print (sra_ID, sample_name, project_name)
-        array = sra_ID.split(";")
-        for ID in array:
-            ID = ID.strip()
-            ID_abd_file[ID] = project_name + "_" + sample_name
-            # print (ID, project_name + "_" + sample_name)
-        # print (sra_ID, sample_name, project_name)
-    return ID_abd_file
-
 class Phenotype():
     def __init__(self):
         self.name_disease = {}
@@ -388,7 +368,8 @@ class Phenotype():
         self.ID_marker_abundance = {}
         self.name_marker_abundance = {}
         self.read_pheno()
-        self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/USA/usa.csv")
+        # these metadata can be seen in the folder meta_data/
+        self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/USA/usa.csv") 
         self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/japan.csv")
         self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/yu_2015.csv")
         self.read_sra_meta("/mnt/d/breakpoints/HGT/CRC/germany.csv")
@@ -1038,15 +1019,16 @@ if __name__ == "__main__":
     i=2
 
     
-    result_file = open("/mnt/d/breakpoints/script/analysis/random_forest.log", 'w')
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
+    result_file = open("/mnt/d/breakpoints/script/analysis/random_forest.log", 'w') # to record log
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/" # HGT breakpoint results detected by LocalHGT, can be downloaded from https://doi.org/10.5281/zenodo.10906354
+    pheno_result = "/mnt/d/HGT/association/phenotype.csv" # Table S1
     abun_cutoff = 0  #1e-7
     level = 5
     phenotype_dict = read_phenotype()
     
     marker_genus = select_genus()
     thomas_16_sample_abd =  get_genus_abd(marker_genus)   
-    phenotype = Phenotype() 
+    phenotype = Phenotype(pheno_result) 
     taxonomy = Taxonomy()
 
     ### test the classifier in the independent CRC cohort and T2D cohort
@@ -1067,7 +1049,6 @@ if __name__ == "__main__":
     ## compare the integration of HGT and abundance biomarkers and the previously reported 16 biomarkers
     # for group in ["Hybrid", "Thomas-Abun"]:  # for main plot
     for group in ["Hybrid", "Thomas-Abun", "HGT", "Abun"]:
-
         marker_genus = select_genus()
         phenotype = Phenotype()
         taxonomy = Taxonomy()

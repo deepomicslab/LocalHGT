@@ -1,3 +1,7 @@
+"""
+Identify differential HGTs, construct the classifier for each disease
+"""
+
 import re, os
 import csv
 from scipy import stats
@@ -229,9 +233,8 @@ class Data_load():
         f.close()
         return my_bkps
 
-def read_phenotype():
+def read_phenotype(pheno_result):
     phenotype_dict = {}
-    pheno_result = "/mnt/d/HGT/association/phenotype.csv"
     for line in open(pheno_result):
         array = line.strip().split(",")
         ID = array[1]
@@ -634,8 +637,9 @@ if __name__ == "__main__":
     marker_num = 20
     replication = 5
 
-    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/"
-    phenotype_dict = read_phenotype()
+    hgt_result_dir = "/mnt/d/breakpoints/script/analysis/filter_hgt_results/" # HGT breakpoint results detected by LocalHGT, can be downloaded from https://doi.org/10.5281/zenodo.10906354
+    pheno_result = "/mnt/d/HGT/association/phenotype.csv" # Table S1
+    phenotype_dict = read_phenotype(pheno_result)
     taxonomy = Taxonomy()
     dat = Data_load()
     dat.read_samples()
@@ -644,6 +648,7 @@ if __name__ == "__main__":
     group2 = "CRC"
     shuffle(dat.sample_obj_list)
 
+    ###### analyze the prediction results to distinguish disease and healthy
     group_list = ["CRC", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
     for group1 in group_list:
         ro = ROC_ana(group1, "control", dat.sample_obj_list)
@@ -656,11 +661,9 @@ if __name__ == "__main__":
 
     # group_list = ["control", "CRC", "T2D",  "IBD"]
     # group_list = ["CRC", "adenoma", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
-
-
     # group_list = ["control", "IGT", "adenoma",  "acute_diarrhoea"]
-    # 
 
+    ###### analyze the prediction results using different number of markers
     # combination_dict = {}
     # data = []
     # group_auc = []
@@ -698,7 +701,7 @@ if __name__ == "__main__":
     #     print ("average AUC across feature numbers:", combination, np.mean(combination_dict[combination]))
 
 
-    ## pairwise comparison
+    ## pairwise comparison, try to distinguish every two group
     # replication = 10
     # data = []
     # # group_list = ["control", "CRC", "IGT", "T2D", "acute_diarrhoea",  "IBD"]
