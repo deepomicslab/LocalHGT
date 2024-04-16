@@ -7,7 +7,7 @@ There are three methods to install LocalHGT:
 First, install LocalHGT by conda via the [bioconda](https://anaconda.org/bioconda/localhgt) channel.
 It is recommanded to create a new conda environment and install LocalHGT simutaneously.
 ```
-conda create --name localhgt --channel bioconda localhgt
+conda create --name localhgt -c bioconda -c conda-forge localhgt
 conda activate localhgt
 ```
 Also, you can install LocalHGT in existing conda environment. Notably, you might face incompatible packages in this way.
