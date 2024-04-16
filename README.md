@@ -10,7 +10,13 @@ It is recommanded to create a new conda environment and install LocalHGT simutan
 conda create --name localhgt -c bioconda -c conda-forge localhgt
 conda activate localhgt
 ```
-Also, you can install LocalHGT in existing conda environment. Notably, you might face incompatible packages in this way.
+or use mamba
+```
+mamba create --name localhgt -c bioconda -c conda-forge localhgt
+mamba activate localhgt
+```
+
+Also, you can install LocalHGT in existing conda environment. Notably, conflicts may occur with existing packages in this way.
 ```
 conda install bioconda::localhgt
 ```
