@@ -39,8 +39,9 @@ Otherwise, run
 ```
 make
 chmod 744 scripts/*
+cd scripts && ln -s localhgt.py localhgt
 ```
-Then add the full path of `scripts/` to the system path by adding `export PATH="/full-path-to/scripts/:$PATH"` to `.bashrc`. In this case, you should use LocalHGT through `localhgt.py --help`.
+Then add the full path of `scripts/` to the system path by adding `export PATH="/full-path-to/scripts/:$PATH"` to `.bashrc`. 
 
 
 ### Run
@@ -52,7 +53,7 @@ localhgt event --help
 ```
 Note:
 - LocalHGT only accept paired-end shotgun metagenomic sequencing data.
-- LocalHGT supports Linux and MacOS platforms.
+- LocalHGT supports Linux, MacOS, and Windows WSL platforms.
 
 
 ## Test

@@ -24,3 +24,4 @@ localhgt.egg-info/
 upload2anaconda/localhgt/LocalHGT
 scripts/extract_ref
 not_used_scripts/
+scripts/localhgt
