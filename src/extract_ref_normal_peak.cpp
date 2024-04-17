@@ -944,8 +944,10 @@ void read_index(char* coder, int* base, int k, char* comple, string index_name, 
             n = n + sizeof(unsigned int);
         }
         // mtx.lock();
+        // cout <<"Thread slide start: " << start << " ref len "<< ref_len << endl;
         slide_window(record_ref_hit, ref_len, ref_index, extract_ref_len, interval_file, hit_ratio, 
             perfect_hit_ratio,total_peak_num,MyPeak,record_ref_index,thread_index);
+        // cout <<"Thread slide-end start: " << start << " ref len "<< ref_len <<endl;
         // mtx.unlock(); 
         slide_ref_len += ref_len;
         start_point += 4;
@@ -954,9 +956,9 @@ void read_index(char* coder, int* base, int k, char* comple, string index_name, 
         delete [] each_ref_buffer;
         delete [] record_ref_hit;
         delete [] record_ref_index;
-        // if (ref_index % 10000 == 0){
-        //     time_t t1 = time(0);
-        //     cout <<"thread: " <<start<<" ref_index: "<<ref_index << " No. of raw BKPs " << total_peak_num<< " contig_len "<<ref_len << endl;
+        // if (ref_index % 1 == 0){
+        // //     time_t t1 = time(0);
+        //     cout <<"Thread start: " << start <<" ref_index: "<< ref_index << " No. of raw BKPs " << total_peak_num<< " contig_len " << ref_len << endl;
         // } 
         ref_index += 1;
         if (start_point >= end){
@@ -1100,7 +1102,7 @@ void read_fastq(string fastq_file, int k, char* coder, int* base, char* comple,
     // cout << "finish reading "<< fastq_file << " in a thread." <<endl;
     // cout << start << "\t" << end << "\t" << pos<< "\t" <<add_size <<endl;
     // return kmer_count_table;
-    cout << ">>> thread : final read " <<start << " : " <<read_first_line << " read num: " << read_num <<endl;
+    cout << ">>> Thread: final read " <<start << " : " <<read_first_line << " read num: " << read_num <<endl;
 
 }
 
@@ -1445,7 +1447,7 @@ int main( int argc, char *argv[])
 		th.join();
     threads.clear();
     time_t now2 = time(0);
-    cout << "reads finish.\t" << now2 - now1 << endl;
+    cout << "K-mer counting is finished. It costs " << now2 - now1 << " seconds." <<endl;
     cout << "considered read pair num in kmer counting:" << READ_NUM/2 << endl;
     READ_NUM = 0;
 
@@ -1476,7 +1478,7 @@ int main( int argc, char *argv[])
         }
         end = split_ref_cutoffs[3*i+1];
         int start_ref_index = split_ref_cutoffs[3*i+2];
-        // cout << "Thread N.O."<<i << "\t"<< start << "\t" <<end<< "\t"<< start_ref_index << endl;
+        cout << "Thread N.O."<<i << "\t"<< start << "\t" <<end<< "\t"<< start_ref_index << endl;
         // read_index(coder, base, k, comple, index_name, interval_name, choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end);
         threads.push_back(thread(read_index, coder, base, k, comple, index_name, interval_name,
          choose_coder, hit_ratio, perfect_hit_ratio, std::ref(MyPeak), start, end, 
