@@ -244,7 +244,7 @@ int Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int 
     if (Peaks::merge_peak(ref_index, pos,my_peak_index)){
         int index;
         for (int near_pos = pos - near; near_pos < pos + 1; near_pos++){
-            if (near_pos>=0 & near_pos<=ref_len){
+            if (near_pos>=0 & near_pos<=(ref_len-k+1)){
                 for (int p = 0; p < coder_num; p++){
                     index = coder_num*near_pos+p;
                     if (record_ref_hit[index] > 0){
@@ -259,7 +259,7 @@ int Peaks::add_peak(int ref_index, int pos, unsigned int* record_ref_index, int 
         peak_loci[2*my_peak_index+1] = pos;
         int index;
         for (int near_pos = pos - near; near_pos < pos + 1; near_pos++){
-            if (near_pos>=0 & near_pos<=ref_len){
+            if (near_pos>=0 & near_pos<=(ref_len-k+1)){
                 for (int p = 0; p < coder_num; p++){
                     index = coder_num*near_pos+p;
                     if (record_ref_hit[index] > 0){
