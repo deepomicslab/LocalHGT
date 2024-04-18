@@ -1,6 +1,6 @@
 # LocalHGT: an ultrafast horizontal gene transfer detection method from large microbial communities
 
-## Install
+## Quick start
 There are three methods to install LocalHGT:
 
 ### 1. conda install
@@ -34,7 +34,7 @@ sh install.sh
 
 ### 3. source code install with self-build environment
 Third, obtain the source code from github, install the dependencies (listed at [Dependencies](#dependencies)), and then install.
-Ensure your platform has `c++ compiler` (g++/clang++) and `make`.
+Ensure your platform has `c++ compiler` (g++) and `make`.
 
 If you have the root access, just install by:
 ```
@@ -67,7 +67,7 @@ localhgt event --help
 Note:
 - If you meet any issues, take a look at [Bug fix](#bug-fix).
 - LocalHGT only accepts paired-end shotgun metagenomic sequencing data.
-- LocalHGT supports Linux, MacOS, and Windows WSL platforms.
+- LocalHGT supports Linux and Windows WSL platforms.
 
 
 ## Basic Usage 
