@@ -89,7 +89,7 @@ def enrichment_analysis(input_counts, background_counts):
 
 if __name__ == "__main__":
 
-    with open('/mnt/d/HGT/seq_ana/ko_pathway_dict.pickle', 'rb') as f:
+    with open('/mnt/d/HGT/seq_ana/ko_pathway_dict.pickle', 'rb') as f: ## this file is in meta_data/ko_pathway_dict.pickle
         ko_pathway_dict = pickle.load(f)
 
     # background_ko_ids = read_list("/mnt/d/HGT/seq_ana/all_kos.txt")
