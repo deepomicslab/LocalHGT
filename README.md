@@ -1,5 +1,10 @@
 # LocalHGT: an ultrafast horizontal gene transfer detection method from large microbial communities
 
+LocalHGT is a software tool which
+- can detect HGT breakpoints from shotgun metagenome data
+- can detect complete HGT events including the transferred sequence and related deletion and insertion sites
+- can handle a human gut microbiome sample with ~two hours and <25G memory using ten threads
+
 ## Quick start
 There are three methods to install LocalHGT:
 
@@ -306,6 +311,9 @@ conda install scikit-bio==0.5.6
 
 ## Paper results generation
 The scripts to produce the results in the paper can be found in `paper_results/*`, where some scripts might require additional python modules. HGT breakpoints and events detected by LocalHGT from all real samples can be seen at [Detected HGTs in real data](https://doi.org/10.5281/zenodo.10906354).
+
+## Citation
+Shuai Wang, Yiqi Jiang, Lijia Che, Ruo Han Wang, Shuai Cheng Li, Enhancing insights into diseases through horizontal gene transfer event detection from gut microbiome, Nucleic Acids Research, 2024;, gkae515, [https://doi.org/10.1093/nar/gkae515](https://doi.org/10.1093/nar/gkae515)
 
 ## Getting help
 Should you have any queries, please feel free to contact us, we will reply as soon as possible (swang66-c@my.cityu.edu.hk).
