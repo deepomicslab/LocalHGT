@@ -14,6 +14,9 @@ import argparse
 import time
 import logging
 
+# Create a lock to synchronize file writing
+file_lock = multiprocessing.Lock()
+
 minSample = 1
 
 
@@ -568,11 +571,15 @@ def judgeDuplicate(htgCluster):
 
 def print_junction(f, key, sub_key, sub_sub_key, pos1, pos2, pos1_left, pos1_right, pos2_left, pos2_right, num_sup):
     if sub_sub_key  ==  'read1pos_pos' or sub_sub_key  ==  'read2pos_pos' or sub_sub_key  ==  'read2neg_neg' or sub_sub_key  ==  'read1neg_neg':
+        file_lock.acquire()
         f.write( key + ", " + str(pos1) + ", " + str(pos1_left) + ", "+str(pos1_right) + ", "+ sub_key + ", " 
             + str(pos2) + ", " + str(pos2_left) + ", "+str(pos2_right) + ", "+ str(num_sup)+ ", "+"False" +'\n' )
+        file_lock.release()
     if sub_sub_key  ==  'read1pos_neg' or sub_sub_key  ==  'read2neg_pos' or sub_sub_key  ==  'read1neg_pos' or sub_sub_key  ==  'read2pos_neg':
+        file_lock.acquire()
         f.write( key + ", " + str(pos1) + ", " + str(pos1_left) + ", "+str(pos1_right) + ", "+ sub_key + ", " 
             + str(pos2) + ", " + str(pos2_left) + ", "+str(pos2_right) + ", "+ str(num_sup)+ ", "+"True" +'\n' )
+        file_lock.release()
 
 def calculateCandidateBkpList(cluster_label_dict, dict_xy, sub_sub_key):
     candidate_bkp_list = []
