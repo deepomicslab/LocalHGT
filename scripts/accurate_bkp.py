@@ -105,6 +105,9 @@ class Read_Raw_Bkp():
         f = open(self.raw_bkp_file)
         all_rows = csv.reader(f)
         for row in all_rows:
+            if len(row) != 10:
+                print ("WARNING: weired line:", row)
+                continue
             eb = Each_Bkp(row)
             self.raw_bkps.append(eb)
         logging.info ('raw bkp num is %s'%(len(self.raw_bkps)))
