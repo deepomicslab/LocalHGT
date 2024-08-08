@@ -830,7 +830,7 @@ def convert_chr2_segment(ref, pos):
             if new_pos < 1:
                 new_pos = 1
             return segment_name, new_pos
-    print ("Can't find corresponding for", ref, pos)
+    print ("Can't find corresponding chr for", ref, pos)
     return "NA", 0
 
 def convert_chr2_segment_new(ref, pos):
@@ -845,7 +845,8 @@ def convert_chr2_segment_new(ref, pos):
             new_pos = 1
         return segment_name, new_pos
     else:
-        print ("Can't find corresponding for", ref, pos)
+        print ("Can't find corresponding chr for", ref, pos)
+        return "NA", 0
 
 
 
