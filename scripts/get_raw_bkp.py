@@ -39,9 +39,9 @@ def getInsertSize(unique_bamfile):
             insert_size_list.append(read.tlen)
             read_length_list.append(len(read.query_sequence))
             r_num += 1
-        if r_num > 10000:
-            print ("consider 10000 reads in estimating read length and insert size.")
-            break
+        # if r_num > 10000:
+        #     print ("consider 10000 reads in estimating read length and insert size.")
+        #     break
         
     read_length = int(sum(read_length_list) / len(read_length_list))
     mean = float(sum(insert_size_list)) / len(insert_size_list)
